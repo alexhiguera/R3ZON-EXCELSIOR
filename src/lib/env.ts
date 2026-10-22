@@ -38,3 +38,13 @@ export function publicEnv(): PublicEnv {
   });
   return cached;
 }
+
+/**
+ * ¿Se ofrece «Continuar con Google»? Opcional: sin la variable, el botón no
+ * aparece. Hace falta que el proveedor esté activo en Supabase (en local,
+ * `[auth.external.google]` de supabase/config.toml), o el botón llevaría a un
+ * error. Escrita literal para que Next la incruste en el navegador.
+ */
+export function googleAuthEnabled(): boolean {
+  return process.env.NEXT_PUBLIC_AUTH_GOOGLE === "true";
+}

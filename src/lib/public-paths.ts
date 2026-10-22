@@ -23,7 +23,7 @@ export const PUBLIC_EXACT: ReadonlySet<string> = new Set([
  * pero no con `/authfalso`. Comparar con `startsWith` a secas dejó pasar rutas
  * como `/preciosXYZ` en el proyecto de origen.
  */
-export const PUBLIC_PREFIXES: readonly string[] = ["/auth", "/legal"];
+export const PUBLIC_PREFIXES: readonly string[] = ["/auth", "/legal", "/invitacion"];
 
 export function matchesPrefix(pathname: string, prefixes: readonly string[]): boolean {
   return prefixes.some((p) => pathname === p || pathname.startsWith(`${p}/`));

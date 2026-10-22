@@ -18,8 +18,8 @@ Leyenda: ⬜ sin empezar · 🚧 en curso · ✅ cerrada. Tamaño relativo: **S*
 
 | Fase | Qué | Tamaño | Estado |
 |---|---|---|---|
-| 0 | Adaptar el repositorio y cimientos (identidad, marca, servicios, decisiones) | M | 🚧 |
-| 1 | Acceso: invitaciones, login con email y Google, contraseña, empresas y roles | L | ⬜ |
+| 0 | Adaptar el repositorio y cimientos (identidad, marca, servicios, decisiones) | M | ✅ en local (servicios externos y CI, aplazados al salir de local) |
+| 1 | Acceso: invitaciones, login con email y Google, contraseña, empresas y roles | L | 🚧 |
 | **🧪 Hito V** | **Recorrido vertical mínimo**: un servicio, un contrato, un medio de pago y una checklist, de invitación a proyecto (partes «V» de las fases 2–5) | L | ⬜ |
 | 2 | Panel R3ZON: clientes, catálogo de servicios e invitaciones con servicio | L | ⬜ |
 | 3 | Onboarding de contratación: bienvenida, datos, contrato y firma | XL | ⬜ |
@@ -89,8 +89,10 @@ r3zon.com, y que todas las decisiones que bloquean la Fase 1 estén tomadas.
      error, igual: con la primera pantalla que tenga datos.
 4. **Servicios externos dados de alta** (sin datos reales): Supabase Cloud (región UE),
    Vercel con `clientes.r3zon.com`, Sentry, cuenta de Stripe en modo test, Resend con el
-   dominio de envío verificado, proyecto en Google Cloud para OAuth.
+   dominio de envío verificado, proyecto en Google Cloud para OAuth. **Aplazado**: por
+   decisión de R3ZON (2026-10-23) el proyecto se desarrolla solo en local por ahora.
 5. **CI en verde en GitHub** (primera ejecución real de los workflows de la plantilla).
+   **Aplazado** con lo anterior.
 6. **Decisiones** que bloquean las fases 0 y 1 cerradas: D-01, D-02, D-03 y D-09
    (ahora T-10 a T-13). Las demás se cierran antes de la fase que bloquea cada una. ✅
 
@@ -112,22 +114,21 @@ aceptación de invitación), `multi-tenancy` (cliente = organización), `roles-p
 
 **Entregables**
 
-0. **Prototipo técnico de invitación + Google**, antes del resto de la fase, en una rama
-   que se tira o se reaprovecha. Tiene que demostrar, con tests:
-   - que el token de invitación **sobrevive al viaje de OAuth** (ida a Google y vuelta al
-     callback) sin exponerse en la URL final ni en logs;
-   - que el **email de Google coincide** con el invitado y, si no, no se crea nada;
-   - que la invitación se **consume una sola vez**, también con dos pestañas a la vez
-     (sin carreras: consumo y alta de pertenencia en una sola transacción);
-   - que un alta por Google **sin invitación** se rechaza en el servidor (*before user
-     created hook*).
-
-   Si algún punto no sale, se replantea la Fase 1 antes de construirla.
-1. **Modelo de organizaciones**: `organizations` (cliente), `organization_members`
-   (usuario ↔ cliente con rol), `staff_members` o nivel de plataforma en el perfil
+0. **Prototipo técnico de invitación + Google** ✅ (salvo el viaje real a Google).
+   Resultado, que cambió el diseño (T-15): **el token no tiene que sobrevivir al viaje
+   de OAuth**. El hook `before_user_created` recibe el email ya verificado por Google y
+   basta con que exista una invitación pendiente para él; con contraseña, el token va en
+   los metadatos del alta y el hook comprueba que es de ese email. La aceptación ocurre
+   en un trigger, en la misma transacción del alta (sin carreras), y un E2E confirma que
+   un alta directa contra la API de Auth da 403. Pendiente: probarlo con una cuenta real
+   de Google, que necesita credenciales de Google Cloud. Dos pestañas a la vez no se han
+   probado en paralelo: lo cubren el bloqueo de fila, la PK de la pertenencia y el
+   trigger de transiciones.
+1. ✅ **Modelo de organizaciones**: `organizations` (cliente), `organization_members`
+   (usuario ↔ cliente con rol), nivel de plataforma en el perfil
    (decisiones T-12 y T-13). RLS por pertenencia; R3ZON ve todo vía función de permiso, nunca
    saltándose la RLS ([ROLES.md](ROLES.md)).
-2. **Invitaciones**: `invitations` con token de un solo uso (guardado como **hash**),
+2. ✅ **Invitaciones**: `invitations` con token de un solo uso (guardado como **hash**),
    caducidad, email destinatario, organización y — en Fase 2 — servicio. Página pública
    `/invitacion/[token]` que valida el token y ofrece:
    - crear cuenta con **email + contraseña**, o
@@ -136,17 +137,21 @@ aceptación de invitación), `multi-tenancy` (cliente = organización), `roles-p
    La cuenta se crea **solo** si la invitación es válida; el email debe coincidir con el
    invitado (decisión T-11). Sin invitación, `/login` no ofrece registrarse y el alta por
    Google de un email desconocido se rechaza (bloqueo en servidor, no solo en la UI:
-   *before user created hook* de Supabase o equivalente).
-3. **Login** con email + contraseña y con Google; **vincular Google** a una cuenta
-   existente desde «Mi cuenta».
+   *before user created hook* de Supabase o equivalente). Hecho; el **envío por email**
+   llega con el entregable 5 y, hasta entonces, el enlace sale de `npm run dev:invitar`.
+3. 🚧 **Login** con email + contraseña ✅ y con Google (botón y callback hechos; falta
+   probarlo con credenciales reales); **vincular Google** a una cuenta existente desde
+   «Mi cuenta».
 4. **Recuperación de contraseña** («¿la has olvidado?») y **cambio de contraseña**
    estando dentro. Página de nueva contraseña con la política de longitud de Supabase.
 5. **Emails transaccionales con la marca** (invitación, recuperación, cambio de
    contraseña, bienvenida) vía Resend como SMTP de Supabase Auth y plantillas propias.
 6. **Mi cuenta**: nombre, contraseña, Google vinculado, cerrar otras sesiones.
 7. **2FA (TOTP) obligatorio para staff** (opcional para clientes).
-8. **Registro de actividad** (audit log) de lo sensible: login, invitación aceptada,
-   cambio de contraseña, cambio de rol.
+8. 🚧 **Registro de actividad** (audit log) de lo sensible: invitación creada, aceptada y
+   revocada, pertenencias y cambios de rol y de nivel ✅; login y cambio de contraseña,
+   con los entregables 4 y 6.
+9. ✅ **UUIDv7** para todas las claves primarias nuevas (T-16).
 
 **Hecho cuando:** tests de BD prueban que un miembro de A no ve nada de B y que el staff
 ve ambos; E2E: aceptar invitación con contraseña, rechazar invitación caducada/usada,
@@ -222,12 +227,12 @@ no se pone un contrato real a firmar.
 7. **Contrato de encargado del tratamiento (DPA)** cuando el servicio implique tratar
    datos personales del cliente (webs con formularios, ecommerce): se firma en el mismo
    paso (decisión D-05).
+8. **Email** con la copia del contrato firmado a firmante y a R3ZON.
 9. **Firmante y pagador distintos de quien abre la invitación** (decisión D-12): si
    quien completa los datos no es el representante legal, puede **enviar el contrato a
    firmar** a otra persona de su empresa (que recibe su propia invitación con rol
    `owner`), y lo mismo con el **pago** hacia alguien con rol `billing`. El asistente
    muestra en qué paso está y a quién espera.
-8. **Email** con la copia del contrato firmado a firmante y a R3ZON.
 
 **Hecho cuando:** E2E del flujo completo invitación → firma, en escritorio y en viewport
 móvil. Tests: el PDF firmado no se puede modificar ni borrar por ningún rol de la app;
@@ -455,6 +460,9 @@ candidatas, con lo que desbloquea cada una, están en [mejoras.md](mejoras.md).
 | T-12 | Dos niveles en el equipo: **`admin`** (todo, incluidos catálogo, precios y usuarios del equipo) y **`staff`** (clientes, proyectos y tickets) | 2026-10-22 | Era D-03 |
 | T-13 | Un usuario puede pertenecer a **varias empresas cliente**, con selector de empresa | 2026-10-22 | Agencias, gestorías y personas que llevan varias empresas; cambiarlo después obligaría a migrar (era D-09) |
 | T-14 | Interfaz **solo en modo oscuro**, como r3zon.com | 2026-10-22 | «Misma estética que la web»: la web no tiene tema claro. Los tokens permiten añadir uno sin tocar componentes |
+| T-15 | **Alta por invitación resuelta en la base**: hook `before_user_created` (con contraseña exige el token de ese email; con Google, invitación pendiente para el email verificado) y aceptación por trigger en la misma transacción. La página de invitación no consulta la invitación sin sesión | 2026-10-23 | Resultado del prototipo de la Fase 1: evita llevar el token a través de OAuth y no abre ninguna función a `anon` |
+| T-16 | Claves primarias **UUIDv7** (`public.uuidv7()`, mismo nombre que la nativa de Postgres 18) | 2026-10-23 | Petición de R3ZON: orden temporal y menos fragmentación de índices. El id revela la fecha de alta: nunca se usa como secreto |
+| T-17 | **Solo en local** por ahora: sin Supabase Cloud, Vercel, Stripe ni Resend reales | 2026-10-23 | Decisión de R3ZON. Lo que depende de servicios externos (emails, Google real, CI) se aplaza sin bloquear el resto |
 
 ## Decisiones abiertas
 

@@ -31,6 +31,13 @@ export async function GET(request: NextRequest) {
   const tokenHash = searchParams.get("token_hash");
   const type = searchParams.get("type");
 
+  // Un proveedor OAuth (Google) que vuelve con error. El caso esperado es el
+  // hook `before_user_created` rechazando un email sin invitación.
+  if (searchParams.get("error")) {
+    log.warn("oauth_failed", { code: searchParams.get("error_code") ?? searchParams.get("error") });
+    return NextResponse.redirect(`${origin}/login?error=oauth`);
+  }
+
   const supabase = await createClient();
   let error: { code?: string; status?: number } | null = null;
 

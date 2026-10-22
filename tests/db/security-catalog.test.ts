@@ -21,7 +21,27 @@ const TABLES_OPEN_TO_ANON: ReadonlySet<string> = new Set([]);
  * Funciones SECURITY DEFINER de `public` que `authenticated` puede ejecutar como
  * RPC. Cada una se salta la RLS, así que cada entrada necesita su porqué.
  */
-const DEFINER_FUNCTIONS_FOR_AUTHENTICATED: ReadonlySet<string> = new Set([]);
+const DEFINER_FUNCTIONS_FOR_AUTHENTICATED: ReadonlySet<string> = new Set([
+  // Las usan las policies. Definer para no entrar en recursión (la policy de
+  // una tabla consultaría esa misma tabla). Solo responden sobre el propio
+  // usuario: no devuelven filas de nadie.
+  "is_staff",
+  "is_admin",
+  "is_org_member",
+  "org_role_of",
+  // Aceptar una invitación con una cuenta existente: el usuario aún no
+  // pertenece a la organización, y la RLS no le deja ver la invitación ni crear
+  // su pertenencia. Las reglas (email, caducidad, un solo uso) las aplica el
+  // trigger invitations_guard_transition, no la función.
+  "accept_invitation",
+]);
+
+/**
+ * Claves primarias UUID con DEFAULT que no usan `public.uuidv7()`. Vacía a
+ * propósito: los ids nuevos son UUIDv7 (migración 20261022120000_uuidv7.sql).
+ * `profiles.id` no aparece porque no tiene DEFAULT: viene de auth.users.
+ */
+const UUID_PKS_NOT_V7: ReadonlySet<string> = new Set([]);
 
 describe.skipIf(!db)("catálogo de seguridad", () => {
   afterAll(async () => {
@@ -111,6 +131,23 @@ describe.skipIf(!db)("catálogo de seguridad", () => {
       rows.map((r) => r.fk),
       "FK sin índice",
     ).toEqual([]);
+  });
+
+  it("toda clave primaria UUID con default usa public.uuidv7()", async () => {
+    const { rows } = await db!.query<{ col: string; def: string }>(
+      `select c.relname || '.' || a.attname as col, pg_get_expr(d.adbin, d.adrelid) as def
+         from pg_constraint k
+         join pg_class c on c.oid = k.conrelid
+         join pg_namespace n on n.oid = c.relnamespace
+         join pg_attribute a on a.attrelid = k.conrelid and a.attnum = any (k.conkey)
+         join pg_attrdef d on d.adrelid = a.attrelid and d.adnum = a.attnum
+        where k.contype = 'p' and n.nspname = 'public' and a.atttypid = 'uuid'::regtype
+        order by 1`,
+    );
+    const offenders = rows.filter(
+      (r) => !/^(public\.)?uuidv7\(\)$/.test(r.def) && !UUID_PKS_NOT_V7.has(r.col),
+    );
+    expect(offenders, "PK UUID sin uuidv7()").toEqual([]);
   });
 
   it("las funciones nuevas de public nacen sin EXECUTE para PUBLIC ni anon", async () => {

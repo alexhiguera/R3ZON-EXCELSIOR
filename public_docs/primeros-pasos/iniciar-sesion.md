@@ -7,7 +7,7 @@ description: "Para iniciar sesión abre la página de acceso, escribe tu email y
 keywords: [iniciar sesión, acceder, entrar en mi cuenta, login]
 tags: [cuenta]
 last_update:
-  date: 2026-09-23
+  date: 2026-10-23
   author: Equipo R3ZON
 r3zon:
   tipo: guia
@@ -24,7 +24,8 @@ concreta, llegas directamente a ella.
 
 ## Qué necesitas antes de empezar
 
-- Una cuenta creada con tu email.
+- Una cuenta creada con tu email. Las cuentas se crean desde la invitación que te envía
+  R3ZON: [Cómo crear tu cuenta](aceptar-invitacion.md).
 - La contraseña de esa cuenta.
 
 ## Cómo iniciar sesión, paso a paso
@@ -51,13 +52,20 @@ entrar vuelves a esa página, no a la de inicio. No tienes que buscarla otra vez
 
 ### ¿Cómo cierro la sesión?
 
-Pulsa **Cerrar sesión**, arriba a la derecha. Vuelves a la página de acceso y las
-páginas privadas dejan de estar disponibles en ese navegador.
+Pulsa **Cerrar sesión**: en el ordenador está al pie del menú lateral, debajo de tu
+email; en el móvil, es el icono de salida arriba a la derecha. Vuelves a la página de
+acceso y las páginas privadas dejan de estar disponibles en ese navegador.
 
 ### ¿Por qué me pide entrar otra vez?
 
 Porque la sesión se cerró: la cerraste tú, o el navegador borró sus datos.
 
+### No tengo cuenta, ¿puedo registrarme?
+
+No hay registro libre: el área de clientes es solo para clientes de R3ZON. Tu cuenta se
+crea con el enlace de invitación que te enviamos al empezar a trabajar juntos.
+
 ## Qué leer después
 
+- [Cómo crear tu cuenta con la invitación](aceptar-invitacion.md)
 - [Portada de la documentación](../index.md)

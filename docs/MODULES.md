@@ -61,8 +61,8 @@ Secciones propias de Excelsior. Detalle de cada una en [PLAN.md](PLAN.md).
 
 | Módulo | Fase | Estado | Notas |
 |---|---|---|---|
-| Organizaciones y usuarios | 1 | ⬜ | Empresa cliente, miembros, staff |
-| Invitaciones | 1–2 | ⬜ | Enlace de un solo uso, con servicio preseleccionado desde la Fase 2 |
+| Organizaciones y usuarios | 1 | 🚧 | Base hecha (empresas, miembros, niveles, audit log); falta «Mi cuenta» y el selector de empresa |
+| Invitaciones | 1–2 | 🚧 | Alta y aceptación hechas; falta el envío por email y el servicio preseleccionado (Fase 2) |
 | Panel de administración | 2 | ⬜ | `/admin`: clientes, embudo de onboarding, ver como cliente |
 | Catálogo de servicios | 2 | ⬜ | Precios, modalidades, plantillas de contrato y briefing; versionado |
 | Contrataciones | 2–4 | ⬜ | Servicio contratado por un cliente y su estado |

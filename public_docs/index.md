@@ -7,7 +7,7 @@ description: "Documentación oficial de R3ZON Clientes, el área de clientes de 
 keywords: [documentación, ayuda, guía]
 tags: [portada]
 last_update:
-  date: 2026-10-22
+  date: 2026-10-23
   author: Equipo R3ZON
 r3zon:
   tipo: indice
@@ -26,6 +26,7 @@ esperas.
 
 | Si… | Ve a |
 |---|---|
+| Te ha llegado una invitación de R3ZON | [Crear tu cuenta](primeros-pasos/aceptar-invitacion.md) |
 | Quieres entrar en tu cuenta | [Iniciar sesión](primeros-pasos/iniciar-sesion.md) |
 
 ## Cómo está organizada esta documentación

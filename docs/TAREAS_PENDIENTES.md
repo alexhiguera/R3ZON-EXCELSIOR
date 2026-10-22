@@ -9,39 +9,48 @@ en curso (y lo que surja); cuando arranca una fase, sus entregables bajan aquí.
 
 `[ ]` pendiente · `[~]` en curso · 🔴 alta · 🟠 media-alta · 🟡 media · 🟢 baja
 
-## Estado hoy — *2026-10-22*
+## Estado hoy — *2026-10-23*
 
 | Comprobación | Resultado |
 |---|---|
 | `npm run lint` · `typecheck` | ✅ |
-| `npm run test:run` (con el stack levantado) | ✅ 107 tests en 14 ficheros (89 sin BD + 18 contra Postgres) |
-| `npm run test:e2e` | ✅ 16 tests (8 en escritorio + 8 en móvil) |
+| `npm run test:run` (con el stack levantado) | ✅ 150 tests en 18 ficheros (también con los datos que dejan los E2E) |
+| `npm run test:e2e` | ✅ 30 tests (15 en escritorio + 15 en móvil) |
 | `npm run build` | ✅ |
 | `npm run db:drift` · `db:types:check` | ✅ |
 | `npm run docs:validar` · `docs:enlaces` | ✅ |
-| `npm audit` | ✅ 0 vulnerabilidades |
-| Identidad | Excelsior · «R3ZON Clientes» · `clientes.r3zon.com` · puertos 5542x |
-| Migraciones | 1 (`core_profiles`, de la plantilla), solo en local |
-| Producción | No existe. Sin clientes reales |
-| Fase en curso | **Fase 0** — quedan los servicios externos, el CI en GitHub y las consultas a la asesoría |
+| Migraciones | 3 (`core_profiles`, `uuidv7`, `organizations_invitations`), solo en local |
+| Entorno | **Solo local** (T-17). Sin producción ni servicios externos |
+| Fase en curso | **Fase 1** — hechos el modelo de empresas y roles, las invitaciones y el alta solo por invitación |
 
-## Fase 0 — Adaptar el repositorio y cimientos
+## Fase 1 — Acceso
 
-- [ ] 🟠 Dar de alta los servicios: Supabase Cloud (UE), Vercel con
-  `clientes.r3zon.com`, Sentry, Stripe (modo test), Resend (dominio verificado), Google
-  Cloud (OAuth). Requiere las cuentas de R3ZON: lo hace una persona.
-- [ ] 🟠 Primera ejecución de los workflows de CI en GitHub (necesita push).
-- [ ] 🟠 Pedir ya a la asesoría lo que bloquea el Hito V, porque tarda: validación de la
-  firma propia (D-10), validación fiscal de Stripe Invoicing (D-11), textos de contrato
-  y DPA (D-05) y plazos de retención (D-13) ([PLAN.md](PLAN.md) → Decisiones abiertas).
+- [ ] 🔴 Recuperación de contraseña (`/recuperar` → callback `recovery` → nueva
+  contraseña). En local los emails van a Mailpit (`http://127.0.0.1:55424`).
+- [ ] 🔴 «Mi cuenta»: nombre, cambio de contraseña pidiendo la actual.
+- [ ] 🟠 2FA (TOTP) obligatorio para el staff.
+- [ ] 🟠 Selector de empresa para quien pertenece a varias (T-13). Hoy el inicio las
+  lista todas; hará falta al aparecer datos por empresa (Fase 2).
+- [ ] 🟡 Decidir si «Cerrar sesión» cierra solo este dispositivo o todos (**aparcada** por
+  R3ZON). Hoy `auth/logout` llama a `signOut()` sin `scope`, que cierra **todas** las
+  sesiones; los E2E van con un solo worker por eso.
+- [ ] 🟡 Probar «Continuar con Google» con una cuenta real (necesita un cliente OAuth de
+  Google Cloud; pasos en [DEVELOPMENT.md](DEVELOPMENT.md)). Hook y alta ya probados con
+  eventos `google` contra Postgres.
+- [ ] 🟢 Emails con la marca (invitación, recuperación) vía Resend: aplazado mientras todo
+  sea local (T-17). Mientras, el enlace de invitación sale de `npm run dev:invitar`.
 
-## Fase 1 — Preparación
+## Al salir de local (aplazado, T-17)
 
-- [ ] 🟡 Decidir si «Cerrar sesión» cierra solo este dispositivo o todos. Hoy
-  `auth/logout` llama a `signOut()` sin `scope`, que en Supabase cierra **todas** las
-  sesiones del usuario. Con «Mi cuenta → cerrar otras sesiones» (Fase 1), lo natural es
-  que el botón normal cierre solo la actual (`scope: "local"`). Cambia los E2E (hoy
-  dependen de un solo worker por esto).
+- [ ] Dar de alta los servicios: Supabase Cloud (UE, **con el hook activado en el panel**),
+  Vercel con `clientes.r3zon.com`, Sentry, Stripe (modo test), Resend, Google Cloud.
+- [ ] Primera ejecución de los workflows de CI en GitHub.
+
+## Asesoría (no depende de que sea local)
+
+- [ ] 🟠 Pedir ya lo que bloquea el Hito V, porque tarda: validación de la firma propia
+  (D-10), validación fiscal de Stripe Invoicing (D-11), textos de contrato y DPA (D-05) y
+  plazos de retención (D-13) ([PLAN.md](PLAN.md) → Decisiones abiertas).
 
 ## Heredadas de la plantilla (antes del hito MVP)
 

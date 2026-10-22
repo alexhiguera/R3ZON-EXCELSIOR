@@ -39,8 +39,10 @@ Motivo: meterlas en un solo enum obliga a crear combinaciones que no tienen sent
 
 ## Modelo previsto en Excelsior
 
-> **Previsto (Fase 1).** Hoy solo existe lo de «Estado en el core». Al implementarse, esta
-> sección pasa a ser la matriz real y se prueba en `tests/db/`.
+> **Dimensiones 1 y 2 implementadas en la base** (Fase 1): `profiles.platform_role`,
+> `organization_members.role` y sus policies, probadas en `tests/db/organizations.test.ts`.
+> Hoy el staff gestiona organizaciones, miembros e invitaciones; la matriz por recurso de
+> abajo se irá aplicando con cada tabla de las fases siguientes.
 
 ### Dimensión 1 — Nivel de plataforma
 

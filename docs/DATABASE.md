@@ -24,6 +24,38 @@ que hay que rectificar, exportar y borrar.
 
 No hay índices adicionales: el de la PK cubre la FK.
 
+## Qué hay en la base de Excelsior
+
+Además del core:
+
+| Migración | Qué añade |
+|---|---|
+| [`20261022120000_uuidv7.sql`](../supabase/migrations/20261022120000_uuidv7.sql) | `public.uuidv7()`: default de toda PK nueva (abajo) |
+| [`20261022120100_organizations_invitations.sql`](../supabase/migrations/20261022120100_organizations_invitations.sql) | `profiles.platform_role`, `organizations`, `organization_members`, `invitations`, `audit_log`, funciones de permiso, hook de alta solo por invitación ([AUTH.md](AUTH.md)) |
+
+| Pieza | Qué hace |
+|---|---|
+| `profiles.platform_role` | `client` · `staff` · `admin`. Sin grant de UPDATE: nadie se cambia el suyo; los cambios quedan en `audit_log` |
+| `organizations` | Empresa cliente. `created_by` lo pone un trigger. La crea y edita el staff (RLS); la ven sus miembros |
+| `organization_members` | Usuario ↔ empresa con rol `owner` · `member` · `billing`; N:M (T-13). Trigger: una empresa con propietario no se queda sin ninguno |
+| `invitations` | Hash SHA-256 del token, caducidad, un desenlace (aceptada o revocada). Una sola abierta por email y empresa. Transiciones en trigger |
+| `audit_log` | Lo escriben solo triggers `SECURITY DEFINER` (sin grants de escritura); lo lee el staff. Sin FK a la organización a propósito: el registro sobrevive a lo que describe |
+| `is_staff()` · `is_admin()` · `is_org_member()` · `org_role_of()` | Funciones de permiso para las policies. Definer para no entrar en recursión; declaradas en el test de catálogo |
+
+### UUIDv7
+
+Decisión de R3ZON (2026-10-22): las claves primarias nuevas son **UUIDv7** (RFC 9562).
+Postgres 17 no la trae (llega en Postgres 18) y Supabase no ofrece extensión, así que
+`public.uuidv7()` la implementa en SQL con el **mismo nombre que la nativa**: al pasar a
+Postgres 18 bastará una migración que cambie los defaults y la borre.
+
+- **Por qué:** ordenan por fecha de alta, los B-tree insertan al final (menos
+  fragmentación) y `order by id` equivale a orden de creación.
+- **Contrapartida:** el id revela cuándo se creó la fila. Nunca es un secreto.
+- **Excepción:** `auth.users.id` (y `profiles.id`) lo genera Supabase Auth como v4.
+- **Vigilancia:** `security-catalog.test.ts` falla si una PK UUID con default no usa
+  `uuidv7()`; `uuidv7.test.ts` comprueba versión, variante, hora y orden.
+
 ## Migraciones: la fuente de verdad
 
 `supabase/migrations/` es el **único** sitio donde se define el esquema.
@@ -112,7 +144,15 @@ ningún otro sitio.
 - [`profiles.test.ts`](../tests/db/profiles.test.ts) — trigger de alta, RLS por fila,
   grants por columna, CHECK, cascada, `updated_at`.
 - [`security-catalog.test.ts`](../tests/db/security-catalog.test.ts) — reglas globales
-  sobre todo el catálogo (ver [ARCHITECTURE.md §3](ARCHITECTURE.md)).
+  sobre todo el catálogo (ver [ARCHITECTURE.md §3](ARCHITECTURE.md)), incluida la de
+  UUIDv7.
+- [`organizations.test.ts`](../tests/db/organizations.test.ts),
+  [`invitations.test.ts`](../tests/db/invitations.test.ts),
+  [`uuidv7.test.ts`](../tests/db/uuidv7.test.ts) — Excelsior. Ayudas de dominio en
+  [`_excelsior.ts`](../tests/db/_excelsior.ts).
+
+**Un test de BD no puede suponer una base vacía**: los E2E y el desarrollo dejan datos.
+Cada consulta se acota a las filas que crea el propio test (por id u organización).
 
 Helpers en [`tests/db/_db.ts`](../tests/db/_db.ts):
 
@@ -167,7 +207,7 @@ audit_log (quién, qué, cuándo, sobre qué organización)
 
 | Fase | Tablas | Reglas que van en triggers (no en la app) |
 |---|---|---|
-| 1 | `organizations`, `organization_members`, `invitations`, `audit_log`; nivel de plataforma en `profiles` | Un usuario no cambia su propio nivel ni su rol; al menos un `owner` por organización; invitación de un solo uso |
+| 1 ✅ | `organizations`, `organization_members`, `invitations`, `audit_log`; nivel de plataforma en `profiles` | Implementado (arriba, «Qué hay en la base de Excelsior») |
 | 2 | `services`, `service_versions`, `engagements`, historial de estados | Una contratación apunta a una **versión** del servicio: cambiar el catálogo no altera lo contratado. Solo las transiciones de estado permitidas ([ARCHITECTURE.md](ARCHITECTURE.md) §20) |
 | 3 | `organization_billing`, `contract_templates`, `contracts`, `contract_signatures`, `onboarding_progress` | Contrato firmado inmutable (sin `UPDATE` ni `DELETE`); solo un `owner` firma |
 | 4 | `payments`, `refunds`, `invoices` (incluidas rectificativas), `stripe_events` | `stripe_events` deduplica webhooks por id; el estado «pagado» solo lo escribe el webhook; un evento antiguo no hace retroceder un estado |

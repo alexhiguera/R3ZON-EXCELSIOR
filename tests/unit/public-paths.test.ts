@@ -4,10 +4,15 @@ import { isPublicPath, matchesPrefix } from "@/lib/public-paths";
 import { isApiRoute } from "@/lib/supabase/proxy";
 
 describe("isPublicPath", () => {
-  it.each(["/", "/login", "/auth/callback", "/auth/logout", "/api/health", "/legal/privacidad"])(
-    "%s es pública",
-    (path) => expect(isPublicPath(path)).toBe(true),
-  );
+  it.each([
+    "/",
+    "/login",
+    "/auth/callback",
+    "/auth/logout",
+    "/api/health",
+    "/legal/privacidad",
+    "/invitacion/0123abcd",
+  ])("%s es pública", (path) => expect(isPublicPath(path)).toBe(true));
 
   it.each([
     project.homePath,
@@ -16,6 +21,7 @@ describe("isPublicPath", () => {
     "/loginfalso",
     "/authx",
     "/legales",
+    "/invitaciones",
   ])("%s exige sesión", (path) => expect(isPublicPath(path)).toBe(false));
 });
 

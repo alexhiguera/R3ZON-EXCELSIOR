@@ -15,12 +15,13 @@ regla lleva su motivo: una norma sin motivo se salta en cuanto estorba.
   propuestas, documentos y tickets. Qué y por qué: [`docs/PRODUCTO.md`](docs/PRODUCTO.md).
   Nombre visible **«R3ZON Clientes»**. Identidad en código:
   [`src/config/project.ts`](src/config/project.ts). Puertos locales 5542x.
-- **Plan y fase en curso:** [`docs/PLAN.md`](docs/PLAN.md). Hoy: **Fase 0**. Las
+- **Plan y fase en curso:** [`docs/PLAN.md`](docs/PLAN.md). Hoy: **Fase 1**. Las
   decisiones tomadas (T-xx) no se reabren sin preguntar; las abiertas (D-xx) se preguntan
   antes de implementar lo que bloquean.
-- **Entornos:** local (Supabase en Docker) · producción (Vercel + Supabase Cloud),
-  **todavía sin crear**.
-- **Datos de producción:** ninguno. No hay clientes reales (2026-10-22).
+- **Entornos:** **solo local** (Supabase en Docker) por decisión de R3ZON (T-17,
+  2026-10-23). Producción (Vercel + Supabase Cloud) no existe: no se crea ni se despliega
+  nada fuera sin que R3ZON lo pida.
+- **Datos de producción:** ninguno. No hay clientes reales (2026-10-23).
 - **Alcance:** solo web responsive (móvil, tablet, escritorio) con la estética de
   r3zon.com (solo modo oscuro, tokens en `src/app/globals.css`); solo español; solo Stripe como pasarela. Fuera de alcance y quién puede
   reabrirlo: [`docs/PRODUCTO.md`](docs/PRODUCTO.md) §8 — lo reabre R3ZON, nunca una tarea.
@@ -124,8 +125,12 @@ que es peor que no tenerlos.
 - **Las reglas de negocio van en triggers sobre la tabla**, no en guardas dentro de cada
   RPC ni en el cliente. La RLS **no se aplica dentro de una `SECURITY DEFINER`**: una
   guarda por RPC deja fuera la ruta que alguien olvide. Lo del cliente es UX.
-- `gen_random_uuid()`, nunca `uuid_generate_v4()` (en Supabase `uuid-ossp` vive en
-  `extensions` y no resuelve sin cualificar).
+- **Claves primarias: `default public.uuidv7()`** (decisión de R3ZON; migración
+  `20261022120000_uuidv7.sql`). Ordenan por fecha y no fragmentan los índices. El test de
+  catálogo falla si una PK UUID nueva usa otro default. Un UUIDv7 revela cuándo se creó
+  la fila: **nunca se usa un UUID como secreto** (los tokens son bytes aleatorios
+  guardados como hash). Fuera de PKs, `gen_random_uuid()`; nunca `uuid_generate_v4()`
+  (en Supabase `uuid-ossp` vive en `extensions` y no resuelve sin cualificar).
 - Toda `SECURITY DEFINER` lleva `set search_path = ''` y nombres cualificados, y se
   revoca `EXECUTE` a quien no deba llamarla.
 - **Antes de un `db push` a producción**, compara con el esquema real

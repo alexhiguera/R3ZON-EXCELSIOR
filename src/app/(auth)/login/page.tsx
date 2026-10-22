@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { AuthLayout } from "@/components/app-shell/AuthLayout";
+import { GoogleButton } from "@/components/auth/GoogleButton";
+import { Separador } from "@/components/auth/Separador";
 import { project } from "@/config/project";
+import { googleAuthEnabled } from "@/lib/env";
 import { safeRedirectPath } from "@/lib/safe-redirect";
 import { getCurrentUser } from "@/lib/supabase/server";
 import { LoginForm } from "./LoginForm";
@@ -28,6 +31,18 @@ export default async function LoginPage({
         <p role="alert" className="text-sm text-danger">
           El enlace no es válido o ha caducado. Vuelve a intentarlo.
         </p>
+      )}
+      {params.error === "oauth" && (
+        <p role="alert" className="text-sm text-danger">
+          No hemos podido entrar con Google. Si es tu primera vez, entra desde el enlace de tu
+          invitación y con la cuenta del mismo email al que te la enviamos.
+        </p>
+      )}
+      {googleAuthEnabled() && (
+        <>
+          <GoogleButton next={destination} />
+          <Separador />
+        </>
       )}
       <LoginForm redirectTo={params.redirect ? destination : undefined} />
       {/*

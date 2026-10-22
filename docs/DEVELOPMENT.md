@@ -43,6 +43,8 @@ Supabase Studio: <http://127.0.0.1:55423>. Emails que envía Auth en local (Mail
 | `docs:enlaces` | Enlaces rotos en `docs/`, `modules/`, `README.md` y `CLAUDE.md` |
 | `deps:overrides` | ¿Siguen haciendo falta los `overrides`? |
 | `dev:setup` | Bootstrap del entorno |
+| `dev:invitar -- <email> ["Empresa"] [rol]` | Crea una invitación en local e imprime el enlace (hasta que exista el panel) |
+| `dev:staff -- <email> [admin\|staff\|client]` | Cambia el nivel de un usuario local |
 
 ## Tests
 
@@ -137,9 +139,15 @@ MCP.
 - **Stripe en local** (Fase 4): Stripe CLI para reenviar webhooks al servidor local
   (`stripe listen --forward-to localhost:3000/api/stripe/webhook`), con claves de modo
   test. Nunca claves live en `.env.local`.
-- **Google OAuth en local** (Fase 1): proveedor configurado en `supabase/config.toml`
-  (`[auth.external.google]`) leyendo el secreto de una variable de entorno, nunca escrito
-  en el fichero.
+- **Google en local**: crea un cliente OAuth «Aplicación web» en Google Cloud con la URI
+  de redirección `http://127.0.0.1:55421/auth/v1/callback`. Después:
+  1. `export SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID=…` y
+     `SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET=…` en la shell (nunca en un fichero del repo);
+  2. `enabled = true` en `[auth.external.google]` de `supabase/config.toml` (sin
+     commitearlo mientras no haya credenciales en CI);
+  3. `NEXT_PUBLIC_AUTH_GOOGLE=true` en `.env.local`;
+  4. `npm run db:stop && npm run db:start`: **la configuración de Auth (también el hook)
+     solo se lee al arrancar el stack**, `db:reset` no basta.
 - **Emails en local**: siguen yendo a Mailpit; Resend solo en los entornos desplegados.
 - **Probar en móvil**: `npm run dev -- --hostname 0.0.0.0` y abrir la IP de la máquina
   desde el teléfono en la misma red (en WSL puede requerir reenviar el puerto).

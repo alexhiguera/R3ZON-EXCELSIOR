@@ -26,9 +26,91 @@ datasource db {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model audit_log {
+  id              String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  created_at      DateTime @default(now()) @db.Timestamptz(6)
+  actor_id        String?  @db.Uuid
+  organization_id String?  @db.Uuid
+  action          String
+  details         Json     @default("{}")
+
+  @@index([actor_id])
+  @@index([organization_id, created_at(sort: Desc)], map: "audit_log_organization_id_idx")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model invitations {
+  id              String        @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  organization_id String        @db.Uuid
+  email           String
+  role            org_role      @default(owner)
+  token_hash      Bytes         @unique
+  expires_at      DateTime      @db.Timestamptz(6)
+  created_by      String?       @db.Uuid
+  created_at      DateTime      @default(now()) @db.Timestamptz(6)
+  accepted_at     DateTime?     @db.Timestamptz(6)
+  accepted_by     String?       @db.Uuid
+  revoked_at      DateTime?     @db.Timestamptz(6)
+  organizations   organizations @relation(fields: [organization_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([organization_id, email], map: "invitations_one_open_per_org_email", where: raw("((accepted_at IS NULL) AND (revoked_at IS NULL))"))
+  @@index([accepted_by])
+  @@index([created_by])
+  @@index([organization_id])
+  @@index([email], map: "invitations_pending_email_idx", where: raw("((accepted_at IS NULL) AND (revoked_at IS NULL))"))
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model organization_members {
+  organization_id String        @db.Uuid
+  user_id         String        @db.Uuid
+  role            org_role      @default(member)
+  created_at      DateTime      @default(now()) @db.Timestamptz(6)
+  organizations   organizations @relation(fields: [organization_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([organization_id, user_id])
+  @@index([user_id])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model organizations {
+  id                   String                 @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  name                 String
+  created_by           String?                @db.Uuid
+  created_at           DateTime               @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime               @default(now()) @db.Timestamptz(6)
+  invitations          invitations[]
+  organization_members organization_members[]
+
+  @@index([created_by])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model profiles {
-  id           String   @id @db.Uuid
-  display_name String?
-  created_at   DateTime @default(now()) @db.Timestamptz(6)
-  updated_at   DateTime @default(now()) @db.Timestamptz(6)
+  id            String        @id @db.Uuid
+  display_name  String?
+  created_at    DateTime      @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime      @default(now()) @db.Timestamptz(6)
+  platform_role platform_role @default(client)
+}
+
+/// This enum is commented in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+enum org_role {
+  owner
+  member
+  billing
+}
+
+/// This enum is commented in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+enum platform_role {
+  client
+  staff
+  admin
 }

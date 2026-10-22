@@ -7,6 +7,47 @@ nunca se renumeran.
 
 ---
 
+### Iteración 4 — *2026-10-23* — Fase 1: empresas, roles, alta solo por invitación y UUIDv7
+
+R3ZON decide trabajar solo en local por ahora (T-17) y pide UUIDv7 para la base (T-16).
+Se construye el núcleo de la Fase 1: quién es quién y cómo se entra.
+
+- **UUIDv7.** Postgres 17 no la trae y Supabase no tiene extensión: `public.uuidv7()` en
+  SQL, con el nombre de la nativa de Postgres 18 para cambiarla por una migración el día
+  que llegue. Default de toda PK nueva; el test de catálogo falla si una PK UUID usa otro.
+  Comprobado que la regla salta con una tabla de prueba con `gen_random_uuid()`.
+- **Modelo** (migración `organizations_invitations`): nivel de plataforma en `profiles`
+  (client · staff · admin), empresas, miembros N:M con rol, invitaciones con hash y
+  transiciones en trigger, registro de actividad escrito solo por triggers.
+- **Prototipo de invitación + Google, y cambio de diseño (T-15).** El plan pedía que el
+  token sobreviviera al viaje de OAuth. No hace falta: el hook `before_user_created`
+  recibe el email que Google ya ha verificado; con contraseña, el token va en los
+  metadatos del alta y el hook comprueba que es de ese email. La aceptación va en un
+  trigger de `auth.users`, en la misma transacción que el alta. Descartado: que la
+  página consultara la invitación sin sesión (exigiría una función ejecutable por
+  `anon`, que el catálogo prohíbe con razón; la página explica qué hacer si el alta
+  falla).
+- **Fallo propio cazado por el E2E**: el token se quedaba guardado en
+  `raw_user_meta_data` y en `auth.identities` tras un alta real. El trigger solo cubría
+  el INSERT en `auth.users`, y el test de BD (que inserta a mano) daba verde. Ahora se
+  limpia en INSERT y UPDATE de las dos tablas, y un E2E lo comprueba contra el Auth real.
+  Al corregirlo se introdujo otro: `tg_table_name = … and new.identity_data …` en
+  PL/pgSQL no se evalúa en orden y rompía todas las altas; se reescribió con IF
+  anidados. La migración se corrigió en su fichero porque solo existía en local.
+- **Tests de BD que asumían una base vacía**: tras los E2E, varios contaban «todas» las
+  filas o hacían `UPDATE` sin `WHERE`. Ahora cada consulta se acota a sus datos; la regla
+  queda en DATABASE.md.
+- **App**: `/invitacion/[token]` (crear cuenta o aceptar con la cuenta actual), botón de
+  Google detrás de `NEXT_PUBLIC_AUTH_GOOGLE`, callback que trata el rechazo de OAuth, la
+  navegación según el nivel, el inicio con las empresas del usuario y scripts
+  `dev:invitar` y `dev:staff`. `/invitacion` añadida a las rutas públicas.
+- **Tests**: 150 de Vitest (47 de BD) y 30 E2E. Entre ellos, un alta directa contra la API
+  de Auth sin invitación da 403.
+- **Documentación pública**: nueva guía «Crear tu cuenta» y corregida «Iniciar sesión»,
+  que situaba «Cerrar sesión» arriba a la derecha desde antes del armazón nuevo.
+- **Sin anunciar al usuario** (`CLAUDE.md` §8): el módulo `whats-new` no está instalado
+  y no hay usuarios.
+
 ### Iteración 3 — *2026-10-22* — Fase 0: identidad, marca de r3zon.com y armazón responsive
 
 Primer bloque de código de Excelsior. El repositorio deja de ser la plantilla y la

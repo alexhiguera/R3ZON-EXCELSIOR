@@ -15,6 +15,7 @@
 │   │   ├── globals.css       Tailwind 4 + tokens de tema
 │   │   ├── page.tsx          portada pública
 │   │   ├── (auth)/login/     login: page + LoginForm (cliente) + actions (Server Action)
+│   │   ├── (auth)/invitacion/[token]/  alta y aceptación por invitación (pública)
 │   │   ├── auth/callback/    enlaces de Supabase Auth → sesión
 │   │   ├── auth/logout/      POST → cerrar sesión
 │   │   ├── (app)/            zona con sesión: layout con 2ª comprobación + inicio/
@@ -24,6 +25,7 @@
 │   ├── components/ui/        primitivos accesibles: Button, Field, Input, Card, Badge, Stepper
 │   ├── components/app-shell/ armazón con sesión (AppShell, NavLinks) y de acceso (AuthLayout)
 │   ├── components/brand/     logotipo de R3ZON
+│   ├── components/auth/      botón de Google, separador
 │   └── lib/
 │       ├── supabase/         client.ts (navegador) · server.ts · proxy.ts
 │       ├── public-paths.ts   lista de rutas sin sesión

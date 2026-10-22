@@ -246,7 +246,7 @@ rastro (quién, cuándo, por qué). Borrador inicial — se cierra en la Fase 2,
 
 | Entidad | Estados | Caminos no felices que tienen que existir |
 |---|---|---|
-| Invitación | `pendiente → aceptada` | `revocada`, `caducada`; reenvío = invitación nueva que revoca la anterior |
+| Invitación ✅ | `pendiente → aceptada` | `revocada`, `caducada`; reenvío = invitación nueva que revoca la anterior. **Implementada** con estado derivado de columnas (`accepted_at`, `revoked_at`, `expires_at`) y el trigger `invitations_guard_transition` |
 | Contratación | `borrador → invitada → datos_completos → firmada → pago_en_curso → pagada → activa → finalizada` | `cancelada` (antes de firmar), `rescindida` (después), `en_impago` |
 | Contrato | `generado → enviado → firmado` | `anulado` (antes de firmar), **`sustituido`** por otro contrato (anexo o nueva versión): el firmado no cambia, se enlaza el que lo sustituye |
 | Pago | `pendiente → en_curso → pagado` | `fallido`, **`devuelto`** (adeudo SEPA rechazado días después), **`en_disputa`** (y su resolución), **`reembolsado`** total o parcial; cada reembolso o devolución con su **abono / factura rectificativa** |

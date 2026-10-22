@@ -34,7 +34,9 @@
     "docs:validar": "node scripts/validar-public-docs.mjs",
     "docs:enlaces": "node scripts/verificar-enlaces-docs.mjs",
     "deps:overrides": "node scripts/verificar-overrides.mjs",
-    "dev:setup": "bash scripts/dev-setup.sh"
+    "dev:setup": "bash scripts/dev-setup.sh",
+    "dev:invitar": "node scripts/dev-invitar.mjs",
+    "dev:staff": "node scripts/dev-staff.mjs"
   },
   "engines": {
     "node": ">=24.0.0 <25"

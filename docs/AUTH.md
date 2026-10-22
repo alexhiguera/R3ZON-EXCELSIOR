@@ -1,12 +1,11 @@
 # Autenticación y sesión
 
 El core trae la autenticación **mínima** que necesita cualquier producto: sesión, login
-con email y contraseña, callback, logout y protección de rutas. Registro, OAuth, 2FA,
-recuperación de contraseña y onboarding son el módulo `auth-advanced`.
-
-> **Excelsior** sustituye el «registro público» por **alta solo por invitación**, con
-> email + contraseña o Google. Lo que hay hoy es el core; lo previsto está al final, en
-> [«Previsto en Excelsior»](#previsto-en-excelsior) ([PLAN.md](PLAN.md) → Fase 1).
+con email y contraseña, callback, logout y protección de rutas. Sobre él, Excelsior añade
+el **alta solo por invitación** (con email y contraseña o con Google), las empresas
+cliente y los niveles del equipo de R3ZON ([PLAN.md](PLAN.md) → Fase 1).
+Recuperación y cambio de contraseña, «Mi cuenta», 2FA y emails con la marca llegan en
+lo que queda de la Fase 1 ([«Pendiente»](#pendiente-de-la-fase-1)).
 
 ## Flujo
 
@@ -39,7 +38,7 @@ Petición ──► src/proxy.ts ──► lib/supabase/proxy.ts (updateSession)
 [`src/lib/public-paths.ts`](../src/lib/public-paths.ts):
 
 - Exactas: `/`, `/login`, `/robots.txt`, `/sitemap.xml`, `/api/health`.
-- Prefijos (por segmento): `/auth`, `/legal`.
+- Prefijos (por segmento): `/auth`, `/legal`, `/invitacion`.
 
 Todo lo demás exige sesión, incluidas las rutas que no existen (`/admin` → 307): un
 anónimo no puede averiguar qué rutas existen por la diferencia entre 404 y 307.
@@ -65,85 +64,105 @@ El proxy no las redirige: un 307 a una página HTML no le sirve a quien llama a 
 **Cada handler que necesite sesión la comprueba** con `getCurrentUser()` y responde 401.
 Hoy solo existe `/api/health`, pública.
 
-## Registro de usuarios
+## Alta solo por invitación
 
-El core no tiene página de registro: los usuarios se crean desde el panel de Supabase, por
-invitación o con `npm run seed:dev` en local. El registro público llega con
-`auth-advanced`, porque implica decisiones de producto (confirmación de email,
-consentimiento legal, onboarding).
+No existe registro libre, **ni en la interfaz ni en el servidor**. Una cuenta nace de
+una invitación de R3ZON ([PRODUCTO.md](PRODUCTO.md) §4). Implementado en
+[`20261022120100_organizations_invitations.sql`](../supabase/migrations/20261022120100_organizations_invitations.sql).
 
-## Recuperación de contraseña
+```text
+Staff (o `npm run dev:invitar` en local)
+  └─ create_invitation(organización, email, rol) ──► token de 32 bytes, devuelto UNA vez;
+                                                      en la base solo su SHA-256, 7 días
+Invitado ──► /invitacion/<token> (pública, sin consultar nada a la base)
+              ├─ formato incorrecto ─────────────────────────► «Enlace no válido»
+              ├─ con sesión ──► «Aceptar invitación» ─► accept_invitation(token)
+              └─ sin sesión ──► «Crear mi cuenta» (nombre, email, contraseña)
+                                │   signUp con el token en los metadatos
+                                └─ «Continuar con Google» (si está activo)
+Supabase Auth ──► hook before_user_created ──► sin invitación válida: 403
+              ──► alta del usuario + trigger: pertenencia + invitación aceptada (1 transacción)
+```
 
-**No está en el core en v1.0: permanece en `auth-advanced`.** El motivo y qué hacer
-mientras tanto (restablecerla desde el panel de Supabase) están en
-[`modules/README.md`](../modules/README.md) → «Decisión sobre la recuperación de
-contraseña». El callback del core ya acepta `type=recovery`, así que el módulo solo
-tendrá que añadir las páginas.
+**Dónde está cada barrera** (todas en la base, ninguna en la interfaz):
+
+| Pieza | Qué hace |
+|---|---|
+| Hook `hook_before_user_created` | Corre antes de crear cualquier usuario. **Email y contraseña**: exige el token en los metadatos, y que sea de una invitación pendiente y vigente **para ese email** (tener el token prueba que se controla el email al que se envió). **Google**: basta una invitación pendiente para ese email, porque Google ya ha verificado que el email es suyo. Cualquier otro proveedor, rechazado. Mensaje único: no revela si un email tiene invitación |
+| Trigger `strip_invitation_token` | El token no se guarda: lo quita de `auth.users.raw_user_meta_data` y de `auth.identities.identity_data`, en INSERT y en UPDATE (Supabase Auth escribe en los dos sitios; un E2E lo comprueba contra el Auth real) |
+| Trigger `on_auth_user_created_accept_invitations` | En la misma transacción del alta, acepta las invitaciones pendientes de ese email y crea la pertenencia con su rol. Sin carreras ni estado intermedio |
+| Trigger `invitations_guard_transition` | Una invitación no se edita; aceptada o revocada es definitivo; no se acepta caducada, revocada ni **con otro email**. Vale para toda vía: RPC, trigger, panel, script |
+| RPC `accept_invitation` | Para una cuenta que ya existe (usuario en varias empresas, T-13). Bloquea la fila (`for update`) |
+
+**Por qué la página no consulta la invitación antes del alta.** Hacerlo sin sesión
+exigiría una función ejecutable por `anon`, y el catálogo de seguridad no admite
+ninguna. La validez la decide la base en el alta (hook) o en la aceptación (trigger), y
+el mensaje de error dice qué hacer. La bienvenida con la empresa y el servicio llega ya
+con sesión (Fase 3).
+
+**Por qué no hace falta confirmar el email.** El token llegó a ese email: tenerlo ya
+prueba que es suyo, y con Google lo prueba Google. Por eso `enable_confirmations` está
+desactivado, también en Cloud ([DEPLOYMENT.md](DEPLOYMENT.md)). Activarlo no rompe nada
+(la app avisa de que revise su email), pero añade un paso sin añadir seguridad.
+
+**Quién puede saltarse el hook.** Solo la API de administración de Supabase Auth (clave
+`service_role`) y el panel de Supabase: los usa R3ZON, nunca la app (la `service_role` no
+entra en el código). `npm run seed:dev` y `seed:e2e` crean así sus usuarios en local.
+
+**Mensajes.** Con contraseña, cualquier rechazo del hook se muestra como «No hemos podido
+usar esta invitación…» con qué hacer; un email que ya tiene cuenta lleva a iniciar
+sesión. Con Google, el callback vuelve a `/login?error=oauth` con el aviso de entrar
+desde la invitación.
+
+## Google
+
+- Botón «Continuar con Google» en el login y en la invitación, **solo si**
+  `NEXT_PUBLIC_AUTH_GOOGLE=true` ([`src/lib/env.ts`](../src/lib/env.ts)). Sin la variable
+  no aparece, para no ofrecer un botón que lleve a un error.
+- El proveedor se configura en Supabase: en local, `[auth.external.google]` de
+  [`supabase/config.toml`](../supabase/config.toml) (apagado hasta tener credenciales;
+  pasos en [DEVELOPMENT.md](DEVELOPMENT.md)); en Cloud, el panel.
+- **Aún no se ha probado con una cuenta real de Google**: el hook y el alta están
+  probados contra Postgres con eventos de proveedor `google`, pero el viaje completo
+  necesita un cliente OAuth de Google Cloud. Tarea abierta en
+  [TAREAS_PENDIENTES.md](TAREAS_PENDIENTES.md).
+
+## Pendiente de la Fase 1
+
+- **Recuperación de contraseña**: `/recuperar` (mismo mensaje exista o no el email) →
+  `/auth/callback?type=recovery` (el callback ya lo acepta) → nueva contraseña.
+- **«Mi cuenta»**: nombre, cambio de contraseña pidiendo la actual, vincular Google.
+- **2FA (TOTP)** obligatorio para el staff.
+- **Emails con la marca** (invitación incluida): hoy el enlace de invitación se copia a
+  mano (`npm run dev:invitar`). Requiere Resend, fuera de alcance mientras todo es local.
+- **Cerrar sesión**: hoy `signOut()` cierra todas las sesiones del usuario; decidir si
+  solo la actual (tarea aparcada).
 
 ## Alta de usuarios
 
 Al crearse un usuario, por cualquier vía, el trigger `on_auth_user_created` crea su fila
-en `public.profiles` con el `display_name` de sus metadatos
-([DATABASE.md](DATABASE.md)).
+en `public.profiles` con el `display_name` de sus metadatos, y nivel `client`
+([DATABASE.md](DATABASE.md)). Para hacer staff a alguien en local:
+`npm run dev:staff -- <email> [admin|staff]`. En producción lo hace un admin
+([ROLES.md](ROLES.md)).
+
+## Zonas con sesión
+
+- `(app)/…` para todos los usuarios. La navegación depende del nivel (cliente o equipo),
+  pero lo que cada uno lee lo decide la RLS ([ARCHITECTURE.md](ARCHITECTURE.md) §16).
+- `(app)/admin/…` (Fase 2) solo staff: proxy y layout redirigen, la RLS es la barrera.
 
 ## Tests
 
 - Unitarios: [`public-paths.test.ts`](../tests/unit/public-paths.test.ts),
-  [`safe-redirect.test.ts`](../tests/unit/safe-redirect.test.ts).
-- E2E: [`e2e/specs/auth.spec.ts`](../e2e/specs/auth.spec.ts) — pública 200, protegida 307
-  al login con el destino, login correcto e incorrecto, logout, y que `?redirect=` no saca
-  del sitio.
-
-## Previsto en Excelsior
-
-> **Previsto (Fase 1).** Nada de esto existe todavía. Al implementarlo, esta sección pasa
-> a describir el estado real y las de arriba se actualizan.
-
-### Alta solo por invitación
-
-```text
-Staff R3ZON ──► crea invitación (email, organización, [servicio])
-                  └─ token aleatorio; en la base solo su hash, con caducidad y un solo uso
-                        │
-Invitado ──► /invitacion/<token> (pública)
-               ├─ token inválido, caducado, revocado o usado ──► mensaje, sin formulario
-               └─ válido ──► «Crear cuenta con email y contraseña»  ó  «Continuar con Google»
-                                └─ cuenta creada ──► miembro de la organización ──► onboarding
-```
-
-- **No existe registro sin invitación**, ni en la interfaz ni en el servidor. El bloqueo
-  real está en Supabase Auth (*before user created hook* o `signups` deshabilitados +
-  alta en servidor), porque con OAuth cualquiera puede intentar crear usuario desde
-  Google sin pasar por nuestras páginas. Un E2E lo intenta.
-- El email de la cuenta debe coincidir con el de la invitación, también con Google
-  (decisión T-11 de [PLAN.md](PLAN.md)). Si el cliente quiere otro email, R3ZON le
-  reenvía la invitación a ese.
-- Aceptar la invitación es atómico: crea la pertenencia a la organización, marca la
-  invitación como usada y registra el evento en el audit log.
-
-### Login, Google y contraseñas
-
-- `/login`: email + contraseña y «Continuar con Google». Sin enlace de registro.
-- **Google** (OAuth de Supabase): un usuario existente puede vincular su cuenta de Google
-  desde «Mi cuenta». Si alguien entra con Google con un email sin cuenta ni invitación,
-  se rechaza con un mensaje que no revela si el email es cliente.
-- **Recuperación de contraseña**: `/recuperar` envía el enlace (mismo mensaje exista o no
-  el email) → `/auth/callback?type=recovery` (el callback ya lo acepta) → página de nueva
-  contraseña.
-- **Cambio de contraseña** en «Mi cuenta», pidiendo la actual. Opción de cerrar las demás
-  sesiones.
-- **2FA (TOTP)** obligatorio para el staff, opcional para clientes.
-- Emails de Auth con la marca de R3ZON, enviados por Resend como SMTP de Supabase.
-
-### Rutas públicas que se añadirán
-
-`/invitacion/[token]`, `/recuperar` y las páginas legales bajo `/legal` (el prefijo ya es
-público). Cada una con su caso en `tests/unit/public-paths.test.ts` y comprobación con
-`curl` sin cookie.
-
-### Zonas con sesión
-
-- `(app)/…` para usuarios de cliente.
-- `(app)/admin/…` solo staff: el proxy y el layout redirigen a quien no lo sea, y la RLS
-  es la barrera real ([ARCHITECTURE.md](ARCHITECTURE.md) §16).
-- Un usuario con el onboarding a medias entra al paso pendiente en vez de a `homePath`.
+  [`safe-redirect.test.ts`](../tests/unit/safe-redirect.test.ts),
+  [`invitaciones.test.ts`](../tests/unit/invitaciones.test.ts) (formato del token y
+  mensajes).
+- BD: [`invitations.test.ts`](../tests/db/invitations.test.ts) — creación solo por staff,
+  hash y no token, reenvío, hook con cada proveedor y cada estado, alta que acepta,
+  token no guardado, aceptación con cuenta existente, email equivocado, transiciones.
+- E2E: [`auth.spec.ts`](../e2e/specs/auth.spec.ts) (login, logout, rutas) e
+  [`invitacion.spec.ts`](../e2e/specs/invitacion.spec.ts) — alta con invitación hasta
+  ver su empresa, email distinto, enlace usado, enlace mal formado, cuenta existente que
+  acepta otra empresa, alta directa contra la API de Auth rechazada (403) y login sin
+  «crear cuenta». En escritorio y en móvil.

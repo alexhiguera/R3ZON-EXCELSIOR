@@ -5,10 +5,10 @@ import { createClient, getCurrentUser } from "@/lib/supabase/server";
 export const metadata: Metadata = { title: "Inicio" };
 
 /**
- * Inicio del cliente. Lee el perfil SIN filtrar por id: la RLS de `profiles`
- * solo deja ver la fila propia, así que `.single()` devuelve la suya. Es la
- * demostración, de punta a punta, de que el frontend no filtra a mano y la base
- * hace de verja.
+ * Inicio del cliente. Lee su propio perfil (el filtro por id elige la fila, no
+ * protege nada: el staff puede ver todos los perfiles y un cliente solo el suyo,
+ * y eso lo decide la RLS) y las empresas a las que pertenece, sin filtrar: la
+ * RLS solo devuelve las suyas.
  *
  * Los pendientes (firmar, pagar, aportar materiales) llegan con las fases 3–6
  * (docs/PLAN.md).
@@ -18,8 +18,10 @@ export default async function InicioPage() {
   const supabase = await createClient();
   const { data: profile } = await supabase
     .from("profiles")
-    .select("display_name, created_at")
-    .single();
+    .select("display_name")
+    .eq("id", user?.id ?? "")
+    .maybeSingle();
+  const { data: empresas } = await supabase.from("organizations").select("id, name").order("name");
 
   return (
     <div className="flex flex-col gap-8">
@@ -32,6 +34,25 @@ export default async function InicioPage() {
           Has iniciado sesión como <strong data-testid="user-email">{user?.email}</strong>.
         </p>
       </header>
+
+      {empresas && empresas.length > 0 && (
+        <section aria-labelledby="empresas" className="flex flex-col gap-3">
+          <h2 id="empresas" className="text-sm font-medium text-muted">
+            {empresas.length === 1 ? "Tu empresa" : "Tus empresas"}
+          </h2>
+          <ul className="grid gap-3 sm:grid-cols-2">
+            {empresas.map((e) => (
+              <li key={e.id}>
+                <Card className="p-4 sm:p-5">
+                  <p className="font-medium" data-testid="empresa">
+                    {e.name}
+                  </p>
+                </Card>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <Card>
         <h2 className="text-lg font-semibold">Todo al día</h2>
