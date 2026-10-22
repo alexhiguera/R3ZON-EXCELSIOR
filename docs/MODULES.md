@@ -34,10 +34,44 @@ Al instalar uno, añade una fila. «Versión de la plantilla» es la de
 |---|---|---|---|
 | — | — | — | — |
 
+### Previstos
+
+Módulos del catálogo de la plantilla que Excelsior necesitará, y en qué fase
+([PLAN.md](PLAN.md)). Ninguno existe aún en la plantilla: se construirán aquí respetando
+su contrato ([`modules/README.md`](../modules/README.md)) y lo que sirva a otros
+productos se propondrá después para la plantilla.
+
+| Módulo | Fase | Para qué en Excelsior |
+|---|---|---|
+| `auth-advanced` | 1 | Invitaciones, Google OAuth, recuperación y cambio de contraseña, 2FA del staff |
+| `multi-tenancy` | 1 | Empresa cliente = organización; pertenencia y RLS por organización |
+| `roles-permissions` | 1 | Nivel de plataforma (staff / cliente) × rol en la empresa ([ROLES.md](ROLES.md)) |
+| `email-resend` | 1 | Emails de Auth y transaccionales con la marca de R3ZON |
+| `audit-log` | 1 | Logins, invitaciones, firmas, cambios de rol, «ver como cliente» |
+| `billing-stripe` | 4 | Pagos únicos, señal + entrega, transferencia/SEPA/tarjeta, facturas y (Fase 6) suscripciones |
+| `file-storage` | 5 | Contratos firmados, materiales del briefing, zona de documentos |
+| `legal-consent` | MVP | Páginas legales del portal y consentimiento si hay analítica |
+| `backups` | MVP | Base **y Storage** (contratos firmados) |
+| `whats-new` | 6 | Anunciar a los clientes los apartados nuevos (`CLAUDE.md` §8) |
+
 ## Módulos de negocio del producto
 
-_Los define cada producto._ Ejemplo de formato:
+Secciones propias de Excelsior. Detalle de cada una en [PLAN.md](PLAN.md).
 
-| Módulo | Estado | Notas |
-|---|---|---|
-| — | — | — |
+| Módulo | Fase | Estado | Notas |
+|---|---|---|---|
+| Organizaciones y usuarios | 1 | ⬜ | Empresa cliente, miembros, staff |
+| Invitaciones | 1–2 | ⬜ | Enlace de un solo uso, con servicio preseleccionado desde la Fase 2 |
+| Panel de administración | 2 | ⬜ | `/admin`: clientes, embudo de onboarding, ver como cliente |
+| Catálogo de servicios | 2 | ⬜ | Precios, modalidades, plantillas de contrato y briefing; versionado |
+| Contrataciones | 2–4 | ⬜ | Servicio contratado por un cliente y su estado |
+| Asistente de onboarding | 3 | ⬜ | Motor de pasos reutilizable (también para propuestas) |
+| Contratos y firma | 3 | ⬜ | Plantillas versionadas, PDF, firma con evidencias ([ARCHITECTURE.md](ARCHITECTURE.md) §17) |
+| Pagos y facturas | 4 | ⬜ | Stripe; después ANTARES (Fase 8) |
+| Proyectos y briefing | 5 | ⬜ | Checklist de materiales por servicio, datos legales |
+| Documentos | 5 | ⬜ | Zona tipo Drive por proyecto |
+| Propuestas y presupuestos | 6 | ⬜ | Aceptar → firmar → pagar |
+| Planes y mejoras | 6 | ⬜ | Suscripciones, cambio de plan |
+| Notificaciones | 6 | ⬜ | En el portal y por email |
+| Tickets | 7 | ⬜ | Soporte con SLA por plan |
+| Integración ANTARES | 8 | ⬜ | Emisión de facturas certificadas |

@@ -50,6 +50,19 @@ explica, para que el documento no se quede atrás.
 | `@sentry/nextjs` | Errores (solo se carga con DSN) |
 | `@vercel/speed-insights` | Web Vitals |
 
+### Previstas en Excelsior
+
+> **Previsto.** No están instaladas. Cada una entra en la tabla de arriba (un test lo
+> exige) cuando su fase la instale, con su motivo real.
+
+| Dependencia candidata | Fase | Para qué |
+|---|---|---|
+| `stripe` (servidor) · `@stripe/stripe-js`, `@stripe/react-stripe-js` (cliente, carga diferida) | 4 | Pagos, webhooks, Payment Element embebido |
+| `resend` · `react-email` | 1 | Emails transaccionales con la marca |
+| `@react-pdf/renderer` o `pdf-lib` | 3 | PDF del contrato en servidor y hoja de evidencias (elegir al empezar la fase) |
+| Un componente de firma dibujada (p. ej. `signature_pad`) | 3 | Firma en el navegador, también táctil |
+| `server-only` | 1 | Que un import de código con secretos desde el cliente rompa el build |
+
 Todo lo demás es de desarrollo. `@vitejs/plugin-react` no hace falta: Vite transforma el
 JSX de los tests por su cuenta (se comprobó al quitarlo).
 

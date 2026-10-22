@@ -4,6 +4,10 @@ El core trae la autenticación **mínima** que necesita cualquier producto: sesi
 con email y contraseña, callback, logout y protección de rutas. Registro, OAuth, 2FA,
 recuperación de contraseña y onboarding son el módulo `auth-advanced`.
 
+> **Excelsior** sustituye el «registro público» por **alta solo por invitación**, con
+> email + contraseña o Google. Lo que hay hoy es el core; lo previsto está al final, en
+> [«Previsto en Excelsior»](#previsto-en-excelsior) ([PLAN.md](PLAN.md) → Fase 1).
+
 ## Flujo
 
 ```text
@@ -89,3 +93,56 @@ en `public.profiles` con el `display_name` de sus metadatos
 - E2E: [`e2e/specs/auth.spec.ts`](../e2e/specs/auth.spec.ts) — pública 200, protegida 307
   al login con el destino, login correcto e incorrecto, logout, y que `?redirect=` no saca
   del sitio.
+
+## Previsto en Excelsior
+
+> **Previsto (Fase 1).** Nada de esto existe todavía. Al implementarlo, esta sección pasa
+> a describir el estado real y las de arriba se actualizan.
+
+### Alta solo por invitación
+
+```text
+Staff R3ZON ──► crea invitación (email, organización, [servicio])
+                  └─ token aleatorio; en la base solo su hash, con caducidad y un solo uso
+                        │
+Invitado ──► /invitacion/<token> (pública)
+               ├─ token inválido, caducado, revocado o usado ──► mensaje, sin formulario
+               └─ válido ──► «Crear cuenta con email y contraseña»  ó  «Continuar con Google»
+                                └─ cuenta creada ──► miembro de la organización ──► onboarding
+```
+
+- **No existe registro sin invitación**, ni en la interfaz ni en el servidor. El bloqueo
+  real está en Supabase Auth (*before user created hook* o `signups` deshabilitados +
+  alta en servidor), porque con OAuth cualquiera puede intentar crear usuario desde
+  Google sin pasar por nuestras páginas. Un E2E lo intenta.
+- El email de la cuenta debe coincidir con el de la invitación (decisión D-02 de
+  [PLAN.md](PLAN.md)).
+- Aceptar la invitación es atómico: crea la pertenencia a la organización, marca la
+  invitación como usada y registra el evento en el audit log.
+
+### Login, Google y contraseñas
+
+- `/login`: email + contraseña y «Continuar con Google». Sin enlace de registro.
+- **Google** (OAuth de Supabase): un usuario existente puede vincular su cuenta de Google
+  desde «Mi cuenta». Si alguien entra con Google con un email sin cuenta ni invitación,
+  se rechaza con un mensaje que no revela si el email es cliente.
+- **Recuperación de contraseña**: `/recuperar` envía el enlace (mismo mensaje exista o no
+  el email) → `/auth/callback?type=recovery` (el callback ya lo acepta) → página de nueva
+  contraseña.
+- **Cambio de contraseña** en «Mi cuenta», pidiendo la actual. Opción de cerrar las demás
+  sesiones.
+- **2FA (TOTP)** obligatorio para el staff, opcional para clientes.
+- Emails de Auth con la marca de R3ZON, enviados por Resend como SMTP de Supabase.
+
+### Rutas públicas que se añadirán
+
+`/invitacion/[token]`, `/recuperar` y las páginas legales bajo `/legal` (el prefijo ya es
+público). Cada una con su caso en `tests/unit/public-paths.test.ts` y comprobación con
+`curl` sin cookie.
+
+### Zonas con sesión
+
+- `(app)/…` para usuarios de cliente.
+- `(app)/admin/…` solo staff: el proxy y el layout redirigen a quien no lo sea, y la RLS
+  es la barrera real ([ARCHITECTURE.md](ARCHITECTURE.md) §16).
+- Un usuario con el onboarding a medias entra al paso pendiente en vez de a `homePath`.

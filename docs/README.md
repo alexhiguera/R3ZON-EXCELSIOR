@@ -1,9 +1,16 @@
-# Documentación interna
+# Documentación interna — Excelsior
 
-Documentación para quien desarrolla y mantiene el proyecto. La documentación para los
-usuarios del producto está en [`public_docs/`](../public_docs/README.md).
+Documentación para quien desarrolla y mantiene **Excelsior**, el área de clientes de
+R3ZON (`clientes.r3zon.com`). La documentación para los usuarios del producto está en
+[`public_docs/`](../public_docs/README.md).
 
 ## Índice
+
+### Producto
+- [PRODUCTO.md](PRODUCTO.md) — qué es Excelsior, para quién, el flujo de invitación →
+  contrato → pago → briefing, glosario y fuera de alcance.
+- [PLAN.md](PLAN.md) — plan de desarrollo por fases, hito MVP, decisiones tomadas y
+  abiertas, riesgos.
 
 ### Empezar
 - [TEMPLATE.md](TEMPLATE.md) — versión de la plantilla, crear un proyecto, qué hacer con
@@ -28,11 +35,7 @@ usuarios del producto está en [`public_docs/`](../public_docs/README.md).
 ### Seguimiento
 - [CHANGELOG.md](CHANGELOG.md) — bitácora de iteraciones, con el porqué.
 - [TAREAS_PENDIENTES.md](TAREAS_PENDIENTES.md) — solo tareas abiertas, priorizadas.
-- [mejoras.md](mejoras.md) — propuestas con lo que las desbloquea.
-
-### Solo en el repositorio de la plantilla
-- `auditoria-template-final.md` — auditoría y cierre de la v1.0 de la plantilla. Un
-  proyecto derivado lo borra ([TEMPLATE.md](TEMPLATE.md)); por eso nada lo enlaza.
+- [mejoras.md](mejoras.md) — propuestas e ideas de producto, con lo que las desbloquea.
 
 ## Cómo contribuir a estos documentos
 
@@ -47,10 +50,13 @@ usuarios del producto está en [`public_docs/`](../public_docs/README.md).
 ## Para LLMs / agentes
 
 1. Lee [`CLAUDE.md`](../CLAUDE.md) entero: son las reglas de trabajo.
-2. Después [ARCHITECTURE.md](ARCHITECTURE.md) y [STRUCTURE.md](STRUCTURE.md) para
-   orientarte.
-3. Antes de tocar la base: [DATABASE.md](DATABASE.md). Antes de tocar rutas o sesión:
+2. Después [PRODUCTO.md](PRODUCTO.md) (el qué) y [PLAN.md](PLAN.md) (en qué fase
+   estamos y qué está decidido).
+3. Después [ARCHITECTURE.md](ARCHITECTURE.md) y [STRUCTURE.md](STRUCTURE.md) para
+   orientarte. Lo marcado como **previsto** describe el plan, no el código: compruébalo
+   antes de darlo por hecho.
+4. Antes de tocar la base: [DATABASE.md](DATABASE.md). Antes de tocar rutas o sesión:
    [AUTH.md](AUTH.md). Antes de tocar `public_docs/`: su
    [README](../public_docs/README.md).
-4. El estado real del proyecto está en [TAREAS_PENDIENTES.md](TAREAS_PENDIENTES.md)
+5. El estado real del proyecto está en [TAREAS_PENDIENTES.md](TAREAS_PENDIENTES.md)
    («Estado hoy») y en las últimas entradas de [CHANGELOG.md](CHANGELOG.md).

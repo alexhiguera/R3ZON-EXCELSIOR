@@ -4,48 +4,52 @@ Solo tareas **abiertas**. Al cerrar una, se borra la línea y se cuenta en
 [CHANGELOG.md](CHANGELOG.md). Lo que no es una tarea (reglas, costumbres) va a
 [`CLAUDE.md`](../CLAUDE.md). Convención completa: `CLAUDE.md` §7.
 
+Las fases y su orden están en [PLAN.md](PLAN.md). Aquí solo entran las tareas de la fase
+en curso (y lo que surja); cuando arranca una fase, sus entregables bajan aquí.
+
 `[ ]` pendiente · `[~]` en curso · 🔴 alta · 🟠 media-alta · 🟡 media · 🟢 baja
 
-> Estas son las tareas **de la plantilla**. Un proyecto derivado vacía este fichero y
-> empieza con las de «Al crear un proyecto» ([TEMPLATE.md](TEMPLATE.md)).
-
-## Estado hoy — *2026-09-26*
+## Estado hoy — *2026-10-22*
 
 | Comprobación | Resultado |
 |---|---|
-| `npm run lint` · `typecheck` | ✅ |
-| `npm run test` (con `CI=true`) | ✅ 96 tests en 12 ficheros (78 sin BD + 18 contra Postgres) |
-| `npm run test:e2e` | ✅ 8 tests |
-| `npm run build` | ✅ también sin `.env.local` |
-| `npm run db:drift` · `db:types:check` | ✅ |
-| `npm run docs:validar` · `docs:enlaces` | ✅ |
-| `npm audit` | ✅ 0 vulnerabilidades (2 overrides vigentes) |
-| Proyecto derivado simulado (personalizado según `TEMPLATE.md`) | ✅ todo en verde; las comprobaciones de identidad y derivación saltan cuando deben |
-| Migraciones | 1 (`core_profiles`), solo en local |
-| Versión | `r3zon-template.json` 1.0.0, **sin etiquetar** |
+| Código | El de la plantilla v1.0.0, sin personalizar |
+| Documentación | Adaptada a Excelsior; plan por fases en [PLAN.md](PLAN.md) |
+| Migraciones | 1 (`core_profiles`, de la plantilla), solo en local |
+| Producción | No existe. Sin clientes reales |
+| Fase en curso | **Fase 0** — adaptar el repositorio y cimientos |
 
-## Plantilla
+## Fase 0 — Adaptar el repositorio y cimientos
 
-- [ ] 🔴 **Primera ejecución de los workflows en GitHub, y después el tag `v1.0.0`.**
-  `ci.yml`, `e2e.yml` y `security.yml` se han reproducido paso a paso en local, pero no
-  han corrido nunca en un runner. Al verlos en verde:
-  - comprobar si `actions/checkout`, `setup-node` y `upload-artifact` tienen una versión
-    mayor más nueva que `v4` y si GitHub avisa de retirada de su runtime;
-  - etiquetar `v1.0.0`;
-  - quitar «pendiente de etiquetar» en `TEMPLATE.md` → Versiones.
+- [ ] 🔴 Cerrar las decisiones que bloquean las fases 0–1 ([PLAN.md](PLAN.md) →
+  Decisiones abiertas): D-01 nombre visible, D-02 invitación atada al email, D-03 roles
+  del staff, D-09 usuario en varias empresas.
+- [ ] 🔴 Personalizar identidad, puertos (rango propio, no 5532x), `_meta/` y
+  `public_docs/index.md` ([TEMPLATE.md](TEMPLATE.md) → Crear un proyecto). `docs:validar`
+  y los tests fallan mientras falte algo.
+- [ ] 🔴 Rellenar lo que falta de los invariantes de `CLAUDE.md` §0 (entornos reales) y
+  reescribir `README.md` para el producto.
+- [ ] 🔴 Extraer el sistema visual de r3zon.com (colores, tipografías, radios, sombras,
+  modo oscuro) a `src/app/globals.css` y el icono a `src/app/icon.svg`.
+- [ ] 🟠 Esqueleto de la interfaz responsive: layout con navegación (lateral en
+  escritorio, inferior o cajón en móvil) y componentes base que faltan (Card, Badge,
+  Tabs, Dialog, Toast, Stepper, Dropzone), con jest-axe.
+- [ ] 🟠 Dar de alta los servicios: Supabase Cloud (UE), Vercel con
+  `clientes.r3zon.com`, Sentry, Stripe (modo test), Resend (dominio verificado), Google
+  Cloud (OAuth).
+- [ ] 🟠 Primera ejecución de los workflows de CI en GitHub.
+- [ ] 🟠 Pedir ya a la asesoría lo que bloquea el Hito V, porque tarda: validación de la
+  firma propia (D-10), validación fiscal de Stripe Invoicing (D-11), textos de contrato
+  y DPA (D-05) y plazos de retención (D-13) ([PLAN.md](PLAN.md) → Decisiones abiertas).
 
-## Al crear un proyecto desde la plantilla
+## Heredadas de la plantilla (antes del hito MVP)
 
-Estas no se cierran en la plantilla: pasan al `TAREAS_PENDIENTES.md` del proyecto nuevo.
-
-- [ ] 🔴 Personalizar identidad, puertos, `_meta/` y documentos
-  ([TEMPLATE.md](TEMPLATE.md) → Crear un proyecto). `docs:validar` y los tests fallan
-  mientras falte algo.
-- [ ] 🔴 Rellenar los invariantes de `CLAUDE.md` §0.
-- [ ] 🔴 Decidir backups según el plan de Supabase antes de tener datos reales
-  ([RESTAURACION.md](RESTAURACION.md)).
+- [ ] 🔴 Decidir backups según el plan de Supabase antes de tener datos reales, **incluido
+  Storage** ([RESTAURACION.md](RESTAURACION.md), decisión D-07 de [PLAN.md](PLAN.md)).
 - [ ] 🟠 Decidir si Speed Insights va detrás de consentimiento según la política de
-  privacidad del producto ([STACK.md](STACK.md)).
-- [ ] 🟠 Definir la CSP con la lista de terceros del producto ([mejoras.md](mejoras.md)).
-- [ ] 🟠 Si se publica la documentación, dar de alta el producto en
+  privacidad ([STACK.md](STACK.md)).
+- [ ] 🟠 Definir la CSP con la lista de terceros: Supabase, Stripe, Sentry, Google, Vercel
+  ([mejoras.md](mejoras.md)).
+- [ ] 🟢 Decidir si `public_docs/` se publica en el Docusaurus (ayuda para clientes) o se
+  queda como manual interno; si se publica, dar de alta el producto en
   `R3ZON-Docusaurus/config/products.ts`.

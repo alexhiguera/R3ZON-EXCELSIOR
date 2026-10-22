@@ -37,6 +37,51 @@ Motivo: meterlas en un solo enum obliga a crear combinaciones que no tienen sent
 - Los límites de plan se aplican también por trigger, con un test que intenta superarlos
   saltándose la interfaz.
 
+## Modelo previsto en Excelsior
+
+> **Previsto (Fase 1).** Hoy solo existe lo de «Estado en el core». Al implementarse, esta
+> sección pasa a ser la matriz real y se prueba en `tests/db/`.
+
+### Dimensión 1 — Nivel de plataforma
+
+| Nivel | Quién | Qué ve |
+|---|---|---|
+| `admin` | Staff de R3ZON con gestión total | Todo, incluidos precios internos, catálogo, plantillas de contrato y usuarios del staff |
+| `staff` | Resto del equipo de R3ZON | Todos los clientes, proyectos, contratos, pagos y tickets; no gestiona staff ni catálogo |
+| `client` | Usuario de una empresa cliente | Solo sus organizaciones |
+
+La división `admin` / `staff` está pendiente de confirmar (decisión D-03 de
+[PLAN.md](PLAN.md)). El nivel **no lo puede cambiar el propio usuario**: columna sin
+grant de `UPDATE` para `authenticated` y cambios registrados en el audit log.
+
+### Dimensión 2 — Rol dentro de la empresa cliente
+
+| Rol | Pensado para | Puede |
+|---|---|---|
+| `owner` | Gerente / firmante | Todo lo de su empresa: firmar contratos, aceptar propuestas, pagar, gestionar usuarios de su empresa |
+| `member` | Marketing, técnico | Ver servicios y proyectos, aportar briefing y documentos, abrir tickets |
+| `billing` | Administración | Ver contratos y facturas, pagar, editar datos fiscales |
+
+El primer usuario de un cliente (el que acepta la invitación inicial) es `owner`. Un
+usuario puede pertenecer a varias empresas si se confirma la decisión D-09.
+
+Matriz inicial de **recurso × acción** (se completa al implementar cada fase):
+
+| Recurso | `owner` | `member` | `billing` | staff |
+|---|---|---|---|---|
+| Datos fiscales de la empresa | leer, editar | leer | leer, editar | todo |
+| Usuarios de la empresa | invitar, cambiar rol, quitar | leer | leer | todo |
+| Contratos | leer, **firmar** | leer | leer | crear, enviar, leer |
+| Propuestas | leer, **aceptar** / rechazar | leer | leer | crear, enviar |
+| Pagos y facturas | leer, pagar | — | leer, pagar | leer, marcar entrega |
+| Briefing y documentos | todo | todo | leer | todo |
+| Tickets | abrir, responder | abrir, responder | abrir, responder | todo + notas internas |
+
+### Dimensión 3 — Plan
+
+Los planes de mantenimiento u otros servicios recurrentes (Fase 6) dan **límites y
+niveles de servicio** (p. ej. SLA de tickets, horas incluidas), **nunca permisos**.
+
 ## Módulos
 
 - `multi-tenancy` — organizaciones y pertenencia (base para la dimensión 2).

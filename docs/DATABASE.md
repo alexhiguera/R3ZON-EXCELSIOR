@@ -134,3 +134,46 @@ ejecutarse contra la base de otro proyecto.
   descritos en [mejoras.md](mejoras.md) y en el módulo `backups`.
 - Secretos por tenant o tokens de terceros, si llegan: cifrados en Postgres (pgcrypto,
   clave maestra en Vault), no en Node.
+
+## Modelo de datos previsto en Excelsior
+
+> **Previsto.** Ninguna de estas tablas existe todavía. Es el mapa para que las
+> migraciones de cada fase encajen entre sí; los nombres y columnas definitivos los
+> decide cada migración, y esta sección se actualiza al aplicarla.
+
+```text
+auth.users ─1:1─ profiles (+ nivel de plataforma: admin | staff | client)
+                    │
+                    └─N:M─ organization_members (rol: owner | member | billing) ─── organizations (cliente)
+                                                                                       │
+          invitations (token_hash, email, organization, service?, expires_at, used_at)─┤
+                                                                                       ├─ organization_billing (razón social, NIF, dirección, firmante)
+services ─< service_versions (precio, IVA, modalidades, plantilla de contrato y briefing)
+                    │                                                                  │
+                    └──────────────< engagements (contratación: estado, precio, modalidad) ─┘
+                                         │
+             ┌───────────────────────────┼──────────────────────────────┐
+         contracts                   payments / invoices            projects
+   (plantilla+versión, PDF,         (Stripe ids, estado,          (fase, fechas)
+    hash, evidencias, firmado)       ref. factura emisor)              │
+                                                         ┌─────────────┼──────────────┐
+                                                  briefing_items    documents      tickets ─< ticket_messages
+                                                  (tipo, valor,     (Storage)       (+ notas internas)
+                                                   estado)
+proposals ─< proposal_items  ──(aceptada)──► engagements
+audit_log (quién, qué, cuándo, sobre qué organización)
+```
+
+| Fase | Tablas | Reglas que van en triggers (no en la app) |
+|---|---|---|
+| 1 | `organizations`, `organization_members`, `invitations`, `audit_log`; nivel de plataforma en `profiles` | Un usuario no cambia su propio nivel ni su rol; al menos un `owner` por organización; invitación de un solo uso |
+| 2 | `services`, `service_versions`, `engagements`, historial de estados | Una contratación apunta a una **versión** del servicio: cambiar el catálogo no altera lo contratado. Solo las transiciones de estado permitidas ([ARCHITECTURE.md](ARCHITECTURE.md) §20) |
+| 3 | `organization_billing`, `contract_templates`, `contracts`, `contract_signatures`, `onboarding_progress` | Contrato firmado inmutable (sin `UPDATE` ni `DELETE`); solo un `owner` firma |
+| 4 | `payments`, `refunds`, `invoices` (incluidas rectificativas), `stripe_events` | `stripe_events` deduplica webhooks por id; el estado «pagado» solo lo escribe el webhook; un evento antiguo no hace retroceder un estado |
+| 5 | `projects`, `briefing_templates`, `briefing_items`, `documents` (+ policies de `storage.objects`) | Ruta del fichero con la organización; límites de tamaño; un fichero en cuarentena no es descargable |
+| 6 | `proposals`, `proposal_items`, `subscriptions`, `notifications` | Propuesta aceptada no se edita; caducidad |
+| 7 | `tickets`, `ticket_messages` | Notas internas invisibles para el cliente |
+
+Toda tabla de negocio lleva `organization_id` rellenado por trigger a partir de su padre
+(proyecto, contratación…), nunca por el cliente ([ARCHITECTURE.md](ARCHITECTURE.md) §5 y
+§15).

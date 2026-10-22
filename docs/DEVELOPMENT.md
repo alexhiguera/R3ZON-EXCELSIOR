@@ -128,6 +128,18 @@ localmente (o en la configuración de usuario de Claude Code):
 Contra producción, siempre `read_only=true`. Ningún script, test ni despliegue depende de
 MCP.
 
+## Previsto en Excelsior
+
+- **Stripe en local** (Fase 4): Stripe CLI para reenviar webhooks al servidor local
+  (`stripe listen --forward-to localhost:3000/api/stripe/webhook`), con claves de modo
+  test. Nunca claves live en `.env.local`.
+- **Google OAuth en local** (Fase 1): proveedor configurado en `supabase/config.toml`
+  (`[auth.external.google]`) leyendo el secreto de una variable de entorno, nunca escrito
+  en el fichero.
+- **Emails en local**: siguen yendo a Mailpit; Resend solo en los entornos desplegados.
+- **Probar en móvil**: `npm run dev -- --hostname 0.0.0.0` y abrir la IP de la máquina
+  desde el teléfono en la misma red (en WSL puede requerir reenviar el puerto).
+
 ## Problemas frecuentes
 
 - **«El Supabase local no está levantado»** — `npm run db:start`.

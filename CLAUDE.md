@@ -1,21 +1,32 @@
 # Instrucciones para Claude
 
-Este repositorio nace de la **plantilla de proyectos SaaS de R3ZON**. Aquí están las
+Este repositorio (**Excelsior**, el área de clientes de R3ZON) nace de la **plantilla de
+proyectos SaaS de R3ZON**. Aquí están las
 reglas que cambian cómo se trabaja; el resto está en [`docs/`](docs/README.md). Cada
 regla lleva su motivo: una norma sin motivo se salta en cuanto estorba.
 
 ## 0. Invariantes del proyecto
 
-> **Rellenar al crear el proyecto** y mantener al día. Son los hechos que cambian cómo
-> se interpreta cualquier medición o tarea.
+> Mantener al día. Son los hechos que cambian cómo se interpreta cualquier medición o
+> tarea.
 
-- **Producto:** ver [`src/config/project.ts`](src/config/project.ts).
-- **Entornos:** local (Supabase en Docker) · producción (Vercel + Supabase Cloud).
-  _Añadir staging si existe._
-- **Datos de producción:** _¿hay clientes reales o solo cuentas de prueba? ¿desde
-  cuándo?_
-- **Alcance:** _plataformas y módulos dentro y fuera de alcance, y quién puede reabrir
-  lo que está fuera._
+- **Producto:** **Excelsior** (nombre interno), el área de clientes de R3ZON en
+  `clientes.r3zon.com`: invitación → contrato → pago → briefing, y después servicios,
+  propuestas, documentos y tickets. Qué y por qué: [`docs/PRODUCTO.md`](docs/PRODUCTO.md).
+  Identidad en código: [`src/config/project.ts`](src/config/project.ts) (**aún con los
+  valores de la plantilla**: se personaliza en la Fase 0).
+- **Plan y fase en curso:** [`docs/PLAN.md`](docs/PLAN.md). Hoy: **Fase 0**. Las
+  decisiones tomadas (T-xx) no se reabren sin preguntar; las abiertas (D-xx) se preguntan
+  antes de implementar lo que bloquean.
+- **Entornos:** local (Supabase en Docker) · producción (Vercel + Supabase Cloud),
+  **todavía sin crear**.
+- **Datos de producción:** ninguno. No hay clientes reales (2026-10-22).
+- **Alcance:** solo web responsive (móvil, tablet, escritorio) con la estética de
+  r3zon.com; solo español; solo Stripe como pasarela. Fuera de alcance y quién puede
+  reabrirlo: [`docs/PRODUCTO.md`](docs/PRODUCTO.md) §8 — lo reabre R3ZON, nunca una tarea.
+- **Seguridad del producto:** sin registro público; los clientes nunca ven datos de otro
+  cliente; el staff ve todo por permiso, no saltándose la RLS
+  ([`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) §16).
 - **Módulos instalados:** ver [`docs/MODULES.md`](docs/MODULES.md).
 
 ## Comandos

@@ -67,6 +67,42 @@
 | Cambio de esquema | migración nueva en `supabase/migrations/` | Nunca en otro sitio |
 | Herramienta de operación | `scripts/*.mjs` (lógica testeable en `scripts/lib/`) | |
 
+## Rutas previstas en Excelsior
+
+> **Previsto.** Mapa de rutas del plan ([PLAN.md](PLAN.md)); hoy solo existen las de la
+> plantilla. Los nombres visibles van en español (convención de abajo).
+
+```text
+src/app/
+├── (auth)/login/                 email + contraseña y «Continuar con Google»     Fase 1
+├── (auth)/recuperar/             recuperación de contraseña (pública)            Fase 1
+├── invitacion/[token]/           aceptar invitación y crear cuenta (pública)     Fase 1
+├── legal/…                       aviso legal, privacidad, cookies (públicas)     MVP
+├── api/stripe/webhook/           webhook de Stripe (firma verificada)            Fase 4
+└── (app)/
+    ├── inicio/                   pendientes y actividad del cliente              Fase 6 (mínimo antes)
+    ├── bienvenida/[contratacion]/  asistente: bienvenida → datos → contrato →
+    │                             firma → pago → enhorabuena                      Fases 3–4
+    ├── servicios/                servicios contratados y mejorar plan            Fase 6
+    ├── proyectos/[id]/           fases, briefing y documentos                    Fase 5
+    ├── contratos/                firmados y pendientes                           Fase 3
+    ├── propuestas/               presupuestos: ver, aceptar, rechazar            Fase 6
+    ├── facturas/                 facturas y pagos pendientes                     Fase 4
+    ├── soporte/                  tickets                                         Fase 7
+    ├── empresa/                  datos fiscales y usuarios de la empresa         Fases 3 y 6
+    ├── cuenta/                   perfil, contraseña, Google, 2FA                 Fase 1
+    └── admin/                    SOLO STAFF                                      Fase 2
+        ├── clientes/             listado, alta, ficha, ver como cliente
+        ├── invitaciones/         generar con servicio, reenviar, revocar
+        ├── servicios/            catálogo y versiones
+        ├── contratos/            plantillas y estado de firma
+        ├── pagos/                cobros pendientes, marcar entrega
+        └── soporte/              bandeja de tickets
+```
+
+Lógica de dominio en `src/lib/<seccion>/` y componentes en `src/components/<seccion>/`,
+uno por apartado ([ARCHITECTURE.md](ARCHITECTURE.md) §15).
+
 ## Convención de nombres
 
 - **Infraestructura técnica en inglés**: `proxy.ts`, `safe-redirect.ts`, `useMediaQuery`.

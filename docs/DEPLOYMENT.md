@@ -86,6 +86,27 @@ Si el producto publica su documentación, darlo de alta en
 de la rama indicada en cada build. Una app interna no se da de alta
 ([TEMPLATE.md](TEMPLATE.md) → Documentación al derivar).
 
+## 6. Servicios propios de Excelsior
+
+> **Previsto.** Se dan de alta en la Fase 0 en modo de pruebas y pasan a producción en el
+> hito MVP ([PLAN.md](PLAN.md)). Cada variable nueva sigue
+> [DEVELOPMENT.md](DEVELOPMENT.md) → «Añadir una variable de entorno» y se añade a la
+> tabla del paso 2 al implementarse.
+
+| Servicio | Qué configurar | Variables previstas |
+|---|---|---|
+| **Dominio** | `clientes.r3zon.com` en Vercel (CNAME en el DNS de r3zon.com); `project.domain` igual | — |
+| **Supabase Auth** | *Site URL* `https://clientes.r3zon.com`; registro público **desactivado** o bloqueado por hook ([AUTH.md](AUTH.md) → Previsto); proveedor Google; SMTP de Resend; plantillas de email con la marca | — |
+| **Supabase Storage** | Buckets privados (contratos, documentos) con límites de tamaño y tipo; plan con backups (decisión D-07) | — |
+| **Google Cloud** | Proyecto OAuth, pantalla de consentimiento con la marca de R3ZON (verificada), URI de redirección de Supabase | En Supabase, no en Vercel |
+| **Stripe** | Cuenta de R3ZON, métodos (transferencia, SEPA, tarjeta), Stripe Tax o tipos de IVA, Invoicing, endpoint de webhook `https://clientes.r3zon.com/api/stripe/webhook` | `STRIPE_SECRET_KEY` (secreta), `STRIPE_WEBHOOK_SECRET` (secreta), `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` |
+| **Resend** | Dominio de envío de r3zon.com con SPF, DKIM y DMARC | `RESEND_API_KEY` (secreta) |
+| **Vercel Cron** | Recordatorios de briefing y de pagos (Fase 5) | `CRON_SECRET` (secreta) |
+
+En la verificación sin cookie (paso 4) se añaden `/invitacion/<token-falso>` → 200 con
+el mensaje de enlace no válido, `/admin` → 307 al login, y `POST /api/stripe/webhook`
+sin firma → 400.
+
 ## ¿Qué hago cuando algo falla en producción?
 
 Por orden, de lo más rápido a lo más profundo:

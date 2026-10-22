@@ -13,6 +13,16 @@ de Supabase Cloud del proyecto:
 Decidirlo es una tarea del proyecto antes de salir a producción
 ([TAREAS_PENDIENTES.md](TAREAS_PENDIENTES.md) la lleva ya).
 
+### En Excelsior
+
+Excelsior guardará **contratos firmados** (evidencia legal) y el **material de los
+clientes** en Storage, además de datos de facturación en la base. Perder cualquiera de
+ellos no es recuperable pidiéndoselo otra vez al cliente. Por eso:
+
+- Plan de Supabase con backups (Pro) **antes del hito MVP** (decisión D-07 de
+  [PLAN.md](PLAN.md)), y aun así el módulo `backups` para **Storage**.
+- Simulacro de restauración hecho y anotado en la bitácora antes del primer cliente real.
+
 ## Qué debe cubrir un backup
 
 1. **Esquema y datos**, incluido `auth.users` (sin él, los perfiles quedan huérfanos).

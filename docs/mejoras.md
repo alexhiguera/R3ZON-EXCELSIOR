@@ -1,108 +1,155 @@
 # Mejoras propuestas
 
 Propuestas que **no son tareas todavía**: cada una dice qué la desbloquea. Cuando se
-cumple el desbloqueo, pasa a [TAREAS_PENDIENTES.md](TAREAS_PENDIENTES.md).
+cumple el desbloqueo, pasa a [TAREAS_PENDIENTES.md](TAREAS_PENDIENTES.md) (o a una fase
+de [PLAN.md](PLAN.md) si es grande). Las mejoras del core se siguen en el repositorio de
+la plantilla; aquí solo las de Excelsior.
 
 ---
 
+## Técnicas
+
 ### Content-Security-Policy
 
-Una CSP estricta con nonces para scripts. **No está en la plantilla** porque sus
-`connect-src`, `img-src` y `script-src` dependen de los terceros de cada producto
-(Supabase, Sentry, Stripe, Vercel…), y una CSP genérica o es tan abierta que no sirve o
-rompe algo.
+Una CSP estricta con nonces para scripts. Terceros conocidos de Excelsior: Supabase (API
+y Storage), Stripe (`js.stripe.com`, iframes del Payment Element), Google (OAuth), Sentry
+y Vercel (Speed Insights).
 
-Cuidado conocido: si la CSP se deriva de `NODE_ENV`, `next start` contra un Supabase
-local la aplica como producción y bloquea las llamadas al stack local; el login falla sin
-ningún error visible. Hay que derivarla del destino real (`NEXT_PUBLIC_SUPABASE_URL`).
+Cuidado heredado de la plantilla: si la CSP se deriva de `NODE_ENV`, `next start` contra
+un Supabase local la aplica como producción y bloquea las llamadas al stack local; el
+login falla sin ningún error visible. Hay que derivarla del destino real
+(`NEXT_PUBLIC_SUPABASE_URL`).
 
-**Desbloqueo:** el primer producto que tenga su lista de terceros cerrada. Se hace allí y
-se trae a la plantilla la parte común.
-
-### Búfer de errores tempranos para Sentry en el navegador
-
-Dos listeners (`error`, `unhandledrejection`) que guarden los errores lanzados antes de
-que termine la carga diferida del SDK y los envíen al cargarse.
-
-**Desbloqueo:** que un producto con usuarios reales vea fallos de arranque que Sentry no
-recoge.
+**Desbloqueo:** la Fase 4 (Stripe es el último tercero del MVP). Obligatoria antes del
+hito MVP.
 
 ### Workflows de producción: migraciones, drift y backups
 
-- **Migraciones**: `workflow_dispatch` en modo dry-run por defecto; aplicar exige escribir
-  una confirmación.
-- **Drift contra producción**: comparar `schema.prisma` con la estructura real, solo
-  lectura.
-- **Backups**: el módulo `backups`.
+Migraciones con `workflow_dispatch` en dry-run por defecto, drift contra producción en
+solo lectura, y el módulo `backups` (que aquí debe cubrir Storage).
 
-No están en el core porque necesitan secretos de producción y decisiones de cada proyecto
-(quién aprueba, retención, plan de Supabase).
+**Desbloqueo:** antes del hito MVP. Lo que se escriba aquí se propone después a la
+plantilla.
 
-**Desbloqueo:** el primer proyecto que salga a producción desde la plantilla. Se escriben
-allí y se traen como módulo o como parte opcional documentada.
+### Sello de tiempo cualificado en las firmas
 
-### `manifest.json` de los módulos y automatización de su instalación
+Añadir a cada contrato firmado un sello de tiempo de una TSA cualificada (RFC 3161), que
+refuerza la fecha de la firma frente a terceros.
 
-**Desbloqueo:** que existan al menos dos o tres módulos implementados y se vea qué datos
-se repiten. Antes, cualquier formato sería inventado.
+**Desbloqueo:** que un cliente o la asesoría lo pidan, o la primera disputa sobre una
+firma.
 
-### Registro de usuarios y recuperación de contraseña
+---
 
-Forman parte de `auth-advanced`; la recuperación se decidió dejar ahí en v1.0
-([`modules/README.md`](../modules/README.md)). **Desbloqueo:** dos productos que la hayan
-implementado; entonces se valora subir al core la parte común.
+## De producto
 
-### Internacionalización
+Ideas que no estaban en la definición inicial. Ordenadas por el valor que creemos que
+aportan frente a su coste.
 
-Módulo `i18n`, ya en el catálogo. **Desbloqueo:** un producto con dos idiomas reales.
-`project.locale` y `public_docs/` ya están preparados (el árbol es el idioma por defecto).
+### Línea de tiempo del proyecto con aprobaciones
 
-### Reevaluar Prisma frente al drift de tipos
+El cliente ve en qué fase está su proyecto (briefing → diseño → desarrollo → revisión →
+lanzamiento) y **aprueba entregables** desde el portal: R3ZON sube el diseño, el cliente
+aprueba o pide cambios con comentarios. Las rondas de revisión cuentan contra las que
+incluye el contrato. Elimina el «¿cómo va lo mío?» y deja rastro de cada aprobación.
 
-Desde v1.0, CI compara `database.types.ts` con las migraciones (`db:types:check`), y eso
-da casi la misma garantía que `db:drift`. Prisma cuesta:
+**Desbloqueo:** Fase 6 (proyectos con fases).
 
-- dos `overrides` y dos entradas de `allowScripts`;
-- el motor que se descarga al instalar;
-- `scripts/prisma-db.mjs` y sus tests.
+### Reunión de arranque en el onboarding
 
-Y su Studio duplica el que ya levanta Supabase en local. Se mantiene congelado en v1.0.
-**Desbloqueo:** el primer proyecto real. Si en él Prisma no aporta nada que no dé el
-check de tipos, se retira en una versión MAJOR.
+Tras el pago, el cliente reserva la llamada de kickoff en la agenda de R3ZON (Google
+Calendar o Cal.com embebido), sin emails de ida y vuelta.
 
-### Mantenimiento de CI
+**Desbloqueo:** Fase 4 cerrada; decidir la herramienta de agenda.
 
-- `supabase start -x studio,realtime,storage-api,imgproxy,…` en CI para acortar el
-  arranque (hoy levanta el stack completo dos veces por PR, en CI y en E2E).
-- Actions fijadas por SHA en vez de por etiqueta, y Dependabot configurado teniendo en
-  cuenta `allowScripts` ([STACK.md](STACK.md)).
-- Notificación a Discord también en `e2e.yml` y `security.yml`.
+### Bóveda de accesos cifrada
 
-**Desbloqueo:** la primera ejecución real en GitHub, que dirá cuánto tarda cada job y qué
-versiones de las actions están vigentes.
+Sitio seguro para que el cliente entregue accesos (hosting, dominio, redes sociales,
+Google Analytics) en vez de mandarlos por email. Cifrado en Postgres (pgcrypto con clave
+en Vault, [DATABASE.md](DATABASE.md) → Producción), visible solo para el staff asignado,
+cada lectura registrada en el audit log.
 
-### Pequeños ajustes de estructura
+**Hasta que exista, el portal no recoge credenciales de ningún modo** (decisión T-07 de
+[PLAN.md](PLAN.md)): ni como campo del briefing ni como documento.
 
-- `src/app/auth/` (route handlers) y `src/app/(auth)/` (páginas) se parecen demasiado a
-  primera vista. Renombrar uno de los dos es un cambio de rutas: se hace con un motivo
-  más, no solo por esto.
-- `engines` admite solo Node 24. Abrirlo a Node 26 cuando sea LTS, junto con `.nvmrc` y
-  CI.
+**Desbloqueo:** Fase 5 cerrada. Es sensible: requiere su propia revisión de seguridad.
 
-### Contrato de `public_docs`: generalizar el Docusaurus
+### Asistente de textos con IA en el briefing
 
-El repo de Docusaurus tiene todavía algunos supuestos de su primer producto. Se
-comprobaron compilando su build real con el `public_docs/` de la plantilla (2026-09-23):
-el build pasa y emite el JSON-LD de las dos páginas, pero el `llms-full.txt` generado:
+A partir de unas pocas respuestas del cliente («a qué os dedicáis, a quién, qué os
+diferencia») se propone un borrador de «Sobre nosotros» y de los textos de servicios, que
+el cliente edita y aprueba. Ataca el elemento del briefing que más se retrasa: los
+textos.
 
-- imprime `Plan mínimo: Free` en cada página y avisa en la cabecera de que «cada guía
-  indica el plan mínimo», aunque el producto no tenga planes;
-- enlaza una «Ficha del producto» en `https://<app>/llms.txt`, que la plantilla no sirve.
+**Desbloqueo:** Fase 5 en producción y datos de qué elementos se quedan sin rellenar.
 
-Además, su validador lleva escritas la lista de módulos y de planes del primer producto
-(no afecta mientras los campos no se usen).
+### Renovaciones y vencimientos
 
-**Desbloqueo:** el segundo producto que se publique. El cambio se hace en
-`R3ZON-Docusaurus` (imprimir el plan solo si existe `plan_minimo`; enlazar el `llms.txt`
-de la app solo si el producto lo declara), no aquí. Alternativa del lado del producto:
-servir un `/llms.txt` propio cuando tenga contenido público que describir.
+Dominios, hosting, certificados y licencias con su fecha de vencimiento; avisos al
+cliente y a R3ZON antes de que caduquen, con renovación y pago desde el portal.
+
+**Desbloqueo:** Fase 6 (servicios recurrentes y suscripciones).
+
+### Informe mensual de mantenimiento
+
+Para los planes de mantenimiento: informe automático (actualizaciones aplicadas, copias
+de seguridad, disponibilidad, incidencias resueltas) que justifica la cuota y facilita la
+mejora de plan.
+
+**Desbloqueo:** Fase 6 y una fuente de datos de monitorización.
+
+### Recordatorios de impago
+
+Avisos escalonados de pagos pendientes (segundo pago de «señal + entrega», cuotas de
+suscripción fallidas) con enlace directo al pago.
+
+**Desbloqueo:** Fase 4 en producción con el primer pago pendiente real.
+
+### PayPal y criptomonedas vía Stripe
+
+Añadir PayPal y pagos en stablecoins **como métodos de Stripe**, sin integraciones
+directas. Depende de que Stripe los ofrezca para la cuenta y el país de R3ZON.
+
+**Desbloqueo:** un cliente que lo pida y disponibilidad confirmada en la cuenta de Stripe.
+
+### Encuesta de satisfacción y reseña
+
+Al lanzar un proyecto o cerrar un ticket: valoración rápida (NPS) y, si es alta,
+invitación a dejar una reseña en Google.
+
+**Desbloqueo:** primeros proyectos entregados por el portal.
+
+### Programa de recomendación
+
+El cliente invita a otra empresa; si contrata, ambos obtienen un descuento. Reutiliza las
+invitaciones y los cupones de Stripe.
+
+**Desbloqueo:** decisión comercial de R3ZON.
+
+### App instalable (PWA)
+
+Manifest e iconos para que el cliente «instale» el portal en el móvil, y notificaciones
+push de tickets y aprobaciones.
+
+**Desbloqueo:** uso real desde móvil medido tras el MVP.
+
+### Base de conocimiento
+
+Respuestas a preguntas frecuentes (cómo cambiar un texto, cómo funciona el
+mantenimiento) junto a «abrir ticket», para resolver antes de abrirlo. Puede salir de
+`public_docs/`.
+
+**Desbloqueo:** Fase 7 y las primeras preguntas repetidas en tickets.
+
+### Exportación y baja de datos (RGPD)
+
+El responsable del cliente descarga todos los datos de su empresa (contratos, facturas,
+documentos) y puede solicitar la baja, con los plazos de conservación legal aplicados.
+
+**Desbloqueo:** antes de tener volumen de clientes; la primera solicitud real.
+
+### Interfaz en inglés
+
+Para clientes extranjeros (módulo `i18n` de la plantilla).
+
+**Desbloqueo:** el primer cliente que no hable español.
