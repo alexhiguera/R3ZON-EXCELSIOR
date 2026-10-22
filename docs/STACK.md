@@ -10,6 +10,7 @@ vigentes, no las de ningún proyecto anterior.
 | Framework | **Next.js 16** (App Router, Turbopack) | RSC, Server Actions y un solo frontend para web (y para escritorio/móvil vía módulos) |
 | Lenguaje | **TypeScript 7** estricto, con `noUncheckedIndexedAccess` | Tipos de la BD generados, nunca escritos a mano |
 | UI | **Tailwind CSS 4** «CSS-first» + **lucide-react** | Tokens en `:root` como tripletes RGB: tema cambiable en runtime y modificadores de opacidad que siguen funcionando |
+| Tipografías | **Inter** y **Sora** con `next/font/google` | Las de r3zon.com. Se descargan en el build y se sirven desde nuestro dominio: el navegador del cliente no llama a Google. El build necesita red |
 | Validación | **Zod 4** | Formularios, variables de entorno y cualquier dato que entra |
 | Datos y auth | **Supabase** (Postgres 17, Auth, RLS) vía `@supabase/ssr` | La RLS es el motor de seguridad |
 | Herramienta de BD | **Prisma 7** (solo CLI) | Introspección, Studio y drift. Nunca Migrate ni Client en la app ([DATABASE.md](DATABASE.md)) |

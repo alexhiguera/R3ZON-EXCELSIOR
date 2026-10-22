@@ -1,37 +1,22 @@
-# R3ZON SaaS Template
+# Excelsior — R3ZON Clientes
 
-Plantilla oficial de proyectos SaaS de **R3ZON**. No es un producto: es el punto de
-partida común para que cada producto nuevo nazca con las mismas tecnologías,
-arquitectura, controles de calidad, documentación y forma de trabajar.
+El **área de clientes de R3ZON**, en [`clientes.r3zon.com`](https://clientes.r3zon.com):
+la parte privada de r3zon.com donde un cliente entra por invitación, firma su contrato,
+paga, aporta los materiales de su proyecto y, después, sigue sus servicios, propuestas,
+documentos y tickets. «Excelsior» es el nombre interno del proyecto.
 
-```text
-R3ZON SaaS Template → proyecto nuevo → definición del producto → módulos necesarios → desarrollo
-```
+- **Qué es y por qué:** [`docs/PRODUCTO.md`](docs/PRODUCTO.md).
+- **Plan por fases y decisiones:** [`docs/PLAN.md`](docs/PLAN.md).
+- **Estado de hoy:** [`docs/TAREAS_PENDIENTES.md`](docs/TAREAS_PENDIENTES.md).
+- **Cómo se trabaja en el repo** (personas y agentes): [`CLAUDE.md`](CLAUDE.md).
+- **Toda la documentación interna:** [`docs/README.md`](docs/README.md).
 
-**Versión:** la de [`r3zon-template.json`](r3zon-template.json). Qué significa, cómo se
-crea un proyecto y cómo se actualiza: [`docs/TEMPLATE.md`](docs/TEMPLATE.md).
+## Stack
 
-Qué trae y por qué: [`docs/README.md`](docs/README.md). Cómo trabajar en el repo (personas
-y agentes): [`CLAUDE.md`](CLAUDE.md).
-
-## Qué incluye
-
-- **App:** Next.js 16 (App Router, `proxy.ts`) · TypeScript estricto · Tailwind CSS 4 ·
-  lucide-react · Zod.
-- **Datos y auth:** Supabase (Postgres 17, Auth, RLS) · migraciones como única fuente
-  del esquema · Prisma solo para introspección y drift · `public.profiles` como única
-  tabla del core.
-- **Auth mínima:** login con email y contraseña, callback, logout, protección de rutas
-  con lista explícita de rutas públicas.
-- **Calidad:** Biome · Vitest + Testing Library + jest-axe · tests de RLS contra
-  Postgres real · Playwright contra el build de producción.
-- **CI:** GitHub Actions (`ci.yml`, `e2e.yml`, `security.yml`).
-- **Observabilidad:** Sentry (apagado sin DSN, sin datos personales) · Vercel Speed
-  Insights.
-- **Documentación:** `docs/` interna · `public_docs/` pública, lista para el Docusaurus
-  de R3ZON.
-- **Módulos opcionales:** catálogo y contrato en [`modules/`](modules/README.md), sin
-  implementar todavía.
+Next.js 16 · TypeScript · Tailwind CSS 4 con la marca de r3zon.com · Supabase (Postgres,
+Auth, RLS, Storage) · Stripe · Vercel. Nace de la plantilla de proyectos SaaS de R3ZON,
+versión en [`r3zon-template.json`](r3zon-template.json); cómo incorporar versiones nuevas
+de la plantilla: [`docs/TEMPLATE.md`](docs/TEMPLATE.md).
 
 ## Arranque rápido
 
@@ -54,35 +39,3 @@ npm run test:e2e                                        # si tocas rutas o auth 
 npm run docs:validar && npm run docs:enlaces            # si tocas documentación o la identidad
 npm run build
 ```
-
----
-
-## Crear un proyecto nuevo desde la plantilla
-
-Procedimiento completo en [`docs/TEMPLATE.md`](docs/TEMPLATE.md). En resumen:
-
-1. **GitHub → *Use this template*** (no un fork). `r3zon-template.json` registra de qué
-   versión nace el proyecto; no se toca.
-2. **Personalizar la identidad** en [`src/config/project.ts`](src/config/project.ts) y en
-   los ficheros que la repiten (`package.json`, `supabase/config.toml` con puertos
-   propios, `public_docs/_meta/`, `public_docs/index.md`). `npm run docs:validar` y los
-   tests fallan mientras no coincidan.
-3. **Documentación al derivar**: vaciar la bitácora, las tareas, `auditoria.md` y
-   `mejoras.md` de la plantilla, y borrar `docs/auditoria-template-final.md`.
-4. **Arrancar** (`npm ci && npm run dev:setup`), dar de alta los servicios
-   ([`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)) y elegir módulos
-   ([`modules/README.md`](modules/README.md)).
-5. **Primer módulo de negocio de punta a punta** (tabla + RLS + UI + tests + E2E +
-   documentación). Es la referencia de todos los demás.
-
-Para incorporar después una versión nueva de la plantilla: [`docs/TEMPLATE.md`](docs/TEMPLATE.md)
-→ «Actualizar un proyecto».
-
----
-
-## Origen
-
-La plantilla destila la experiencia de **R3ZON ANTARES**, el primer producto de R3ZON:
-qué decisiones funcionaron, qué problemas aparecieron y cómo se resolvieron. Las
-decisiones y su origen están en [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). La
-plantilla no depende de ANTARES en nada.

@@ -6,6 +6,7 @@
 ├── r3zon-template.json       versión del core de la plantilla (docs/TEMPLATE.md)
 ├── src/
 │   ├── config/project.ts     ÚNICO punto con la identidad del producto
+│   ├── config/navegacion.ts  secciones de la zona con sesión (añadir apartado = añadir entrada)
 │   ├── proxy.ts              proxy de Next 16: refresco de sesión + gate de rutas
 │   ├── instrumentation.ts    Sentry en servidor/edge (solo con DSN)
 │   ├── instrumentation-client.ts   Sentry en navegador (carga diferida, solo con DSN)
@@ -20,7 +21,9 @@
 │   │   ├── api/health/       comprobación de vida
 │   │   ├── robots.ts · sitemap.ts
 │   │   └── error.tsx · global-error.tsx · not-found.tsx
-│   ├── components/ui/        primitivos accesibles: Button, Field, Input
+│   ├── components/ui/        primitivos accesibles: Button, Field, Input, Card, Badge, Stepper
+│   ├── components/app-shell/ armazón con sesión (AppShell, NavLinks) y de acceso (AuthLayout)
+│   ├── components/brand/     logotipo de R3ZON
 │   └── lib/
 │       ├── supabase/         client.ts (navegador) · server.ts · proxy.ts
 │       ├── public-paths.ts   lista de rutas sin sesión

@@ -11,7 +11,7 @@
     "src/app/ y que `base` coincide con `sitioProducto` de entidad.json."
   ],
   "$version": 1,
-  "base": "https://app.example.com",
+  "base": "https://clientes.r3zon.com",
 
   "modulos": {},
 

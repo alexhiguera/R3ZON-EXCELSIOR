@@ -3,7 +3,8 @@
 #
 # ── Decisiones de la plantilla R3ZON (docs/DATABASE.md) ──────────────────────
 # · `project_id` (= slug de src/config/project.ts) y el RANGO DE PUERTOS se
-#   personalizan por proyecto. El rango 5532x está RESERVADO para la plantilla:
+#   personalizan por proyecto. Excelsior usa 5542x. El rango 5532x está
+#   RESERVADO para la plantilla:
 #   cada producto usa el suyo (p. ej. 5542x, 5552x…) para poder tener varios
 #   stacks locales levantados a la vez sin que los tests de BD hablen con la
 #   base equivocada. tests/unit/project.test.ts falla si un proyecto derivado
@@ -15,12 +16,12 @@
 #   los necesita.
 # · `minimum_password_length = 8`: replicarlo en el panel de Supabase Cloud.
 # ─────────────────────────────────────────────────────────────────────────────
-project_id = "r3zon-template"
+project_id = "excelsior"
 
 [api]
 enabled = true
 # Port to use for the API URL.
-port = 55321
+port = 55421
 # Schemas to expose in your API. Tables, views and stored procedures in this schema will get API
 # endpoints. `public` and `graphql_public` schemas are included by default.
 schemas = ["public", "graphql_public"]
@@ -46,9 +47,9 @@ enabled = false
 
 [db]
 # Port to use for the local database URL.
-port = 55322
+port = 55422
 # Port used by db diff command to initialize the shadow database.
-shadow_port = 55320
+shadow_port = 55420
 # Maximum amount of time to wait for health check when starting the local database.
 health_timeout = "2m"
 # The database major version to use. This has to be the same as your remote database's. Run `SHOW
@@ -58,7 +59,7 @@ major_version = 17
 [db.pooler]
 enabled = false
 # Port to use for the local connection pooler.
-port = 55329
+port = 55429
 # Specifies when a server connection can be reused by other clients.
 # Configure one of the supported pooler modes: `transaction`, `session`.
 pool_mode = "transaction"
@@ -108,7 +109,7 @@ enabled = true
 [studio]
 enabled = true
 # Port to use for Supabase Studio.
-port = 55323
+port = 55423
 # External URL of the API server that frontend connects to.
 api_url = "http://127.0.0.1"
 # OpenAI API Key to use for Supabase AI in the Supabase Studio.
@@ -119,10 +120,10 @@ openai_api_key = "env(OPENAI_API_KEY)"
 [local_smtp]
 enabled = true
 # Port to use for the email testing server web interface.
-port = 55324
+port = 55424
 # Uncomment to expose additional ports for testing user applications that send emails.
-# smtp_port = 55325
-# pop3_port = 55326
+# smtp_port = 55425
+# pop3_port = 55426
 # admin_email = "admin@email.com"
 # sender_name = "Admin"
 
@@ -404,7 +405,7 @@ deno_version = 2
 
 [analytics]
 enabled = false
-port = 55327
+port = 55427
 # Configure one of the supported backends: `postgres`, `bigquery`.
 backend = "postgres"
 

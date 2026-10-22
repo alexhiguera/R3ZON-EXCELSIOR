@@ -5,50 +5,109 @@
  * en `:root` escritos como tripletes RGB, y `@theme` los expone a Tailwind.
  *
  * Por qué tripletes y no colores cerrados: permite cambiar el tema en runtime
- * reescribiendo `:root` (modo oscuro, tema por usuario, marca por cliente) sin
- * recompilar, y los modificadores de opacidad (`bg-primary/20`) siguen
- * funcionando porque Tailwind los resuelve con `color-mix()` sobre la variable.
+ * reescribiendo `:root` sin recompilar, y los modificadores de opacidad
+ * (`bg-primary/20`) siguen funcionando porque Tailwind los resuelve con
+ * `color-mix()` sobre la variable.
  *
- * La paleta es NEUTRA a propósito: la marca de cada producto se pone aquí.
+ * Marca: la de r3zon.com (extraída de su CSS el 2026-10-22). Como la web, el
+ * portal es SOLO OSCURO: es la parte privada de la misma marca y tiene que
+ * sentirse igual al pasar de una a otra. Si algún día hace falta un tema claro,
+ * se añade como un segundo bloque de tokens, sin tocar los componentes.
  */
 :root {
-  --rgb-background: 255 255 255;
-  --rgb-surface: 244 245 247;
-  --rgb-foreground: 17 24 39;
-  --rgb-muted: 75 85 99;
-  --rgb-border: 209 213 219;
-  --rgb-primary: 37 99 235;
-  --rgb-primary-foreground: 255 255 255;
-  --rgb-danger: 185 28 28;
-}
+  color-scheme: dark;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --rgb-background: 17 24 39;
-    --rgb-surface: 31 41 55;
-    --rgb-foreground: 243 244 246;
-    --rgb-muted: 156 163 175;
-    --rgb-border: 55 65 81;
-    --rgb-primary: 96 165 250;
-    --rgb-primary-foreground: 17 24 39;
-    --rgb-danger: 248 113 113;
-  }
+  /* Fondos: tinta de r3zon.com y dos niveles de elevación. */
+  --rgb-background: 5 1 15; /* #05010f — ink */
+  --rgb-surface: 11 7 24; /* #0b0718 — ink-raised */
+  --rgb-surface-raised: 18 11 38; /* #120b26 */
+
+  /* Texto. */
+  --rgb-foreground: 230 230 240; /* #e6e6f0 — fg */
+  --rgb-muted: 161 161 178; /* zinc-400 de la web: 8:1 sobre el fondo */
+
+  /* Líneas: lavanda casi transparente («hairline»). La opacidad va en @theme. */
+  --rgb-border: 196 181 253; /* #c4b5fd */
+  --rgb-input: 255 255 255;
+
+  /* Acción principal: magenta de los botones de r3zon.com, con texto oscuro. */
+  --rgb-primary: 229 73 255; /* #e549ff */
+  --rgb-primary-hover: 238 116 255; /* #ee74ff */
+  --rgb-primary-foreground: 22 3 28; /* #16031c */
+
+  /* Acentos de marca. */
+  --rgb-brand: 255 159 252; /* #ff9ffc — rosa del isotipo; foco */
+  --rgb-violet: 82 39 255; /* #5227ff */
+  --rgb-lavender: 177 158 239; /* #b19eef */
+
+  /* Estados. */
+  --rgb-danger: 248 113 113;
+  --rgb-success: 74 222 128;
+  --rgb-warning: 251 191 36;
 }
 
 @theme inline {
   --color-background: rgb(var(--rgb-background));
   --color-surface: rgb(var(--rgb-surface));
+  --color-surface-raised: rgb(var(--rgb-surface-raised));
   --color-foreground: rgb(var(--rgb-foreground));
   --color-muted: rgb(var(--rgb-muted));
-  --color-border: rgb(var(--rgb-border));
+  --color-border: rgb(var(--rgb-border) / 0.12);
+  --color-input: rgb(var(--rgb-input) / 0.15);
   --color-primary: rgb(var(--rgb-primary));
+  --color-primary-hover: rgb(var(--rgb-primary-hover));
   --color-primary-foreground: rgb(var(--rgb-primary-foreground));
+  --color-brand: rgb(var(--rgb-brand));
+  --color-violet: rgb(var(--rgb-violet));
+  --color-lavender: rgb(var(--rgb-lavender));
   --color-danger: rgb(var(--rgb-danger));
+  --color-success: rgb(var(--rgb-success));
+  --color-warning: rgb(var(--rgb-warning));
+
+  /* Tipografías de r3zon.com, servidas por next/font desde nuestro dominio (layout.tsx). */
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: var(--font-sora), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+
+  /* Movimiento de r3zon.com. */
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* Resplandor de la acción principal. */
+  --shadow-glow: 0 0 34px -8px rgb(var(--rgb-primary) / 0.8);
+  --shadow-glow-strong: 0 0 46px -6px rgb(var(--rgb-primary) / 0.9);
 }
 
 body {
   background-color: var(--color-background);
   color: var(--color-foreground);
+  font-family: var(--font-sans);
+}
+
+/* Títulos con la tipografía de display, como en la web. */
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  letter-spacing: -0.01em;
+}
+
+/* Degradado de marca para texto destacado (el de los titulares de r3zon.com). */
+@utility text-gradient {
+  background-image: linear-gradient(100deg, #ff7cf8 0%, #e549ff 55%, #b98bff 100%);
+  background-clip: text;
+  color: transparent;
+}
+
+/* Superficie de tarjeta: blanco casi transparente sobre la tinta, con línea fina. */
+@utility surface-card {
+  background-image: linear-gradient(180deg, rgb(255 255 255 / 0.045), rgb(255 255 255 / 0.012));
+  border: 1px solid var(--color-border);
+}
+
+/* Halo violeta de fondo de las páginas de acceso. */
+@utility bg-aurora {
+  background-image:
+    radial-gradient(60rem 30rem at 50% -10%, rgb(var(--rgb-violet) / 0.28), transparent 70%),
+    radial-gradient(40rem 24rem at 90% 10%, rgb(var(--rgb-primary) / 0.12), transparent 70%);
 }
 
 @media (prefers-reduced-motion: reduce) {

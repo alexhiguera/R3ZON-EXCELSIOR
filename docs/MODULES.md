@@ -15,7 +15,8 @@ Leyenda: ✅ completo · 🚧 en curso · ⬜ pendiente.
 | Página protegida mínima | ✅ | `src/app/(app)/inicio/` |
 | `public.profiles` + RLS + triggers | ✅ | `supabase/migrations/` |
 | Prisma (introspección y drift) | ✅ | `scripts/prisma-db.mjs` |
-| UI base accesible (Button, Field, Input) y tema | ✅ | `src/components/ui/`, `src/app/globals.css` |
+| UI base accesible (Button, Field, Input, Card, Badge, Stepper) y tema de r3zon.com | ✅ | `src/components/ui/`, `src/app/globals.css` |
+| Armazón responsive de la zona con sesión y navegación declarada | ✅ | `src/components/app-shell/`, `src/config/navegacion.ts` |
 | Observabilidad (Sentry, Speed Insights, logger, health) | ✅ | `src/lib/observability/`, `src/instrumentation*.ts` |
 | Tests: unitarios, componentes, a11y, BD, E2E | ✅ | `tests/`, `e2e/` |
 | CI: calidad, E2E, seguridad | ✅ | `.github/workflows/` |

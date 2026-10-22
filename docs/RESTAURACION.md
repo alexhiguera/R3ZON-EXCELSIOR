@@ -42,7 +42,7 @@ npx supabase db dump --db-url "$DB_URL" --data-only -f data.sql
 
 # Restaurar en el stack LOCAL, nunca directamente en producción
 npm run db:reset
-psql "postgresql://postgres:postgres@127.0.0.1:55322/postgres" -f data.sql
+psql "postgresql://postgres:postgres@127.0.0.1:55422/postgres" -f data.sql
 ```
 
 Regla: **se ensaya siempre primero en local**. Una restauración en producción es una

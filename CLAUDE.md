@@ -13,8 +13,8 @@ regla lleva su motivo: una norma sin motivo se salta en cuanto estorba.
 - **Producto:** **Excelsior** (nombre interno), el área de clientes de R3ZON en
   `clientes.r3zon.com`: invitación → contrato → pago → briefing, y después servicios,
   propuestas, documentos y tickets. Qué y por qué: [`docs/PRODUCTO.md`](docs/PRODUCTO.md).
-  Identidad en código: [`src/config/project.ts`](src/config/project.ts) (**aún con los
-  valores de la plantilla**: se personaliza en la Fase 0).
+  Nombre visible **«R3ZON Clientes»**. Identidad en código:
+  [`src/config/project.ts`](src/config/project.ts). Puertos locales 5542x.
 - **Plan y fase en curso:** [`docs/PLAN.md`](docs/PLAN.md). Hoy: **Fase 0**. Las
   decisiones tomadas (T-xx) no se reabren sin preguntar; las abiertas (D-xx) se preguntan
   antes de implementar lo que bloquean.
@@ -22,7 +22,7 @@ regla lleva su motivo: una norma sin motivo se salta en cuanto estorba.
   **todavía sin crear**.
 - **Datos de producción:** ninguno. No hay clientes reales (2026-10-22).
 - **Alcance:** solo web responsive (móvil, tablet, escritorio) con la estética de
-  r3zon.com; solo español; solo Stripe como pasarela. Fuera de alcance y quién puede
+  r3zon.com (solo modo oscuro, tokens en `src/app/globals.css`); solo español; solo Stripe como pasarela. Fuera de alcance y quién puede
   reabrirlo: [`docs/PRODUCTO.md`](docs/PRODUCTO.md) §8 — lo reabre R3ZON, nunca una tarea.
 - **Seguridad del producto:** sin registro público; los clientes nunca ven datos de otro
   cliente; el staff ve todo por permiso, no saltándose la RLS

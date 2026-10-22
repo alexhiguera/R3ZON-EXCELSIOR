@@ -115,8 +115,9 @@ Invitado ──► /invitacion/<token> (pública)
   real está en Supabase Auth (*before user created hook* o `signups` deshabilitados +
   alta en servidor), porque con OAuth cualquiera puede intentar crear usuario desde
   Google sin pasar por nuestras páginas. Un E2E lo intenta.
-- El email de la cuenta debe coincidir con el de la invitación (decisión D-02 de
-  [PLAN.md](PLAN.md)).
+- El email de la cuenta debe coincidir con el de la invitación, también con Google
+  (decisión T-11 de [PLAN.md](PLAN.md)). Si el cliente quiere otro email, R3ZON le
+  reenvía la invitación a ese.
 - Aceptar la invitación es atómico: crea la pertenencia a la organización, marca la
   invitación como usada y registra el evento en el audit log.
 

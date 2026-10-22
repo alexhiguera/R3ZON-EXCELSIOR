@@ -1,13 +1,13 @@
 ---
-title: "Documentación de R3ZON Template"
+title: "Documentación de R3ZON Clientes"
 sidebar_label: "Inicio"
 sidebar_position: 0
 slug: /
-description: "Documentación oficial de R3ZON Template: cómo acceder a tu cuenta y dónde encontrar cada guía. Sustituye esta portada por la de tu producto."
+description: "Documentación oficial de R3ZON Clientes, el área de clientes de R3ZON: cómo acceder a tu cuenta y dónde encontrar cada guía."
 keywords: [documentación, ayuda, guía]
 tags: [portada]
 last_update:
-  date: 2026-09-23
+  date: 2026-10-22
   author: Equipo R3ZON
 r3zon:
   tipo: indice
@@ -17,7 +17,8 @@ r3zon:
   app_url: /
 ---
 
-**Respuesta corta.** Esta es la documentación oficial de **R3ZON Template**. Aquí se
+**Respuesta corta.** Esta es la documentación oficial de **R3ZON Clientes**, el área de
+clientes de R3ZON. Aquí se
 explica cómo se hace cada cosa, paso a paso, y qué hacer cuando algo no sale como
 esperas.
 

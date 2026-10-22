@@ -22,8 +22,8 @@ claves del stack **local** y crea el usuario de desarrollo (`dev@example.test` /
 `dev-password-local-only`, configurable con `DEV_EMAIL` y `DEV_PASSWORD`). Nunca toca una
 base remota.
 
-Supabase Studio: <http://127.0.0.1:55323>. Emails que envía Auth en local (Mailpit):
-<http://127.0.0.1:55324>.
+Supabase Studio: <http://127.0.0.1:55423>. Emails que envía Auth en local (Mailpit):
+<http://127.0.0.1:55424>.
 
 ## Scripts
 
@@ -51,6 +51,10 @@ npm run test:run      # todo Vitest; los de BD necesitan el stack levantado
 npm run test:db       # solo los de BD
 npm run test:e2e      # build de producción + Playwright contra el Supabase local
 ```
+
+Playwright ejecuta cada recorrido dos veces, en **escritorio** y en **móvil** (Pixel 7),
+con un solo worker: los dos proyectos usan el mismo usuario y el logout cierra su sesión
+en todos los dispositivos.
 
 > **`npm run test:e2e` reinicia la base de datos local y elimina los datos de
 > desarrollo**, incluido el usuario `dev@`. Es a propósito: los E2E tienen que partir

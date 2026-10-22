@@ -7,39 +7,38 @@
     "usa estos @id LITERALMENTE: apuntan al dominio de la app porque ahí vive la entidad",
     "canónica, y la documentación la referencia.",
     "",
-    "Valores de PLANTILLA: se personalizan al crear el proyecto (README.md raiz →",
-    "«Crear un proyecto nuevo»). `sitioProducto` debe coincidir con `project.domain` de",
-    "src/config/project.ts y `sitioDocumentacion` terminar en `/<project.slug>`: el",
+    "Personalizado para Excelsior (R3ZON Clientes) el 2026-10-22. `sitioProducto` debe",
+    "coincidir con `project.domain` de src/config/project.ts y `sitioDocumentacion` terminar en `/<project.slug>`: el",
     "validador comprueba lo primero."
   ],
   "$version": 1,
   "$origen": "src/config/project.ts",
 
-  "sitioProducto": "https://app.example.com",
-  "sitioDocumentacion": "https://docs.r3zon.com/r3zon-template",
+  "sitioProducto": "https://clientes.r3zon.com",
+  "sitioDocumentacion": "https://docs.r3zon.com/excelsior",
 
   "ids": {
-    "organization": "https://app.example.com/#organization",
-    "website": "https://app.example.com/#website",
-    "softwareApplication": "https://app.example.com/#software"
+    "organization": "https://clientes.r3zon.com/#organization",
+    "website": "https://clientes.r3zon.com/#website",
+    "softwareApplication": "https://clientes.r3zon.com/#software"
   },
 
   "organization": {
     "@type": "Organization",
-    "@id": "https://app.example.com/#organization",
+    "@id": "https://clientes.r3zon.com/#organization",
     "name": "R3ZON",
     "url": "https://r3zon.com",
-    "sameAs": ["https://r3zon.com", "https://app.example.com", "https://docs.r3zon.com/r3zon-template"]
+    "sameAs": ["https://r3zon.com", "https://clientes.r3zon.com", "https://docs.r3zon.com/excelsior"]
   },
 
   "softwareApplication": {
     "@type": "SoftwareApplication",
-    "@id": "https://app.example.com/#software",
-    "name": "R3ZON Template",
+    "@id": "https://clientes.r3zon.com/#software",
+    "name": "R3ZON Clientes",
     "applicationCategory": "BusinessApplication",
     "operatingSystem": "Web",
-    "description": "Plantilla base de proyectos SaaS de R3ZON.",
+    "description": "Área de clientes de R3ZON: contratación, contratos, pagos, proyectos y soporte.",
     "inLanguage": "es-ES",
-    "publisher": { "@id": "https://app.example.com/#organization" }
+    "publisher": { "@id": "https://clientes.r3zon.com/#organization" }
   }
 }

@@ -7,8 +7,8 @@
  * algunos valores, y `npm run docs:validar` comprueba que coinciden con este
  * fichero (lo importa directamente). Pasos completos: docs/TEMPLATE.md.
  *
- * Los valores de abajo son neutros a propósito. Si alguno llega a producción
- * sin cambiar, se nota enseguida (`example.com`), que es lo que se quiere.
+ * Excelsior: el área de clientes de R3ZON (docs/PRODUCTO.md). «Excelsior» es
+ * el nombre interno; el cliente ve `name`.
  */
 export const project = {
   /**
@@ -16,18 +16,18 @@ export const project = {
    * Validado contra `entidad.json` (`softwareApplication.name`) y el título de
    * `public_docs/index.md`.
    */
-  name: "R3ZON Template",
+  name: "R3ZON Clientes",
   /**
    * Identificador corto (minúsculas y guiones). La app no lo lee en runtime:
    * es el nombre que `docs:validar` exige en `package.json` (`name`),
    * `supabase/config.toml` (`project_id`) y la ruta de la documentación
    * pública (`docs.r3zon.com/<slug>`, id del producto en R3ZON-Docusaurus).
    */
-  slug: "r3zon-template",
+  slug: "excelsior",
   /** Descripción de una frase: metadatos y `entidad.json`. */
-  description: "Plantilla base de proyectos SaaS de R3ZON.",
+  description: "Área de clientes de R3ZON: contratación, contratos, pagos, proyectos y soporte.",
   /** Dominio de la app en producción, sin protocolo: URL pública, `entidad.json`, `rutas-app.json`. */
-  domain: "app.example.com",
+  domain: "clientes.r3zon.com",
   /** Organización propietaria: metadatos (`publisher`, `creator`) y `entidad.json`. */
   organization: "R3ZON",
   /**

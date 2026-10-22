@@ -1,8 +1,8 @@
 {
-  "name": "r3zon-template",
+  "name": "excelsior",
   "version": "0.1.0",
   "private": true,
-  "description": "Plantilla base de proyectos SaaS de R3ZON",
+  "description": "Área de clientes de R3ZON: contratación, contratos, pagos, proyectos y soporte.",
   "type": "module",
   "scripts": {
     "dev": "next dev",
@@ -71,7 +71,7 @@
     "@types/pg": "^8.23.1",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
-    "@vitest/coverage-v8": "^5.0.1",
+    "@vitest/coverage-v8": "^5.0.5",
     "jest-axe": "^11.0.0",
     "jsdom": "^30.1.1",
     "pg": "^8.23.0",
@@ -79,7 +79,7 @@
     "supabase": "^2.117.0",
     "tailwindcss": "^4.3.3",
     "typescript": "^7.0.2",
-    "vitest": "^5.0.1",
+    "vitest": "^5.0.5",
     "yaml": "^2.9.1"
   },
   "overrides": {

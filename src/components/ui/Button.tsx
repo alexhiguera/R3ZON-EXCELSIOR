@@ -2,15 +2,29 @@ import { Loader2 } from "lucide-react";
 import type { ComponentProps } from "react";
 import { cn } from "@/lib/utils";
 
-type Variant = "primary" | "secondary";
+type Variant = "primary" | "secondary" | "ghost";
+type Size = "md" | "lg";
 
+/*
+ * Estilo de los botones de r3zon.com: píldora, magenta con resplandor para la
+ * acción principal, línea fina para la secundaria. Una pantalla tiene, como
+ * mucho, UNA acción principal.
+ */
 const VARIANTS: Record<Variant, string> = {
-  primary: "bg-primary text-primary-foreground hover:bg-primary/90",
-  secondary: "border border-border bg-background text-foreground hover:bg-surface",
+  primary:
+    "bg-primary font-semibold text-primary-foreground shadow-glow hover:bg-primary-hover hover:shadow-glow-strong",
+  secondary: "border border-border bg-white/[0.04] text-foreground hover:bg-white/[0.08]",
+  ghost: "text-muted hover:bg-white/5 hover:text-foreground",
+};
+
+const SIZES: Record<Size, string> = {
+  md: "px-5 py-2.5 text-sm",
+  lg: "px-6 py-3 text-base",
 };
 
 export type ButtonProps = ComponentProps<"button"> & {
   variant?: Variant;
+  size?: Size;
   /** Deshabilita el botón y lo anuncia como ocupado a los lectores de pantalla. */
   loading?: boolean;
 };
@@ -21,6 +35,7 @@ export type ButtonProps = ComponentProps<"button"> & {
  */
 export function Button({
   variant = "primary",
+  size = "md",
   loading = false,
   disabled,
   className,
@@ -34,10 +49,12 @@ export function Button({
       disabled={disabled || loading}
       aria-busy={loading || undefined}
       className={cn(
-        "inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium",
-        "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
-        "disabled:cursor-not-allowed disabled:opacity-60",
+        "inline-flex items-center justify-center gap-2 rounded-full font-medium",
+        "transition-[background-color,box-shadow,color] duration-200 ease-out-quint",
+        "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand",
+        "disabled:cursor-not-allowed disabled:opacity-60 disabled:shadow-none",
         VARIANTS[variant],
+        SIZES[size],
         className,
       )}
       {...props}

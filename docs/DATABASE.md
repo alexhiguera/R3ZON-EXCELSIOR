@@ -95,7 +95,8 @@ devDependency, así que su versión es la del lockfile.
 
 **Puertos propios por proyecto.** [`supabase/config.toml`](../supabase/config.toml) usa
 en la plantilla el rango 5532x (API 55321, BD 55322, Studio 55323, Mailpit 55324), que
-queda **reservado para la plantilla**. Cada producto de R3ZON elige el suyo al crearse,
+queda **reservado para la plantilla**. **Excelsior usa 5542x** (API 55421, BD 55422,
+Studio 55423, Mailpit 55424). Cada producto de R3ZON elige el suyo al crearse,
 para poder tener varios stacks levantados a la vez; `tests/unit/project.test.ts` falla si
 un proyecto derivado conserva 55321 o 55322. Scripts,
 tests y Playwright **leen el puerto de `config.toml`**

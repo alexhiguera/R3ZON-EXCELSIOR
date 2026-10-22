@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { AuthLayout } from "@/components/app-shell/AuthLayout";
 import { project } from "@/config/project";
 import { safeRedirectPath } from "@/lib/safe-redirect";
 import { getCurrentUser } from "@/lib/supabase/server";
@@ -19,14 +20,24 @@ export default async function LoginPage({
   if (await getCurrentUser()) redirect(destination);
 
   return (
-    <main className="mx-auto flex min-h-dvh max-w-sm flex-col justify-center gap-6 p-6">
-      <h1 className="text-2xl font-semibold">Iniciar sesión</h1>
+    <AuthLayout
+      titulo="Iniciar sesión"
+      subtitulo="Accede a tu área de cliente para ver tus servicios, contratos y proyectos."
+    >
       {params.error === "callback" && (
         <p role="alert" className="text-sm text-danger">
           El enlace no es válido o ha caducado. Vuelve a intentarlo.
         </p>
       )}
       <LoginForm redirectTo={params.redirect ? destination : undefined} />
-    </main>
+      {/*
+       * No hay «Crear cuenta»: las cuentas nacen solo de una invitación de
+       * R3ZON (docs/PRODUCTO.md §4, docs/AUTH.md → Previsto en Excelsior).
+       */}
+      <p className="text-center text-xs text-muted">
+        ¿Aún no tienes cuenta? Te la crearemos al empezar a trabajar juntos: recibirás una
+        invitación por email.
+      </p>
+    </AuthLayout>
   );
 }

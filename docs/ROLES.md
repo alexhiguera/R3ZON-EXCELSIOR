@@ -50,8 +50,7 @@ Motivo: meterlas en un solo enum obliga a crear combinaciones que no tienen sent
 | `staff` | Resto del equipo de R3ZON | Todos los clientes, proyectos, contratos, pagos y tickets; no gestiona staff ni catálogo |
 | `client` | Usuario de una empresa cliente | Solo sus organizaciones |
 
-La división `admin` / `staff` está pendiente de confirmar (decisión D-03 de
-[PLAN.md](PLAN.md)). El nivel **no lo puede cambiar el propio usuario**: columna sin
+La división `admin` / `staff` está decidida (T-12 de [PLAN.md](PLAN.md)). El nivel **no lo puede cambiar el propio usuario**: columna sin
 grant de `UPDATE` para `authenticated` y cambios registrados en el audit log.
 
 ### Dimensión 2 — Rol dentro de la empresa cliente
@@ -63,7 +62,7 @@ grant de `UPDATE` para `authenticated` y cambios registrados en el audit log.
 | `billing` | Administración | Ver contratos y facturas, pagar, editar datos fiscales |
 
 El primer usuario de un cliente (el que acepta la invitación inicial) es `owner`. Un
-usuario puede pertenecer a varias empresas si se confirma la decisión D-09.
+usuario puede pertenecer a varias empresas, con selector de empresa (T-13).
 
 Matriz inicial de **recurso × acción** (se completa al implementar cada fase):
 

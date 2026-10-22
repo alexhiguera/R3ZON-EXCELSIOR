@@ -18,7 +18,7 @@ Leyenda: ⬜ sin empezar · 🚧 en curso · ✅ cerrada. Tamaño relativo: **S*
 
 | Fase | Qué | Tamaño | Estado |
 |---|---|---|---|
-| 0 | Adaptar el repositorio y cimientos (identidad, marca, servicios, decisiones) | M | ⬜ |
+| 0 | Adaptar el repositorio y cimientos (identidad, marca, servicios, decisiones) | M | 🚧 |
 | 1 | Acceso: invitaciones, login con email y Google, contraseña, empresas y roles | L | ⬜ |
 | **🧪 Hito V** | **Recorrido vertical mínimo**: un servicio, un contrato, un medio de pago y una checklist, de invitación a proyecto (partes «V» de las fases 2–5) | L | ⬜ |
 | 2 | Panel R3ZON: clientes, catálogo de servicios e invitaciones con servicio | L | ⬜ |
@@ -71,23 +71,28 @@ r3zon.com, y que todas las decisiones que bloquean la Fase 1 estén tomadas.
 
 1. **Identidad** según [TEMPLATE.md](TEMPLATE.md) → Crear un proyecto:
    - `src/config/project.ts`: `slug: "excelsior"`, `domain: "clientes.r3zon.com"`,
-     `organization: "R3ZON"`, nombre visible (ver decisión D-01), descripción.
-   - `package.json`, `supabase/config.toml` (`project_id` y **rango de puertos propio**,
-     p. ej. 5542x), `public_docs/_meta/*`, `public_docs/index.md`, `sitemap.ts`.
-   - `CLAUDE.md` §0 completo y `README.md` del producto.
-2. **Marca y sistema visual de r3zon.com**: extraer tokens (colores, tipografías, radios,
-   sombras, espaciado) de la web corporativa a `src/app/globals.css`; icono; modo oscuro
-   si la web lo tiene.
-3. **Esqueleto de la interfaz**: layout con navegación lateral en escritorio y menú
-   inferior o cajón en móvil; cabecera con usuario; estados vacíos, de carga y de error;
-   componentes base que faltan (Card, Badge, Tabs, Dialog, Toast, Stepper, Dropzone).
-   Probado en las tres anchuras.
+     `organization: "R3ZON"`, nombre visible «R3ZON Clientes» (T-10), descripción. ✅
+   - `package.json`, `supabase/config.toml` (`project_id` y rango de puertos **5542x**),
+     `public_docs/_meta/*`, `public_docs/index.md`. ✅
+   - `CLAUDE.md` §0 completo y `README.md` del producto. ✅
+2. **Marca y sistema visual de r3zon.com**: tokens extraídos del CSS de la web
+   (tinta `#05010f`, magenta `#e549ff`, rosa, violeta y lavanda; Inter y Sora; botones
+   píldora con resplandor) en `src/app/globals.css`; logotipo e icono. Solo oscuro, como
+   la web (T-14). ✅
+3. **Esqueleto de la interfaz**: navegación declarada en `src/config/navegacion.ts`,
+   barra lateral en escritorio, cabecera y barra inferior en móvil; login, portada e
+   inicio con la marca; `Card`, `Badge` y `Stepper`. Probado en 375, 768 y 1280 px, y
+   los E2E corren en escritorio y en móvil. ✅
+   - `Dialog`, `Toast`, `Tabs` y `Dropzone` **se construyen en la fase que los use por
+     primera vez** (fases 1, 3 y 5), no antes: un componente sin pantalla que lo use se
+     diseña a ciegas y nadie lo prueba de verdad. Los estados vacíos, de carga y de
+     error, igual: con la primera pantalla que tenga datos.
 4. **Servicios externos dados de alta** (sin datos reales): Supabase Cloud (región UE),
    Vercel con `clientes.r3zon.com`, Sentry, cuenta de Stripe en modo test, Resend con el
    dominio de envío verificado, proyecto en Google Cloud para OAuth.
 5. **CI en verde en GitHub** (primera ejecución real de los workflows de la plantilla).
 6. **Decisiones** que bloquean las fases 0 y 1 cerradas: D-01, D-02, D-03 y D-09
-   (abajo). Las demás se cierran antes de la fase que bloquea cada una.
+   (ahora T-10 a T-13). Las demás se cierran antes de la fase que bloquea cada una. ✅
 
 **Hecho cuando:** `docs:validar` y los tests de derivación en verde con la identidad de
 Excelsior; una página de muestra con la estética de r3zon.com se ve bien en móvil, tablet
@@ -120,7 +125,7 @@ aceptación de invitación), `multi-tenancy` (cliente = organización), `roles-p
    Si algún punto no sale, se replantea la Fase 1 antes de construirla.
 1. **Modelo de organizaciones**: `organizations` (cliente), `organization_members`
    (usuario ↔ cliente con rol), `staff_members` o nivel de plataforma en el perfil
-   (decisión D-03). RLS por pertenencia; R3ZON ve todo vía función de permiso, nunca
+   (decisiones T-12 y T-13). RLS por pertenencia; R3ZON ve todo vía función de permiso, nunca
    saltándose la RLS ([ROLES.md](ROLES.md)).
 2. **Invitaciones**: `invitations` con token de un solo uso (guardado como **hash**),
    caducidad, email destinatario, organización y — en Fase 2 — servicio. Página pública
@@ -129,7 +134,7 @@ aceptación de invitación), `multi-tenancy` (cliente = organización), `roles-p
    - **continuar con Google**.
 
    La cuenta se crea **solo** si la invitación es válida; el email debe coincidir con el
-   invitado (decisión D-02). Sin invitación, `/login` no ofrece registrarse y el alta por
+   invitado (decisión T-11). Sin invitación, `/login` no ofrece registrarse y el alta por
    Google de un email desconocido se rechaza (bloqueo en servidor, no solo en la UI:
    *before user created hook* de Supabase o equivalente).
 3. **Login** con email + contraseña y con Google; **vincular Google** a una cuenta
@@ -445,6 +450,11 @@ candidatas, con lo que desbloquea cada una, están en [mejoras.md](mejoras.md).
 | T-07 | El portal **no recoge credenciales** (contraseñas de hosting, dominio, redes) hasta que exista la bóveda cifrada | 2026-10-22 | Un campo de texto o un documento normal no es sitio para una contraseña: la vería cualquiera con acceso al proyecto y acabaría en los backups |
 | T-08 | La columna de pertenencia es **`organization_id`** en todo el proyecto (no `tenant_id`) | 2026-10-22 | Un solo nombre antes de la primera migración; «organización» es el término del dominio ([PRODUCTO.md](PRODUCTO.md) §5) |
 | T-09 | **Recorrido vertical** (Hito V) antes de generalizar las fases 2–5 | 2026-10-22 | Validar el flujo con un caso real antes de construir tres motores genéricos |
+| T-10 | Nombre visible **«R3ZON Clientes»** (`project.name`) | 2026-10-22 | Corto y cabe en la cabecera móvil (era D-01) |
+| T-11 | La invitación queda **atada al email** al que se envía; con Google, el email de la cuenta de Google debe coincidir. Si el cliente quiere otro email, R3ZON reenvía la invitación | 2026-10-22 | Un enlace reenviado no da acceso a otra persona (era D-02) |
+| T-12 | Dos niveles en el equipo: **`admin`** (todo, incluidos catálogo, precios y usuarios del equipo) y **`staff`** (clientes, proyectos y tickets) | 2026-10-22 | Era D-03 |
+| T-13 | Un usuario puede pertenecer a **varias empresas cliente**, con selector de empresa | 2026-10-22 | Agencias, gestorías y personas que llevan varias empresas; cambiarlo después obligaría a migrar (era D-09) |
+| T-14 | Interfaz **solo en modo oscuro**, como r3zon.com | 2026-10-22 | «Misma estética que la web»: la web no tiene tema claro. Los tokens permiten añadir uno sin tocar componentes |
 
 ## Decisiones abiertas
 
@@ -452,15 +462,11 @@ Bloquean la fase indicada. Cada una lleva una recomendación; la decisión es de
 
 | ID | Pregunta | Recomendación | Bloquea |
 |---|---|---|---|
-| D-01 | **Nombre visible** del portal (`project.name`): ¿«Área de clientes R3ZON», «R3ZON Clientes», otro? | «R3ZON Clientes» (corto, cabe en móvil) | Fase 0 |
-| D-02 | ¿La invitación queda **atada al email** al que se envía? ¿Puede el cliente entrar con un Google de otro email? | Atada al email. Si quiere otro, R3ZON reenvía la invitación a ese email | Fase 1 |
-| D-03 | ¿Hay **roles dentro del staff** (administrador, gestor de cuentas, técnico) o todo el staff ve y hace todo? | Dos niveles: `admin` (todo, incluidos precios y usuarios staff) y `staff` (clientes, proyectos, tickets) | Fase 1 |
 | D-04 | Pago **embebido** (Payment Element, estética propia) o **Stripe Checkout** (página de Stripe, menos trabajo) | Embebido: el flujo «premium» es el motivo del producto | Fase 4 |
 | D-05 | ¿Qué servicios exigen **DPA** (encargo del tratamiento)? ¿Hay ya textos de contrato y condiciones por servicio? | Pedir a la asesoría plantillas: contrato marco + condiciones por servicio + DPA | Fase 3 |
 | D-06 | ¿ANTARES tiene o tendrá **API** para emitir facturas y dar de alta clientes? | Definir el contrato de la API antes de la Fase 8 | Fase 8 |
 | D-07 | **Plan de Supabase**: Free (sin backups, 1 GB de Storage, 50 MB por fichero) o Pro | Pro antes del MVP: contratos firmados y materiales no pueden depender de un plan sin backups | Hito MVP |
 | D-08 | **Catálogo inicial** de servicios, con precios, modalidades y porcentaje de señal | Empezar con 2–3 (web corporativa, ecommerce, mantenimiento) | Fase 2 |
-| D-09 | ¿Puede un usuario pertenecer a **varias empresas cliente** (p. ej. una agencia o un gestor)? | Sí en el modelo de datos (N:M), con selector de empresa; coste bajo si se decide ahora | Fase 1 |
 | D-10 | **Validación jurídica de la firma propia**: ¿para qué contratos y servicios basta la firma simple con estas evidencias? ¿Qué evidencias exige la asesoría, cuánto se conservan y cómo? ¿Hace falta sello de tiempo cualificado? | Llevar a la asesoría el diseño de [ARCHITECTURE.md](ARCHITECTURE.md) §17 y un PDF de ejemplo con su hoja de evidencias | Fase 3 (Hito V) |
 | D-11 | **Validación fiscal de Stripe Invoicing**: ¿cumplen sus facturas los requisitos españoles (numeración, datos, rectificativas, IVA intracomunitario) y el calendario de adaptación de la AEAT? Si no, ¿se adelanta ANTARES o se factura fuera mientras tanto? | Revisión con la asesoría con una factura de prueba real de Stripe | Fase 4 (Hito V) |
 | D-12 | **¿Quién firma y quién paga?** Quien abre la invitación puede no ser el representante legal ni administración | El asistente permite delegar firma (a un `owner`) y pago (a un `billing`) de la misma empresa | Fase 3 |

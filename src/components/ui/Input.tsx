@@ -16,8 +16,9 @@ export function Input({ className, ...props }: ComponentProps<"input">) {
       aria-describedby={field?.describedBy}
       aria-invalid={field?.invalid || undefined}
       className={cn(
-        "rounded-md border border-border bg-background px-3 py-2 text-sm",
-        "focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary",
+        "rounded-xl border border-input bg-white/[0.04] px-4 py-2.5 text-base text-foreground",
+        "placeholder:text-muted/70 sm:text-sm",
+        "focus-visible:border-brand/60 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-brand/40",
         "aria-invalid:border-danger",
         className,
       )}
