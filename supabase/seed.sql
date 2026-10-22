@@ -1,0 +1,6 @@
+-- Seed del stack local (`npm run db:reset` lo ejecuta tras las migraciones).
+--
+-- Vacío a propósito. Los usuarios de desarrollo y de E2E los crean
+-- `npm run seed:dev` y `npm run seed:e2e` a través de la API de Auth, que es
+-- el mismo camino que usa un usuario real (y dispara el mismo trigger).
+-- Insertar en `auth.users` a mano desde aquí se salta ese camino.

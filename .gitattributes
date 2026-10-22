@@ -1,0 +1,11 @@
+# Finales de línea LF en el repo, se edite desde donde se edite.
+#
+# R3ZON trabaja a la vez desde macOS, Linux y Windows + WSL. Sin esta línea, un
+# fichero guardado desde Windows entra con CRLF, Biome lo marca entero y el diff
+# ocupa el fichero completo sin haber cambiado nada.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.ico binary
+*.woff2 binary

@@ -1,0 +1,40 @@
+# Dependencias
+node_modules/
+
+# Next.js
+.next/
+out/
+next-env.d.ts
+*.tsbuildinfo
+
+# Prisma Client (solo si algún script local lo genera; ver docs/DATABASE.md)
+src/generated/
+
+# Tests
+coverage/
+test-results/
+playwright-report/
+blob-report/
+e2e/.auth/
+
+# Entorno: nunca se versiona un fichero con valores reales.
+.env
+.env.*
+!.env.example
+.env.sentry-build-plugin
+
+# Supabase local
+supabase/.branches/
+supabase/.temp/
+
+# Herramientas locales opcionales (ver CLAUDE.md → «Herramientas opcionales»)
+graphify-out/
+.claude/settings.local.json
+
+# Sistema / editores
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.log

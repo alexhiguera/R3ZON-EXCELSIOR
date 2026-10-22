@@ -1,0 +1,34 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// GENERADO con `npm run db:pull`. No se edita a mano.
+//
+// Sale de introspeccionar la base LOCAL, que es el resultado de aplicar
+// supabase/migrations/: esa es la fuente de verdad del esquema, no este fichero.
+// Tocar esto no cambia la base, y CI (`npm run db:drift`) falla si deja de
+// coincidir con lo que producen las migraciones.
+//
+// Solo el esquema `public`. Las FK hacia `auth.users` existen en la base pero
+// no aquí: `auth` es de Supabase y queda fuera a propósito.
+//
+// Lo que Prisma no representa y SÍ existe en la base: la RLS y sus policies, las
+// funciones, los triggers, los CHECK y los grants. Guía: docs/DATABASE.md
+// ─────────────────────────────────────────────────────────────────────────────
+
+generator client {
+  provider        = "prisma-client"
+  output          = "../src/generated/prisma"
+  previewFeatures = ["partialIndexes"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model profiles {
+  id           String   @id @db.Uuid
+  display_name String?
+  created_at   DateTime @default(now()) @db.Timestamptz(6)
+  updated_at   DateTime @default(now()) @db.Timestamptz(6)
+}

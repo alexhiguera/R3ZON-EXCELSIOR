@@ -1,0 +1,68 @@
+# =============================================================================
+# E2E — Playwright contra la app real y el Supabase local sembrado
+# =============================================================================
+# Existe porque no correr los E2E en ningún sitio automático sale caro: en el
+# proyecto de origen un spec llevaba semanas roto (buscaba un botón que ya no
+# se pintaba) y otro señalaba un fallo que podía dejar a alguien fuera de su
+# cuenta. Los dos los habría visto este workflow.
+#
+# Va aparte de ci.yml porque tarda más (build + navegador) y su fallo se lee
+# distinto. Las mismas ramas que CI.
+# =============================================================================
+name: E2E
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - develop
+      - "long/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    name: Playwright
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci --no-audit --no-fund
+
+      - name: Instalar Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Supabase local
+        run: npm run db:start
+
+      # `test:e2e` encadena `pretest:e2e` (db:reset + seed:e2e) y levanta el
+      # build de producción con las claves del stack local.
+      - name: E2E
+        run: npm run test:e2e
+
+      - name: Informe de Playwright
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+
+      - name: Parar Supabase local
+        if: always()
+        run: npm run db:stop

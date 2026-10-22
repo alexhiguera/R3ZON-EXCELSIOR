@@ -1,0 +1,135 @@
+# =============================================================================
+# CI — la puerta de calidad de cada cambio
+# =============================================================================
+# install → lint → typecheck → Supabase local (migraciones) → Prisma/drift →
+# tipos generados → tests (incluidos los de BD) → validación de docs → build
+#
+# Cuándo corre: en cada PR, en cada push a `main` y en cada push a las RAMAS
+# LARGAS de desarrollo. Esto último no es cosmético: en el proyecto de origen
+# una rama de feature vivió semanas sin CI y tres regresiones de una función
+# crítica —una impedía emitir cualquier documento— convivieron dos días sin que
+# nada las viera. Una rama donde se desarrolla durante semanas necesita CI
+# tanto como la rama a la que se fusiona.
+#
+# RAMAS LARGAS: se configuran en `on.push.branches` más abajo. Por defecto
+# cubre `develop` y cualquier `long/**`; cada proyecto ajusta la lista a su
+# forma de trabajar (docs/DEVELOPMENT.md → «Ramas»).
+#
+# Los tests de BD NO pueden pasar en silencio: con `CI=true`, si no encuentran
+# la base FALLAN en vez de saltarse (tests/db/_db.ts).
+# =============================================================================
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      # Ramas largas de desarrollo — personalizar por proyecto.
+      - develop
+      - "long/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Lint · Types · DB · Tests · Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci --no-audit --no-fund
+
+      - name: Lint (Biome)
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Prisma — schema válido
+        run: npm run db:validate
+
+      # Aplica supabase/migrations/ sobre una base nueva: si una migración no
+      # aplica desde cero, falla aquí.
+      - name: Supabase local (aplica las migraciones)
+        run: npm run db:start
+
+      # La base recién creada es exactamente lo que producen las migraciones:
+      # una migración nueva sin su `npm run db:pull` falla aquí, y el mensaje
+      # dice qué comando lanzar.
+      - name: Prisma — schema.prisma coincide con las migraciones
+        run: npm run db:drift
+
+      # Igual para los tipos de TypeScript: sin esto, una migración nueva sin
+      # `npm run db:types` pasa el typecheck con tipos viejos y el fallo sale en
+      # runtime. Regenera desde la base recién migrada y compara sin escribir.
+      - name: Tipos — database.types.ts coincide con las migraciones
+        run: npm run db:types:check
+
+      - name: Tests (unitarios, componentes, a11y y base de datos)
+        run: npm run test:run
+
+      - name: Validar public_docs/
+        run: npm run docs:validar
+
+      - name: Enlaces de la documentación interna
+        run: npm run docs:enlaces
+
+      - name: Parar Supabase local
+        if: always()
+        run: npm run db:stop
+
+      # El build no necesita secretos: las variables de Supabase solo se leen
+      # al servir peticiones, y Sentry solo se activa con SENTRY_AUTH_TOKEN.
+      - name: Build
+        run: npm run build
+
+  notify:
+    name: Notificar a Discord (opcional)
+    needs: quality
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      # Solo si el repo tiene el secreto DISCORD_WEBHOOK. Sin él, el paso no
+      # hace nada y el workflow sigue en verde: un proyecto recién creado no
+      # debe romperse por no tener notificaciones configuradas.
+      - name: Enviar notificación
+        env:
+          WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+          STATUS: ${{ needs.quality.result }}
+          AUTHOR: ${{ github.actor }}
+          REPO: ${{ github.repository }}
+          BRANCH: ${{ github.head_ref || github.ref_name }}
+          COMMIT: ${{ github.sha }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ -z "$WEBHOOK" ]; then
+            echo "DISCORD_WEBHOOK no configurado: sin notificación."
+            exit 0
+          fi
+          case "$STATUS" in
+            success)   COLOR=3066993 ; EMOJI="✅" ;;
+            failure)   COLOR=15158332; EMOJI="❌" ;;
+            cancelled) COLOR=10070709; EMOJI="🚫" ;;
+            *)         COLOR=9807270 ; EMOJI="ℹ️" ;;
+          esac
+          PAYLOAD=$(jq -n \
+            --arg title "$EMOJI CI $STATUS — $REPO@$BRANCH" \
+            --arg desc  "**Commit:** \`${COMMIT:0:7}\` · **Autor:** $AUTHOR" \
+            --arg url   "$RUN_URL" \
+            --argjson color "$COLOR" \
+            '{embeds:[{title:$title, description:$desc, url:$url, color:$color}]}')
+          # Un fallo de Discord no debe poner el workflow en rojo.
+          curl -sS -H "Content-Type: application/json" -X POST -d "$PAYLOAD" "$WEBHOOK" || true

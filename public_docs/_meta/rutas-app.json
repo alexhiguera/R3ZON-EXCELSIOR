@@ -1,0 +1,26 @@
+{
+  "$comentario": [
+    "Rutas reales de la app. Cada página puede declarar `r3zon.app_url` y el Docusaurus pinta",
+    "con ella un botón «Abrir en la app», con la etiqueta de aquí.",
+    "",
+    "Centralizadas para que, el día que una ruta cambie, se cambie en UN sitio: escritas",
+    "sueltas en cada página quedan enlaces rotos que nadie valida.",
+    "",
+    "Los tres grupos (`modulos`, `otras`, `publicas`) son obligatorios aunque estén vacíos:",
+    "el Docusaurus los lee siempre. `npm run docs:validar` comprueba que cada ruta existe en",
+    "src/app/ y que `base` coincide con `sitioProducto` de entidad.json."
+  ],
+  "$version": 1,
+  "base": "https://app.example.com",
+
+  "modulos": {},
+
+  "otras": {
+    "/inicio": { "label": "Inicio" }
+  },
+
+  "publicas": {
+    "/": { "label": "Portada" },
+    "/login": { "label": "Iniciar sesión" }
+  }
+}

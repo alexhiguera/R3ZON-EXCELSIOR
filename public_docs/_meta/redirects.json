@@ -1,0 +1,15 @@
+{
+  "$comentario": [
+    "Mapa 1:1 de URLs antiguas a sus equivalentes actuales. Vacío en un proyecto nuevo.",
+    "",
+    "Regla: cada URL antigua va a la página que responde a la MISMA pregunta, nunca todas a",
+    "la portada (los buscadores tratan eso como soft-404). Si se renombra un fichero de",
+    "public_docs/, su entrada se añade aquí en el mismo commit.",
+    "",
+    "Formato: { \"de\": \"/ruta-antigua\", \"a\": \"/<slug-del-producto>/ruta-nueva\" }.",
+    "Si `de` es una ruta de la APP (otro dominio), el 301 lo emite la app en su",
+    "next.config; el Docusaurus solo puede servir redirects internos a su propio sitio."
+  ],
+  "$version": 1,
+  "redirects": []
+}

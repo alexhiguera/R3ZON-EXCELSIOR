@@ -1,0 +1,22 @@
+{
+  "$comentario": [
+    "Versión del CORE de R3ZON Template que tiene este repositorio. Procedimiento: docs/TEMPLATE.md.",
+    "",
+    "· En el repo de la plantilla: la versión de la plantilla (se etiqueta igual en git: vX.Y.Z).",
+    "· En un proyecto derivado: la versión de la plantilla de la que se creó, o la última con la",
+    "  que se sincronizó su core. No se toca al personalizar; se sube solo al incorporar una",
+    "  versión nueva de la plantilla.",
+    "",
+    "No es la versión del producto: esa es `version` de package.json.",
+    "",
+    "`reservadoPorLaPlantilla` lo usa tests/unit/project.test.ts para detectar un proyecto",
+    "derivado que conserva por error los puertos o los documentos propios de la plantilla."
+  ],
+  "plantilla": "R3ZON SaaS Template",
+  "version": "1.0.0",
+  "reservadoPorLaPlantilla": {
+    "slug": "r3zon-template",
+    "puertos": { "api": 55321, "db": 55322 },
+    "documentos": ["docs/auditoria-template-final.md"]
+  }
+}

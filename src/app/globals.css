@@ -1,0 +1,61 @@
+@import "tailwindcss";
+
+/*
+ * Tailwind 4 «CSS-first»: no hay tailwind.config.js. Los colores son tokens
+ * en `:root` escritos como tripletes RGB, y `@theme` los expone a Tailwind.
+ *
+ * Por qué tripletes y no colores cerrados: permite cambiar el tema en runtime
+ * reescribiendo `:root` (modo oscuro, tema por usuario, marca por cliente) sin
+ * recompilar, y los modificadores de opacidad (`bg-primary/20`) siguen
+ * funcionando porque Tailwind los resuelve con `color-mix()` sobre la variable.
+ *
+ * La paleta es NEUTRA a propósito: la marca de cada producto se pone aquí.
+ */
+:root {
+  --rgb-background: 255 255 255;
+  --rgb-surface: 244 245 247;
+  --rgb-foreground: 17 24 39;
+  --rgb-muted: 75 85 99;
+  --rgb-border: 209 213 219;
+  --rgb-primary: 37 99 235;
+  --rgb-primary-foreground: 255 255 255;
+  --rgb-danger: 185 28 28;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --rgb-background: 17 24 39;
+    --rgb-surface: 31 41 55;
+    --rgb-foreground: 243 244 246;
+    --rgb-muted: 156 163 175;
+    --rgb-border: 55 65 81;
+    --rgb-primary: 96 165 250;
+    --rgb-primary-foreground: 17 24 39;
+    --rgb-danger: 248 113 113;
+  }
+}
+
+@theme inline {
+  --color-background: rgb(var(--rgb-background));
+  --color-surface: rgb(var(--rgb-surface));
+  --color-foreground: rgb(var(--rgb-foreground));
+  --color-muted: rgb(var(--rgb-muted));
+  --color-border: rgb(var(--rgb-border));
+  --color-primary: rgb(var(--rgb-primary));
+  --color-primary-foreground: rgb(var(--rgb-primary-foreground));
+  --color-danger: rgb(var(--rgb-danger));
+}
+
+body {
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

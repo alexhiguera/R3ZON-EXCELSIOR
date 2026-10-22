@@ -1,0 +1,45 @@
+{
+  "$comentario": [
+    "Identidad schema.org compartida entre la app y su documentación publica.",
+    "",
+    "Dos dominios que declaran la MISMA entidad (mismos @id) se refuerzan ante buscadores y",
+    "motores generativos; si declaran entidades distintas, se diluyen. El repo de Docusaurus",
+    "usa estos @id LITERALMENTE: apuntan al dominio de la app porque ahí vive la entidad",
+    "canónica, y la documentación la referencia.",
+    "",
+    "Valores de PLANTILLA: se personalizan al crear el proyecto (README.md raiz →",
+    "«Crear un proyecto nuevo»). `sitioProducto` debe coincidir con `project.domain` de",
+    "src/config/project.ts y `sitioDocumentacion` terminar en `/<project.slug>`: el",
+    "validador comprueba lo primero."
+  ],
+  "$version": 1,
+  "$origen": "src/config/project.ts",
+
+  "sitioProducto": "https://app.example.com",
+  "sitioDocumentacion": "https://docs.r3zon.com/r3zon-template",
+
+  "ids": {
+    "organization": "https://app.example.com/#organization",
+    "website": "https://app.example.com/#website",
+    "softwareApplication": "https://app.example.com/#software"
+  },
+
+  "organization": {
+    "@type": "Organization",
+    "@id": "https://app.example.com/#organization",
+    "name": "R3ZON",
+    "url": "https://r3zon.com",
+    "sameAs": ["https://r3zon.com", "https://app.example.com", "https://docs.r3zon.com/r3zon-template"]
+  },
+
+  "softwareApplication": {
+    "@type": "SoftwareApplication",
+    "@id": "https://app.example.com/#software",
+    "name": "R3ZON Template",
+    "applicationCategory": "BusinessApplication",
+    "operatingSystem": "Web",
+    "description": "Plantilla base de proyectos SaaS de R3ZON.",
+    "inLanguage": "es-ES",
+    "publisher": { "@id": "https://app.example.com/#organization" }
+  }
+}

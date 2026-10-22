@@ -1,0 +1,16 @@
+{
+  // Config de `npm run typecheck`, separada de `tsconfig.json` a propósito.
+  //
+  // `next dev` y `next build` reescriben el `include` del tsconfig principal
+  // para meter `.next/types`, que son artefactos generados con las rutas del
+  // último arranque. Con ellos dentro, `typecheck` puede ponerse rojo por rutas
+  // de OTRA rama que ya no existen en esta (pasó en el proyecto de origen:
+  // 7 errores, todos en `.next/types/validator.ts`, con `src/` limpio). Una
+  // puerta de calidad que falla por artefactos deja de leerse.
+  //
+  // Los tipos de rutas no se pierden: los valida `next build`, que es quien
+  // genera esos ficheros.
+  "extends": "./tsconfig.json",
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", "**/*.mts"],
+  "exclude": ["node_modules", ".next"]
+}
