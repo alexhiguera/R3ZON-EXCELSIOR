@@ -277,3 +277,138 @@ create policy organization_members_delete_staff
   on public.organization_members for delete
   to authenticated
   using ((select public.is_staff()));
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 6. «Ver como cliente» (Fase 2, T-22)
+-- ─────────────────────────────────────────────────────────────────────────────
+-- La vista es de solo lectura y NO suplanta: el staff ve lo del cliente con
+-- sus propios permisos. Lo único que hace falta es dejar constancia. Definer
+-- porque nadie escribe en audit_log directamente; la comprobación de staff va
+-- dentro.
+create function public.log_client_view(p_organization_id uuid)
+returns void
+language plpgsql
+volatile
+security definer
+set search_path = ''
+as $$
+begin
+  if not public.is_staff() then
+    raise exception 'Solo el equipo de R3ZON' using errcode = '42501';
+  end if;
+  perform public.write_audit('organization.viewed_as_client', p_organization_id, '{}'::jsonb);
+end;
+$$;
+
+comment on function public.log_client_view(uuid) is
+  'Registra que el equipo abrió la vista de cliente de una empresa. Solo staff (comprobado dentro).';
+revoke execute on function public.log_client_view(uuid) from public, anon;
+grant execute on function public.log_client_view(uuid) to authenticated;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 7. Datos fiscales de la empresa (Fase 3)
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Una fila por empresa: lo que necesitan el contrato y la factura. Los datos
+-- del FIRMANTE no van aquí: son de cada contrato (puede firmar otra persona).
+-- Conservación 6 años (contratos y facturas los citan): restrict, sin DELETE.
+create table public.organization_billing (
+  organization_id uuid primary key references public.organizations (id) on delete restrict,
+  entity_type     text not null check (entity_type in ('empresa', 'autonomo')),
+  legal_name      text not null check (char_length(btrim(legal_name)) between 1 and 200),
+  tax_id          text not null check (tax_id ~ '^[A-Z0-9]{8,14}$'),
+  address         text not null check (char_length(btrim(address)) between 1 and 300),
+  postal_code     text not null check (postal_code ~ '^[A-Za-z0-9 -]{3,10}$'),
+  city            text not null check (char_length(btrim(city)) between 1 and 100),
+  province        text check (province is null or char_length(province) <= 100),
+  country         text not null default 'ES' check (country ~ '^[A-Z]{2}$'),
+  billing_email   text check (billing_email is null or billing_email ~ '^[^@\s]+@[^@\s]+$'),
+  updated_by      uuid references auth.users (id) on delete set null,
+  created_at      timestamptz not null default now(),
+  updated_at      timestamptz not null default now()
+);
+
+comment on table public.organization_billing is
+  'Datos fiscales de la empresa para contrato y factura. Los editan propietario y facturación de la empresa, o el staff.';
+
+create index organization_billing_updated_by_idx on public.organization_billing (updated_by);
+
+create function public.organization_billing_before_write()
+returns trigger
+language plpgsql
+security invoker
+set search_path = ''
+as $$
+begin
+  new.updated_by := (select auth.uid());
+  new.tax_id := upper(regexp_replace(new.tax_id, '[\s.-]', '', 'g'));
+  new.legal_name := btrim(new.legal_name);
+  new.billing_email := lower(nullif(btrim(new.billing_email), ''));
+  if tg_op = 'UPDATE' then
+    if new.organization_id is distinct from old.organization_id then
+      raise exception 'La empresa no se cambia' using errcode = 'P0001';
+    end if;
+    new.updated_at := now();
+  end if;
+  return new;
+end;
+$$;
+revoke execute on function public.organization_billing_before_write() from public, anon, authenticated;
+
+create trigger organization_billing_before_write
+  before insert or update on public.organization_billing
+  for each row execute function public.organization_billing_before_write();
+
+create function public.organization_billing_audit()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  -- Sin los datos: solo que cambiaron.
+  perform public.write_audit('billing.updated', new.organization_id, '{}'::jsonb);
+  return null;
+end;
+$$;
+revoke execute on function public.organization_billing_audit() from public, anon, authenticated;
+
+create trigger organization_billing_audit
+  after insert or update on public.organization_billing
+  for each row execute function public.organization_billing_audit();
+
+-- ¿Puede el usuario actual editar los datos fiscales de esta empresa?
+create function public.can_edit_billing(p_organization_id uuid)
+returns boolean
+language sql
+stable
+security invoker
+set search_path = ''
+as $$
+  select public.is_staff() or public.org_role_of(p_organization_id) in ('owner', 'billing');
+$$;
+revoke execute on function public.can_edit_billing(uuid) from public, anon;
+grant execute on function public.can_edit_billing(uuid) to authenticated;
+
+revoke all on table public.organization_billing from anon, authenticated;
+grant select,
+      insert (organization_id, entity_type, legal_name, tax_id, address, postal_code, city, province, country, billing_email),
+      update (entity_type, legal_name, tax_id, address, postal_code, city, province, country, billing_email)
+  on table public.organization_billing to authenticated;
+
+alter table public.organization_billing enable row level security;
+
+create policy organization_billing_select
+  on public.organization_billing for select
+  to authenticated
+  using ((select public.is_staff()) or public.is_org_member(organization_id));
+
+create policy organization_billing_insert
+  on public.organization_billing for insert
+  to authenticated
+  with check (public.can_edit_billing(organization_id));
+
+create policy organization_billing_update
+  on public.organization_billing for update
+  to authenticated
+  using (public.can_edit_billing(organization_id))
+  with check (public.can_edit_billing(organization_id));

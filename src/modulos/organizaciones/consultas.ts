@@ -1,6 +1,7 @@
 import "server-only";
 import type { Database } from "@/lib/database.types";
 import { leer, type Resultado } from "@/lib/datos";
+import { logger } from "@/lib/logger";
 import { createClient } from "@/lib/supabase/server";
 
 export type Empresa = { id: string; name: string };
@@ -111,4 +112,25 @@ export async function actividad(organizationId: string): Promise<Resultado<Activ
       .order("created_at", { ascending: false })
       .limit(20),
   );
+}
+
+/**
+ * Rol del usuario actual en una empresa (null si no pertenece). No usa
+ * `leer()`: aquí un null es una respuesta válida, no un fallo.
+ */
+export async function rolEnEmpresa(organizationId: string): Promise<Resultado<RolEmpresa | null>> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("org_role_of", { p_organization_id: organizationId });
+  if (error) {
+    logger("modulo/organizaciones").error("rol_en_empresa_failed", { code: error.code });
+    return { ok: false };
+  }
+  return { ok: true, datos: data ?? null };
+}
+
+/** Deja constancia de que el equipo abre la vista de cliente (solo staff). */
+export async function registrarVistaCliente(organizationId: string): Promise<boolean> {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("log_client_view", { p_organization_id: organizationId });
+  return !error;
 }

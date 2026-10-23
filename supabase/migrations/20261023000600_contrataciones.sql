@@ -347,3 +347,96 @@ create policy services_select_contracted
        where v.service_id = services.id and public.is_org_member(e.organization_id)
     )
   );
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 5. Alta de cliente e invitación de una vez (Fase 2)
+-- ─────────────────────────────────────────────────────────────────────────────
+-- La otra vía (crear el cliente y después invitar desde su ficha) sigue
+-- existiendo. Invoker: solo el staff puede (RLS). Todo o nada.
+create function public.create_client_with_invitation(
+  p_name text,
+  p_email text,
+  p_service_version_id uuid default null,
+  p_price_cents bigint default null,
+  p_conditions text default null
+)
+returns table (organization_id uuid, token text)
+language plpgsql
+volatile
+security invoker
+set search_path = ''
+as $$
+declare
+  v_org uuid;
+begin
+  insert into public.organizations (name) values (btrim(p_name)) returning id into v_org;
+  organization_id := v_org;
+  if p_service_version_id is null then
+    token := public.create_invitation(v_org, p_email, 'owner');
+  else
+    token := public.invite_to_service(v_org, p_email, p_service_version_id, p_price_cents, p_conditions);
+  end if;
+  return next;
+end;
+$$;
+
+comment on function public.create_client_with_invitation(text, text, uuid, bigint, text) is
+  'Crea el cliente y la invitación (con o sin servicio) en una transacción. Solo staff, por RLS.';
+grant execute on function public.create_client_with_invitation(text, text, uuid, bigint, text) to authenticated;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 6. Pasos del cliente (Fase 3)
+-- ─────────────────────────────────────────────────────────────────────────────
+-- ¿Tiene la empresa todo lo que el contrato y la factura necesitan?
+create function public.billing_complete(p_organization_id uuid)
+returns boolean
+language sql
+stable
+security invoker
+set search_path = ''
+as $$
+  select exists (select 1 from public.organization_billing b where b.organization_id = p_organization_id);
+$$;
+revoke execute on function public.billing_complete(uuid) from public, anon;
+grant execute on function public.billing_complete(uuid) to authenticated;
+
+-- El cliente confirma sus datos: invitada → datos_completos. Definer porque la
+-- RLS de engagements solo deja escribir al staff; las condiciones (miembro con
+-- permiso, estado, datos completos) van dentro y la transición la vuelve a
+-- comprobar el trigger.
+create function public.confirm_engagement_data(p_engagement_id uuid)
+returns void
+language plpgsql
+volatile
+security definer
+set search_path = ''
+as $$
+declare
+  v_org uuid;
+  v_status public.engagement_status;
+begin
+  select e.organization_id, e.status into v_org, v_status
+    from public.engagements e where e.id = p_engagement_id for update;
+  if not found or not public.is_org_member(v_org) then
+    raise exception 'La contratación no existe' using errcode = 'P0001';
+  end if;
+  if public.org_role_of(v_org) not in ('owner', 'billing') then
+    raise exception 'Solo el propietario o facturación pueden confirmar los datos' using errcode = '42501';
+  end if;
+  if v_status = 'datos_completos' then
+    return; -- idempotente: volver atrás en el asistente y confirmar otra vez no falla
+  end if;
+  if v_status <> 'invitada' then
+    raise exception 'Los datos ya no se pueden confirmar en este paso' using errcode = 'P0001';
+  end if;
+  if not public.billing_complete(v_org) then
+    raise exception 'Faltan los datos fiscales de la empresa' using errcode = 'P0001';
+  end if;
+  update public.engagements set status = 'datos_completos' where id = p_engagement_id;
+end;
+$$;
+
+comment on function public.confirm_engagement_data(uuid) is
+  'El cliente confirma sus datos (invitada → datos_completos). Comprobaciones dentro.';
+revoke execute on function public.confirm_engagement_data(uuid) from public, anon;
+grant execute on function public.confirm_engagement_data(uuid) to authenticated;

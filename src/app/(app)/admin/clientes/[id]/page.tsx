@@ -1,21 +1,21 @@
+import { Eye } from "lucide-react";
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { z } from "zod";
 import { Encabezado } from "@/components/app-shell/Encabezado";
 import { BloqueNoDisponible, ModuloSeguro } from "@/components/app-shell/ModuloSeguro";
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
-import { Field } from "@/components/ui/Field";
 import { FormAccion } from "@/components/ui/FormAccion";
-import { Input, Select, Textarea } from "@/components/ui/Input";
 import { euros, fecha, fechaHora } from "@/lib/formato";
 import { invitacionesAbiertas } from "@/modulos/acceso/servidor";
 import { ESTADOS } from "@/modulos/contrataciones";
 import { listarContrataciones } from "@/modulos/contrataciones/servidor";
 import { ETIQUETA_ROL } from "@/modulos/organizaciones";
-import { actividad, cliente, directorio } from "@/modulos/organizaciones/servidor";
-import { listarServicios } from "@/modulos/servicios/servidor";
+import { actividad, cliente, datosFiscales, directorio } from "@/modulos/organizaciones/servidor";
 import { accionArchivar, accionInvitar, accionRevocar } from "../actions";
+import { CamposInvitacion } from "../CamposInvitacion";
 
 export const metadata: Metadata = { title: "Ficha de cliente" };
 
@@ -46,11 +46,20 @@ export default async function ClientePage({ params }: { params: Promise<{ id: st
         }
         descripcion={`Cliente desde el ${fecha(c.created_at)}.`}
         acciones={
-          <FormAccion
-            accion={accionArchivar.bind(null, c.id, !archivado)}
-            boton={archivado ? "Reactivar" : "Archivar"}
-            variante="secondary"
-          />
+          <>
+            <Link
+              href={`/admin/clientes/${c.id}/vista`}
+              className="inline-flex items-center gap-2 rounded-full border border-border px-5 py-2.5 text-sm hover:bg-white/5 focus-visible:outline-2 focus-visible:outline-brand"
+            >
+              <Eye aria-hidden="true" className="size-4" />
+              Ver como cliente
+            </Link>
+            <FormAccion
+              accion={accionArchivar.bind(null, c.id, !archivado)}
+              boton={archivado ? "Reactivar" : "Archivar"}
+              variante="secondary"
+            />
+          </>
         }
       />
 
@@ -86,6 +95,13 @@ export default async function ClientePage({ params }: { params: Promise<{ id: st
       </Card>
 
       <Card>
+        <h2 className="mb-4 text-lg font-semibold">Datos fiscales</h2>
+        <ModuloSeguro nombre="Los datos fiscales">
+          <ResumenFiscal organizationId={c.id} />
+        </ModuloSeguro>
+      </Card>
+
+      <Card>
         <h2 className="mb-4 text-lg font-semibold">Actividad</h2>
         <ModuloSeguro nombre="La actividad">
           <Actividad organizationId={c.id} />
@@ -95,54 +111,14 @@ export default async function ClientePage({ params }: { params: Promise<{ id: st
   );
 }
 
-async function FormularioInvitacion({ organizationId }: { organizationId: string }) {
-  const servicios = await listarServicios();
-  const disponibles = servicios.ok ? servicios.datos.filter((s) => s.version_id) : [];
-
+function FormularioInvitacion({ organizationId }: { organizationId: string }) {
   return (
     <FormAccion
       accion={accionInvitar.bind(null, organizationId)}
       boton="Crear invitación"
       etiquetaEnlace="Enlace de invitación (cópialo ahora: no se vuelve a mostrar)"
     >
-      <Field label="Email">
-        <Input name="email" type="email" required autoComplete="off" />
-      </Field>
-      <Field
-        label="Servicio"
-        hint={
-          servicios.ok
-            ? undefined
-            : "El catálogo no está disponible ahora: solo se puede invitar sin servicio."
-        }
-      >
-        <Select name="servicio" defaultValue="">
-          <option value="">Sin servicio (solo acceso)</option>
-          {disponibles.map((s) => (
-            <option key={s.id} value={s.version_id ?? ""}>
-              {s.name} · {euros(s.price_cents ?? 0)} + IVA
-            </option>
-          ))}
-        </Select>
-      </Field>
-      <Field label="Precio final (€, sin IVA)" hint="Vacío: el del catálogo. Solo con servicio.">
-        <Input name="precio" inputMode="decimal" placeholder="1.500,00" />
-      </Field>
-      <Field
-        label="Condiciones particulares"
-        hint="Descuentos, plazos… Pasan al contrato. Solo con servicio."
-      >
-        <Textarea name="condiciones" maxLength={4000} rows={3} />
-      </Field>
-      <Field label="Rol" hint="Solo sin servicio: con servicio, la persona entra como propietaria.">
-        <Select name="rol" defaultValue="owner">
-          {Object.entries(ETIQUETA_ROL).map(([valor, etiqueta]) => (
-            <option key={valor} value={valor}>
-              {etiqueta}
-            </option>
-          ))}
-        </Select>
-      </Field>
+      <CamposInvitacion />
     </FormAccion>
   );
 }
@@ -219,9 +195,9 @@ async function Contrataciones({ organizationId }: { organizationId: string }) {
           className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between"
           data-testid="contratacion"
         >
-          <span className="font-medium">
+          <Link href={`/admin/contrataciones/${e.id}`} className="font-medium hover:underline">
             {e.servicio} <span className="text-xs text-muted">v{e.version}</span>
-          </span>
+          </Link>
           <span className="flex flex-wrap items-center gap-3 text-sm text-muted">
             {euros(e.price_cents)} + IVA
             <Badge tone={ESTADOS[e.status].tono}>{ESTADOS[e.status].etiqueta}</Badge>
@@ -242,6 +218,14 @@ const ACCIONES: Record<string, string> = {
   "invitation.created": "Invitación creada",
   "invitation.accepted": "Invitación aceptada",
   "invitation.revoked": "Invitación anulada",
+  "organization.viewed_as_client": "El equipo abrió la vista de cliente",
+  "billing.updated": "Datos fiscales actualizados",
+  "contract.created": "Contrato creado",
+  "contract.enviado": "Contrato enviado para firmar",
+  "contract.borrador": "Contrato retirado para editar",
+  "contract.firmado": "Contrato firmado",
+  "contract.anulado": "Contrato anulado",
+  "contract.delegated": "Firma delegada en otra persona",
   "engagement.created": "Contratación creada",
   "engagement.status_changed": "Contratación: cambio de estado",
 };
@@ -261,5 +245,41 @@ async function Actividad({ organizationId }: { organizationId: string }) {
         </li>
       ))}
     </ol>
+  );
+}
+
+async function ResumenFiscal({ organizationId }: { organizationId: string }) {
+  const r = await datosFiscales(organizationId);
+  if (!r.ok) return <BloqueNoDisponible nombre="Los datos fiscales" />;
+  if (!r.datos) {
+    return (
+      <p className="text-sm text-muted">El cliente los dará en su alta, antes del contrato.</p>
+    );
+  }
+  const d = r.datos;
+  return (
+    <dl className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2" data-testid="datos-fiscales">
+      <div>
+        <dt className="text-xs text-muted">Razón social</dt>
+        <dd>{d.legal_name}</dd>
+      </div>
+      <div>
+        <dt className="text-xs text-muted">NIF</dt>
+        <dd>{d.tax_id}</dd>
+      </div>
+      <div className="sm:col-span-2">
+        <dt className="text-xs text-muted">Dirección</dt>
+        <dd>
+          {d.address}, {d.postal_code} {d.city}
+          {d.province ? ` (${d.province})` : ""}, {d.country}
+        </dd>
+      </div>
+      {d.billing_email && (
+        <div>
+          <dt className="text-xs text-muted">Email de facturación</dt>
+          <dd>{d.billing_email}</dd>
+        </div>
+      )}
+    </dl>
   );
 }

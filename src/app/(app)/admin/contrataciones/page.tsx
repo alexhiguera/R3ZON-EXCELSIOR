@@ -120,9 +120,12 @@ function FilaContratacion({ c }: { c: Contratacion }) {
           >
             {c.cliente}
           </Link>
-          <span className="text-sm text-muted">
+          <Link
+            href={`/admin/contrataciones/${c.id}`}
+            className="text-sm text-muted hover:underline"
+          >
             {c.servicio} · {euros(c.price_cents)} + IVA
-          </span>
+          </Link>
         </span>
         <span className="flex flex-wrap items-center gap-2 text-xs text-muted">
           <Badge tone={ESTADOS[c.status].tono}>{ESTADOS[c.status].etiqueta}</Badge>

@@ -7,6 +7,65 @@ nunca se renumeran.
 
 ---
 
+### Iteración 6 — *2026-10-23* — Cierre de la Fase 2 y Fase 3: alta, contrato y firma
+
+R3ZON decide: «ver como cliente» de solo lectura (T-22), las dos vías de alta de
+cliente, firma delegada (T-25), firma dibujada con código por email y, en vez de un
+texto de contrato fijo, una **herramienta para el equipo** con plantillas, cláusulas
+activables y anexos (T-23).
+
+**Fase 2 (cierre)**
+
+- `create_client_with_invitation()`: cliente e invitación, con o sin servicio, en una
+  transacción. La vía de crear primero e invitar después se mantiene.
+- «Ver como cliente»: no suplanta. Usa los mismos componentes que el inicio del cliente
+  (`ResumenContrataciones`) con los permisos del staff, sin enlaces de acción, y cada
+  apertura queda en el registro (`log_client_view`).
+
+**Fase 3**
+
+- Datos fiscales (`organization_billing`) con validación de NIF, NIE y CIF (carácter de
+  control) en la app, y formato en la base.
+- Módulo `contratos`: plantillas y cláusulas versionadas e inmutables, con una lista
+  cerrada de huecos que la base comprueba al guardar (y un test de paridad con la de la
+  interfaz); contrato por contratación con cláusulas activadas y anexos editables solo
+  en borrador; máquina de estados `borrador ⇄ enviado → firmado`, anulado y sustituido.
+- **El texto lo compone la base** (`contract_render`): la vista previa y lo firmado salen
+  de la misma función. Descartado componerlo en TypeScript y mandarlo a la base: el
+  cliente podría mandar otro texto.
+- **Firma** (`sign_contract`): propietario, contrato enviado, datos confirmados,
+  aceptación, firma dibujada (PNG comprobado) y **código de email verificado en la
+  sesión en los últimos 10 minutos, leído del claim `amr` del JWT**. Guarda el texto, su
+  SHA-256 (calculado por la base), las evidencias (incluidas IP y agente que ve
+  PostgREST) y pasa la contratación a `firmada`. Lo firmado es inmutable para todos.
+- PDF con `pdf-lib`, generado al descargar desde el texto firmado, con hoja de
+  evidencias. Es una representación: la evidencia es el texto y su huella en la base.
+- Asistente `/bienvenida/[id]` (bienvenida, datos, contrato y firma, enhorabuena) en el
+  que el paso lo decide el estado real; delegación de firma; inicio del cliente con sus
+  servicios y el siguiente paso.
+- Plantilla de email del código (`supabase/templates/codigo.html`) y límite local de
+  inicios de sesión subido a 100 para los E2E (en Cloud, el de por defecto).
+
+**Fallos cazados por los tests**, todos corregidos:
+
+- React 19 **vacía el formulario tras cada envío con `action`**, también si la acción
+  devuelve un error: un CIF mal escrito borraba todo. `FormAccion` envía ahora por
+  `onSubmit` + `startTransition` y solo vacía si sale bien (con test). Los formularios de
+  acceso tienen el mismo problema: tarea abierta.
+- `upsert` de PostgREST hace `ON CONFLICT DO UPDATE` de todas las columnas, incluida la
+  que no tiene permiso de UPDATE: el propietario no podía guardar sus datos. Ahora se
+  actualiza y, si no había fila, se inserta.
+- La ficha del panel mostraba un contrato **firmado recompuesto ahora** (con el hueco del
+  firmante vacío) en vez del texto firmado.
+- Un `id` propio en un campo pisaba el de `<Field>` y dejaba el campo sin etiqueta
+  accesible.
+- En la migración, otra vez el patrón `tg_table_name = … AND new.campo`: corregido antes
+  de ejecutarse.
+
+**Pendiente**: validación jurídica (D-10) antes de firmar nada real, textos reales
+(D-05), email del contrato (T-17), VIES. La elección de la modalidad de pago pasa a la
+Fase 4, con el cobro.
+
 ### Iteración 5 — *2026-10-23* — Dependencias al día, línea base modular, seguridad y RGPD, y Fase 2
 
 R3ZON aprueba T-15, aparca lo pendiente de la Fase 1 y pide cuatro cosas antes de

@@ -28,6 +28,7 @@ esperas.
 |---|---|
 | Te ha llegado una invitación de R3ZON | [Crear tu cuenta](primeros-pasos/aceptar-invitacion.md) |
 | Quieres entrar en tu cuenta | [Iniciar sesión](primeros-pasos/iniciar-sesion.md) |
+| Tienes que completar tu alta o firmar el contrato | [Completar tu alta y firmar](primeros-pasos/completar-alta.md) |
 
 ## Cómo está organizada esta documentación
 

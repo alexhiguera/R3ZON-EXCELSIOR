@@ -63,6 +63,7 @@ explica, para que el documento no se quede atrás.
 | `clsx`, `tailwind-merge` | La función `cn()` para combinar clases |
 | `@sentry/nextjs` | Errores (solo se carga con DSN) |
 | `@vercel/speed-insights` | Web Vitals |
+| `pdf-lib` | PDF del contrato firmado, generado en el servidor al descargarlo (sin dependencias nativas). **A vigilar:** su última versión (1.17.1) es de 2022; no tiene avisos de seguridad. Si deja de servir, la alternativa mantenida es `@react-pdf/renderer` |
 | `server-only` | Marca el código que solo puede correr en el servidor (las puertas `servidor.ts` de los módulos, `src/lib/origen.ts`): importarlo desde un componente de cliente rompe el build en vez de filtrar código con acceso a datos |
 
 ### Previstas en Excelsior
@@ -74,8 +75,6 @@ explica, para que el documento no se quede atrás.
 |---|---|---|
 | `stripe` (servidor) · `@stripe/stripe-js`, `@stripe/react-stripe-js` (cliente, carga diferida) | 4 | Pagos, webhooks, Payment Element embebido |
 | `resend` · `react-email` | 1 | Emails transaccionales con la marca |
-| `@react-pdf/renderer` o `pdf-lib` | 3 | PDF del contrato en servidor y hoja de evidencias (elegir al empezar la fase) |
-| Un componente de firma dibujada (p. ej. `signature_pad`) | 3 | Firma en el navegador, también táctil |
 
 Todo lo demás es de desarrollo. `@vitejs/plugin-react` no hace falta: Vite transforma el
 JSX de los tests por su cuenta (se comprobó al quitarlo).

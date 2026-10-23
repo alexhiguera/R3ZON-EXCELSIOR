@@ -181,6 +181,13 @@ obligue a tocar las demás:
 
 ## 17. Contratos: firma propia con evidencias
 
+> **Implementado** (Fase 3, T-23 y T-24) en [`20261023000700_contratos.sql`](../supabase/migrations/20261023000700_contratos.sql).
+> Dos cambios respecto al diseño inicial: (a) el texto lo **compone la base**
+> (`contract_render`), no la app, para que la vista previa y lo firmado salgan de la
+> misma función; (b) el «código por email» se comprueba **en la base** con el claim `amr`
+> del JWT (método `otp` en los últimos 10 minutos), no en la app. El PDF no se guarda: se
+> genera al descargar a partir del texto firmado.
+
 Firma electrónica **simple** (eIDAS) hecha en casa, con evidencias. **Pendiente de
 validación jurídica** (decisión D-10 de [PLAN.md](PLAN.md)): eIDAS impide rechazar una
 firma solo por ser electrónica, pero solo la cualificada equivale automáticamente a la
@@ -249,7 +256,7 @@ demás se escriben con su fase siguiendo esta tabla:
 |---|---|---|
 | Invitación ✅ | `pendiente → aceptada` | `revocada`, `caducada`; reenvío = invitación nueva que revoca la anterior. **Implementada** con estado derivado de columnas (`accepted_at`, `revoked_at`, `expires_at`) y el trigger `invitations_guard_transition` |
 | Contratación ✅ | `borrador → invitada → datos_completos → firmada → pago_en_curso → pagada → activa → finalizada` | `cancelada` (antes de firmar), `rescindida` (después), `en_impago` (desde el pago, la activa o la pagada; vuelve a `pago_en_curso` o `activa`, o se rescinde). **Implementada**: `engagement_transition_allowed()` + trigger, historial inmutable con motivo; la interfaz repite la tabla y un test comprueba que coinciden |
-| Contrato | `generado → enviado → firmado` | `anulado` (antes de firmar), **`sustituido`** por otro contrato (anexo o nueva versión): el firmado no cambia, se enlaza el que lo sustituye |
+| Contrato ✅ | `borrador ⇄ enviado → firmado` | `anulado` (antes de firmar), **`sustituido`** por otro contrato (anexo o nueva versión): el firmado no cambia, se enlaza el que lo sustituye |
 | Pago | `pendiente → en_curso → pagado` | `fallido`, **`devuelto`** (adeudo SEPA rechazado días después), **`en_disputa`** (y su resolución), **`reembolsado`** total o parcial; cada reembolso o devolución con su **abono / factura rectificativa** |
 | Proyecto | `briefing → diseño → desarrollo → revisión → lanzado → mantenimiento` | `en_pausa` (p. ej. por impago), `cancelado` |
 

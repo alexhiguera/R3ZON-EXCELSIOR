@@ -21,8 +21,8 @@ Leyenda: ⬜ sin empezar · 🚧 en curso · ✅ cerrada. Tamaño relativo: **S*
 | 0 | Adaptar el repositorio y cimientos (identidad, marca, servicios, decisiones) | M | ✅ en local (servicios externos y CI, aplazados al salir de local) |
 | 1 | Acceso: invitaciones, login con email y Google, contraseña, empresas y roles | L | 🚧 |
 | **🧪 Hito V** | **Recorrido vertical mínimo**: un servicio, un contrato, un medio de pago y una checklist, de invitación a proyecto (partes «V» de las fases 2–5) | L | ⬜ |
-| 2 | Panel R3ZON: clientes, catálogo de servicios e invitaciones con servicio | L | 🚧 (falta «ver como cliente» y el envío por email) |
-| 3 | Onboarding de contratación: bienvenida, datos, contrato y firma | XL | ⬜ |
+| 2 | Panel R3ZON: clientes, catálogo de servicios e invitaciones con servicio | L | ✅ (el envío por email, aplazado con T-17) |
+| 3 | Onboarding de contratación: bienvenida, datos, contrato y firma | XL | 🚧 (hecho el recorrido completo; pendientes: validación jurídica D-10 y textos D-05) |
 | 4 | Pagos con Stripe y facturas | L | ⬜ |
 | 5 | Briefing del proyecto y zona de documentos (tipo Drive) | L | ⬜ |
 | **🚩 Hito MVP** | **Primer cliente real hace el flujo completo** (fases 0–5 + salida a producción) | | |
@@ -181,12 +181,13 @@ enviarle el enlace, todo desde el panel.
 4. ✅ **Invitación con servicio**: email + servicio + precio final + condiciones →
    contratación e invitación en una transacción; el enlace se enseña una vez para
    copiarlo; anular y ver caducidad; reenviar = invitar otra vez (revoca la anterior).
-   ⬜ **Envío por email**: aplazado mientras todo sea local (T-17). ⬜ Crear el cliente
-   «al vuelo» desde la invitación: hoy se crea primero (dos clics).
+   ⬜ **Envío por email**: aplazado mientras todo sea local (T-17). ✅ Las dos vías:
+   crear el cliente y después invitar, o crear e invitar de una vez
+   (`create_client_with_invitation`).
 5. ✅ **Embudo**: invitado → cuenta creada → datos → firmado → pago → en marcha, con la
    fecha del último cambio. Las etapas siguientes se llenarán con las fases 3 y 4.
-6. ⬜ **Ver como cliente** (solo lectura, registrado en el audit log). Pendiente: exige
-   decidir cómo se suplanta sin saltarse la RLS (decisión D-14).
+6. ✅ **Ver como cliente** (T-22): solo lectura y sin suplantar; usa los mismos
+   componentes que el inicio del cliente y cada apertura queda en el registro.
 
 **Hecho cuando:** E2E del staff: crear cliente, crear servicio, generar invitación y
 verla aceptada en el embudo. Tests de BD: un usuario cliente no puede leer `services`
@@ -204,31 +205,31 @@ no se pone un contrato real a firmar.
 
 **Entregables**
 
-1. **Motor de asistente por pasos** reutilizable (también para propuestas en Fase 6):
+1. ✅ **Asistente por pasos** (`/bienvenida/[contratación]`; el paso lo decide el estado real, no la URL). 🚧 Reutilizarlo para propuestas (Fase 6). Texto original: (también para propuestas en Fase 6):
    progreso visible, guardado automático, retomar donde se dejó, «completar más tarde»
    en los pasos que no bloquean.
-2. **Bienvenida premium** por servicio: agradecimiento, qué incluye lo contratado, qué
+2. ✅ **Bienvenida premium** por servicio (resumen, qué incluye, precio, modalidades y condiciones). Texto original:: agradecimiento, qué incluye lo contratado, qué
    pasará a continuación y quién es su contacto en R3ZON. Contenido editable desde el
    catálogo de servicios.
-3. **Datos para contrato y factura** (`organization_billing`): razón social, NIF/CIF,
+3. ✅ **Datos para contrato y factura** (`organization_billing`, NIF/NIE/CIF con carácter de control; ⬜ VIES). Texto original:: razón social, NIF/CIF,
    dirección fiscal, tipo (empresa/autónomo, UE/no UE para el IVA), **firmante** (nombre,
    DNI, cargo) y contacto de facturación. Validación de NIF/CIF y de IVA intracomunitario
    (VIES) si aplica.
-4. **Modalidad de pago**: el cliente elige entre las que permite el servicio — pago único
+4. ⬜ **Modalidad de pago** (se mueve a la Fase 4: va con el cobro). Texto original: el cliente elige entre las que permite el servicio — pago único
    o señal + entrega — y el medio: **transferencia/SEPA (recomendado, destacado)** o
    tarjeta. La elección entra en el contrato.
-5. **Plantillas de contrato versionadas** (`contract_templates`) con variables (cliente,
+5. ✅ **Plantillas de contrato versionadas** + cláusulas activables + anexos (T-23); PDF en servidor. Texto original: (`contract_templates`) con variables (cliente,
    servicio, precio, modalidad, fechas) y condiciones generales. Generación del **PDF en
    servidor** ([ARCHITECTURE.md](ARCHITECTURE.md) §17).
-6. **Previsualización y firma in situ**: el contrato se ve completo (también en móvil),
+6. ✅ **Previsualización y firma in situ** (T-24). Texto original:: el contrato se ve completo (también en móvil),
    el firmante marca la aceptación, firma (dibujada o tecleada) y confirma con un
    **código enviado a su email**. Se guarda el PDF final sellado con hoja de evidencias:
    hash SHA-256, fecha, IP, agente, identidad y versión de la plantilla. Inmutable.
-7. **Contrato de encargado del tratamiento (DPA)** cuando el servicio implique tratar
+7. 🚧 **Contrato de encargado del tratamiento (DPA)**: se resuelve como cláusula activable; falta su texto (D-05). Texto original: cuando el servicio implique tratar
    datos personales del cliente (webs con formularios, ecommerce): se firma en el mismo
    paso (decisión D-05).
-8. **Email** con la copia del contrato firmado a firmante y a R3ZON.
-9. **Firmante y pagador distintos de quien abre la invitación** (decisión D-12): si
+8. ⬜ **Email** (aplazado, T-17; el PDF se descarga desde el portal). Texto original: con la copia del contrato firmado a firmante y a R3ZON.
+9. ✅ **Firma delegada** (T-25); el pago delegado, en la Fase 4. Texto original: firmante y pagador distintos de quien abre la invitación (decisión D-12): si
    quien completa los datos no es el representante legal, puede **enviar el contrato a
    firmar** a otra persona de su empresa (que recibe su propia invitación con rol
    `owner`), y lo mismo con el **pago** hacia alguien con rol `billing`. El asistente
@@ -466,6 +467,10 @@ candidatas, con lo que desbloquea cada una, están en [mejoras.md](mejoras.md).
 | T-19 | Contraseña mínima de **12 caracteres** y reautenticación para cambiarla | 2026-10-23 | Revisión de seguridad (NIST SP 800-63B). Ajustable en `src/lib/auth/politica.ts` + `config.toml` |
 | T-20 | **Monolito modular**: módulos con API pública, consultas que no lanzan, bloques aislados (ARCHITECTURE §21) | 2026-10-23 | Petición de R3ZON: que un fallo de un módulo no tumbe el resto |
 | T-21 | **Conservación de 6 años** y backups durante ese plazo; exportación e importación RGPD | 2026-10-23 | Decisión de R3ZON. Diseño en [RGPD.md](RGPD.md); cierra parte de D-13 |
+| T-22 | **«Ver como cliente»** de solo lectura y **sin suplantar**: los mismos componentes del cliente con los permisos del staff, registrado | 2026-10-23 | Decisión de R3ZON (era D-14). No hay que emitir tokens de otro usuario |
+| T-23 | **Herramienta de contratos del equipo**: plantillas con huecos, cláusulas prediseñadas que se activan por contrato y anexos a mano; todo versionado | 2026-10-23 | Decisión de R3ZON (en lugar de un único texto fijo) |
+| T-24 | **El texto que se firma lo compone la base** (`contract_render`) y la firma exige, dentro de la base, propietario + código de email verificado en la sesión (< 10 min, claim `amr`) + firma dibujada + aceptación | 2026-10-23 | Lo que el cliente ve es lo que firma, y nadie puede firmar llamando a la API. El PDF es una representación del texto guardado |
+| T-25 | **Delegar la firma** (era D-12): propietario o facturación envían el contrato a otra persona, que entra como propietaria | 2026-10-23 | Decisión de R3ZON |
 | T-17 | **Solo en local** por ahora: sin Supabase Cloud, Vercel, Stripe ni Resend reales | 2026-10-23 | Decisión de R3ZON. Lo que depende de servicios externos (emails, Google real, CI) se aplaza sin bloquear el resto |
 
 ## Decisiones abiertas
@@ -481,8 +486,6 @@ Bloquean la fase indicada. Cada una lleva una recomendación; la decisión es de
 | D-08 | **Catálogo inicial** de servicios, con precios, modalidades y porcentaje de señal | Empezar con 2–3 (web corporativa, ecommerce, mantenimiento) | Fase 2 |
 | D-10 | **Validación jurídica de la firma propia**: ¿para qué contratos y servicios basta la firma simple con estas evidencias? ¿Qué evidencias exige la asesoría, cuánto se conservan y cómo? ¿Hace falta sello de tiempo cualificado? | Llevar a la asesoría el diseño de [ARCHITECTURE.md](ARCHITECTURE.md) §17 y un PDF de ejemplo con su hoja de evidencias | Fase 3 (Hito V) |
 | D-11 | **Validación fiscal de Stripe Invoicing**: ¿cumplen sus facturas los requisitos españoles (numeración, datos, rectificativas, IVA intracomunitario) y el calendario de adaptación de la AEAT? Si no, ¿se adelanta ANTARES o se factura fuera mientras tanto? | Revisión con la asesoría con una factura de prueba real de Stripe | Fase 4 (Hito V) |
-| D-12 | **¿Quién firma y quién paga?** Quien abre la invitación puede no ser el representante legal ni administración | El asistente permite delegar firma (a un `owner`) y pago (a un `billing`) de la misma empresa | Fase 3 |
-| D-14 | **«Ver como cliente»**: ¿vista de solo lectura construida con los datos del cliente vistos como staff (sin suplantar), o suplantación real con un JWT del cliente y caducidad corta? | La primera: no exige emitir tokens de otro usuario ni tocar Auth, y la RLS del staff ya ve esos datos | Fase 2, entregable 6 |
 | D-13 | **Retención de datos** (6 años ya decidido, T-21): plazos de lo que NO es obligación legal (invitaciones cerradas, logs de Auth), anonimización y bloqueo legal | Plazos de la asesoría; aplicarlos por trigger y tarea programada | Hito MVP |
 
 ## Riesgos

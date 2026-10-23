@@ -13,4 +13,12 @@ export {
   misEmpresas,
   type Persona,
   type RolEmpresa,
+  registrarVistaCliente,
+  rolEnEmpresa,
 } from "./consultas";
+export {
+  type DatosFiscales,
+  datosFiscales,
+  guardarDatosFiscales,
+  leerDatosFiscales,
+} from "./fiscales";

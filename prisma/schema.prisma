@@ -40,6 +40,152 @@ model audit_log {
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model contract_annexes {
+  id          String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  contract_id String    @db.Uuid
+  position    Int       @default(0) @db.SmallInt
+  title       String
+  body        String
+  created_at  DateTime  @default(now()) @db.Timestamptz(6)
+  contracts   contracts @relation(fields: [contract_id], references: [id], onUpdate: NoAction)
+
+  @@index([contract_id, position], map: "contract_annexes_contract_idx")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model contract_clause_selections {
+  contract_id              String                   @db.Uuid
+  clause_version_id        String                   @db.Uuid
+  position                 Int                      @default(0) @db.SmallInt
+  contract_clause_versions contract_clause_versions @relation(fields: [clause_version_id], references: [id], onUpdate: NoAction)
+  contracts                contracts                @relation(fields: [contract_id], references: [id], onUpdate: NoAction)
+
+  @@id([contract_id, clause_version_id])
+  @@index([clause_version_id], map: "contract_clause_selections_clause_version_idx")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model contract_clause_versions {
+  id                         String                       @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  clause_id                  String                       @db.Uuid
+  version                    Int                          @default(0)
+  body                       String
+  created_by                 String?                      @db.Uuid
+  created_at                 DateTime                     @default(now()) @db.Timestamptz(6)
+  contract_clause_selections contract_clause_selections[]
+  contract_clauses           contract_clauses             @relation(fields: [clause_id], references: [id], onUpdate: NoAction)
+
+  @@unique([clause_id, version])
+  @@index([created_by])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
+model contract_clauses {
+  id                       String                     @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  title                    String
+  description              String?
+  created_by               String?                    @db.Uuid
+  created_at               DateTime                   @default(now()) @db.Timestamptz(6)
+  updated_at               DateTime                   @default(now()) @db.Timestamptz(6)
+  archived_at              DateTime?                  @db.Timestamptz(6)
+  contract_clause_versions contract_clause_versions[]
+
+  @@index([created_by])
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model contract_signatures {
+  id               String        @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  contract_id      String        @unique @db.Uuid
+  organization_id  String        @db.Uuid
+  signer_user_id   String        @db.Uuid
+  signer_name      String
+  signer_tax_id    String
+  signer_role      String
+  signer_email     String
+  signature_png    Bytes
+  signature_sha256 Bytes
+  text_sha256      Bytes
+  otp_verified_at  DateTime      @db.Timestamptz(6)
+  signed_at        DateTime      @default(now()) @db.Timestamptz(6)
+  ip               String?
+  user_agent       String?
+  contracts        contracts     @relation(fields: [contract_id], references: [id], onUpdate: NoAction)
+  organizations    organizations @relation(fields: [organization_id], references: [id], onUpdate: NoAction)
+
+  @@index([organization_id], map: "contract_signatures_organization_idx")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model contract_template_versions {
+  id                 String             @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  template_id        String             @db.Uuid
+  version            Int                @default(0)
+  body               String
+  created_by         String?            @db.Uuid
+  created_at         DateTime           @default(now()) @db.Timestamptz(6)
+  contract_templates contract_templates @relation(fields: [template_id], references: [id], onUpdate: NoAction)
+  contracts          contracts[]
+
+  @@unique([template_id, version])
+  @@index([created_by])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
+model contract_templates {
+  id                         String                       @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  name                       String
+  description                String?
+  created_by                 String?                      @db.Uuid
+  created_at                 DateTime                     @default(now()) @db.Timestamptz(6)
+  updated_at                 DateTime                     @default(now()) @db.Timestamptz(6)
+  archived_at                DateTime?                    @db.Timestamptz(6)
+  contract_template_versions contract_template_versions[]
+
+  @@index([created_by])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model contracts {
+  id                         String                       @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  engagement_id              String                       @unique(map: "contracts_one_live_per_engagement", where: raw("(status = ANY (ARRAY['borrador'::contract_status, 'enviado'::contract_status, 'firmado'::contract_status]))")) @db.Uuid
+  organization_id            String                       @db.Uuid
+  template_version_id        String                       @db.Uuid
+  status                     contract_status              @default(borrador)
+  delegated_email            String?
+  signed_text                String?
+  text_sha256                Bytes?
+  sent_at                    DateTime?                    @db.Timestamptz(6)
+  signed_at                  DateTime?                    @db.Timestamptz(6)
+  created_by                 String?                      @db.Uuid
+  created_at                 DateTime                     @default(now()) @db.Timestamptz(6)
+  updated_at                 DateTime                     @default(now()) @db.Timestamptz(6)
+  contract_annexes           contract_annexes[]
+  contract_clause_selections contract_clause_selections[]
+  contract_signatures        contract_signatures?
+  engagements                engagements                  @relation(fields: [engagement_id], references: [id], onUpdate: NoAction)
+  organizations              organizations                @relation(fields: [organization_id], references: [id], onUpdate: NoAction)
+  contract_template_versions contract_template_versions   @relation(fields: [template_version_id], references: [id], onUpdate: NoAction)
+
+  @@index([created_by])
+  @@index([engagement_id])
+  @@index([organization_id])
+  @@index([template_version_id])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model engagement_status_history {
@@ -70,6 +216,7 @@ model engagements {
   created_at                DateTime                    @default(now()) @db.Timestamptz(6)
   updated_at                DateTime                    @default(now()) @db.Timestamptz(6)
   status_changed_at         DateTime                    @default(now()) @db.Timestamptz(6)
+  contracts                 contracts?
   engagement_status_history engagement_status_history[]
   invitations               invitations?                @relation(fields: [invitation_id], references: [id], onUpdate: NoAction)
   organizations             organizations               @relation(fields: [organization_id], references: [id], onUpdate: NoAction)
@@ -107,6 +254,28 @@ model invitations {
   @@index([email], map: "invitations_pending_email_idx", where: raw("((accepted_at IS NULL) AND (revoked_at IS NULL))"))
 }
 
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model organization_billing {
+  organization_id String        @id @db.Uuid
+  entity_type     String
+  legal_name      String
+  tax_id          String
+  address         String
+  postal_code     String
+  city            String
+  province        String?
+  country         String        @default("ES")
+  billing_email   String?
+  updated_by      String?       @db.Uuid
+  created_at      DateTime      @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime      @default(now()) @db.Timestamptz(6)
+  organizations   organizations @relation(fields: [organization_id], references: [id], onUpdate: NoAction)
+
+  @@index([updated_by])
+}
+
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model organization_members {
@@ -130,8 +299,11 @@ model organizations {
   created_at           DateTime               @default(now()) @db.Timestamptz(6)
   updated_at           DateTime               @default(now()) @db.Timestamptz(6)
   archived_at          DateTime?              @db.Timestamptz(6)
+  contract_signatures  contract_signatures[]
+  contracts            contracts[]
   engagements          engagements[]
   invitations          invitations[]
+  organization_billing organization_billing?
   organization_members organization_members[]
 
   @@index([created_by])
@@ -146,6 +318,18 @@ model profiles {
   created_at    DateTime      @default(now()) @db.Timestamptz(6)
   updated_at    DateTime      @default(now()) @db.Timestamptz(6)
   platform_role platform_role @default(client)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model provider_profile {
+  id         Boolean  @id @default(true)
+  legal_name String   @default("")
+  tax_id     String   @default("")
+  address    String   @default("")
+  email      String   @default("")
+  updated_at DateTime @default(now()) @db.Timestamptz(6)
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -184,6 +368,14 @@ model services {
   service_versions service_versions[]
 
   @@index([created_by])
+}
+
+enum contract_status {
+  borrador
+  enviado
+  firmado
+  anulado
+  sustituido
 }
 
 /// This enum is commented in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments

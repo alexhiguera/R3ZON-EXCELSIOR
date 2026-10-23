@@ -48,6 +48,13 @@ export function urlApiLocal(raiz = process.cwd()) {
   return `http://127.0.0.1:${puerto}`;
 }
 
+/** URL del Mailpit local (los emails que envía Auth en desarrollo y E2E). */
+export function urlCorreoLocal(raiz = process.cwd()) {
+  const puerto = puertoDeSeccion(leerConfig(raiz), "local_smtp");
+  if (!puerto) throw new Error("supabase/config.toml no declara [local_smtp] port.");
+  return `http://127.0.0.1:${puerto}`;
+}
+
 /**
  * Claves del stack local según `supabase status -o env`. Falla alto si el
  * stack no está levantado: un script que siguiera sin claves fallaría más

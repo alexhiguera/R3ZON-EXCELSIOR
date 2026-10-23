@@ -48,8 +48,9 @@ test.describe("panel de R3ZON", () => {
 
     // 2. Cliente nuevo.
     await page.goto("/admin/clientes");
-    await page.getByLabel("Nombre de la empresa").fill(empresa);
-    await page.getByRole("button", { name: "Crear cliente" }).click();
+    const nuevo = page.getByRole("region", { name: "Nuevo cliente", exact: true });
+    await nuevo.getByLabel("Nombre de la empresa").fill(empresa);
+    await nuevo.getByRole("button", { name: "Crear cliente" }).click();
     await expect(page.getByRole("heading", { level: 1 })).toContainText(empresa);
     const fichaUrl = page.url();
 

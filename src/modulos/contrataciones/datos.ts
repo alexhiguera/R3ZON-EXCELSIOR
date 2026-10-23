@@ -133,3 +133,134 @@ export async function cambiarEstado(
   );
   return r.ok ? { ok: true, datos: null } : r;
 }
+
+export type DetalleContratacion = Contratacion & {
+  organizacion: string;
+  servicio_resumen: string | null;
+  incluye: string[];
+  vat_rate: number;
+  payment_plans: ("pago_unico" | "senal_entrega")[];
+  deposit_percent: number | null;
+};
+
+/** Una contratación con su servicio. La RLS decide quién la ve (su empresa o el staff). */
+export async function contratacion(id: string): Promise<Resultado<DetalleContratacion | null>> {
+  const supabase = await createClient();
+  const r = await leer(
+    "contrataciones",
+    "detalle",
+    supabase
+      .from("engagements")
+      .select(
+        `id, organization_id, status, price_cents, conditions, created_at, status_changed_at,
+         organizations(name),
+         service_versions(version, vat_rate, payment_plans, deposit_percent, includes, services(name, summary)),
+         invitations(accepted_at)`,
+      )
+      .eq("id", id)
+      .limit(1),
+  );
+  if (!r.ok) return r;
+  const f = r.datos[0] as unknown as
+    | (Fila & {
+        service_versions: {
+          version: number;
+          vat_rate: number;
+          payment_plans: ("pago_unico" | "senal_entrega")[];
+          deposit_percent: number | null;
+          includes: string[];
+          services: { name: string; summary: string | null } | null;
+        } | null;
+      })
+    | undefined;
+  if (!f) return { ok: true, datos: null };
+  return {
+    ok: true,
+    datos: {
+      ...aContratacion(f),
+      organizacion: f.organizations?.name ?? "—",
+      servicio_resumen: f.service_versions?.services?.summary ?? null,
+      incluye: f.service_versions?.includes ?? [],
+      vat_rate: Number(f.service_versions?.vat_rate ?? 0),
+      payment_plans: f.service_versions?.payment_plans ?? [],
+      deposit_percent: f.service_versions?.deposit_percent ?? null,
+    },
+  };
+}
+
+export type CambioEstado = {
+  id: string;
+  from_status: Estado | null;
+  to_status: Estado;
+  changed_at: string;
+  reason: string | null;
+};
+
+export async function historial(engagementId: string): Promise<Resultado<CambioEstado[]>> {
+  const supabase = await createClient();
+  return leer(
+    "contrataciones",
+    "historial",
+    supabase
+      .from("engagement_status_history")
+      .select("id, from_status, to_status, changed_at, reason")
+      .eq("engagement_id", engagementId)
+      .order("changed_at"),
+  );
+}
+
+/** El cliente confirma sus datos (invitada → datos_completos). Las reglas, en la base. */
+export async function confirmarDatos(engagementId: string): Promise<ResultadoAccion<null>> {
+  const supabase = await createClient();
+  const r = await escribir(
+    "contrataciones",
+    "confirmar_datos",
+    supabase.rpc("confirm_engagement_data", { p_engagement_id: engagementId }),
+    "No se han podido confirmar los datos.",
+  );
+  return r.ok ? { ok: true, datos: null } : r;
+}
+
+const nuevoClienteSchema = z.object({
+  nombre: z.string().trim().min(1, "Escribe el nombre de la empresa.").max(200),
+  email: z.email("Escribe un email válido.").transform((e) => e.trim().toLowerCase()),
+  versionId: z.union([z.literal(""), z.uuid()]),
+  precio: z.string(),
+  condiciones: z.string().max(4000, "Las condiciones son demasiado largas."),
+});
+
+/** Alta de cliente e invitación (con o sin servicio) en una transacción. */
+export async function crearClienteConInvitacion(datos: {
+  nombre: string;
+  email: string;
+  versionId: string;
+  precio: string;
+  condiciones: string;
+}): Promise<ResultadoAccion<{ organizationId: string; token: string }>> {
+  const d = nuevoClienteSchema.safeParse(datos);
+  if (!d.success) return { ok: false, error: d.error.issues[0]!.message };
+  let precio: number | undefined;
+  if (d.data.versionId && d.data.precio.trim()) {
+    const c = aCentimos(d.data.precio);
+    if (c === null)
+      return { ok: false, error: "Escribe el precio en euros, p. ej. 1.500 o 1500,50." };
+    precio = c;
+  }
+  const supabase = await createClient();
+  const r = await escribir<{ organization_id: string; token: string }[]>(
+    "contrataciones",
+    "crear_cliente_con_invitacion",
+    supabase.rpc("create_client_with_invitation", {
+      p_name: d.data.nombre,
+      p_email: d.data.email,
+      p_service_version_id: d.data.versionId || undefined,
+      p_price_cents: precio,
+      p_conditions: d.data.condiciones,
+    }),
+    "No se ha podido crear el cliente.",
+  );
+  if (!r.ok) return r;
+  const fila = r.datos[0];
+  if (!fila) return { ok: false, error: "No se ha podido crear el cliente." };
+  return { ok: true, datos: { organizationId: fila.organization_id, token: fila.token } };
+}

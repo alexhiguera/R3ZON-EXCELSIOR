@@ -38,6 +38,18 @@ const DEFINER_FUNCTIONS_FOR_AUTHENTICATED: ReadonlySet<string> = new Set([
   // cliente. El email vive en auth.users (la app no lo lee) y no se duplica en
   // profiles. La comprobación de staff está DENTRO de la función.
   "organization_directory",
+  // Registrar «ver como cliente»: nadie escribe en audit_log directamente. La
+  // comprobación de staff está dentro.
+  "log_client_view",
+  // Pasos del cliente sobre su contratación y su contrato. La RLS de esas
+  // tablas solo deja escribir al staff; cada función comprueba dentro
+  // pertenencia, rol, estado y (al firmar) el código verificado del email.
+  "confirm_engagement_data",
+  "sign_contract",
+  "delegate_contract_signature",
+  // Para policies: ¿es miembro y el contrato ya no es borrador? Definer para no
+  // entrar en recursión entre las policies de contratos y de sus partes.
+  "contract_visible_to_client",
 ]);
 
 /**

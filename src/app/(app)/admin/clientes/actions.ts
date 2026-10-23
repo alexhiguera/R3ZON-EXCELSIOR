@@ -6,7 +6,7 @@ import type { EstadoForm } from "@/components/ui/FormAccion";
 import { origenDeLaPeticion } from "@/lib/origen";
 import { enlaceInvitacion } from "@/modulos/acceso";
 import { crearInvitacion, revocarInvitacion } from "@/modulos/acceso/servidor";
-import { invitarAServicio } from "@/modulos/contrataciones/servidor";
+import { crearClienteConInvitacion, invitarAServicio } from "@/modulos/contrataciones/servidor";
 import { archivarCliente, crearCliente } from "@/modulos/organizaciones/servidor";
 
 /*
@@ -23,6 +23,28 @@ export async function accionCrearCliente(_: EstadoForm, datos: FormData): Promis
   if (!r.ok) return { error: r.error };
   revalidatePath("/admin/clientes");
   redirect(`/admin/clientes/${r.datos.id}`);
+}
+
+/** Cliente nuevo e invitación (con o sin servicio) de una vez. */
+export async function accionCrearConInvitacion(
+  _: EstadoForm,
+  datos: FormData,
+): Promise<EstadoForm> {
+  const r = await crearClienteConInvitacion({
+    nombre: texto(datos, "nombre"),
+    email: texto(datos, "email"),
+    versionId: texto(datos, "servicio"),
+    precio: texto(datos, "precio"),
+    condiciones: texto(datos, "condiciones"),
+  });
+  if (!r.ok) return { error: r.error };
+  revalidatePath("/admin/clientes");
+  return {
+    error: null,
+    ok: "Cliente creado e invitación lista. Válida 7 días.",
+    enlace: enlaceInvitacion(await origenDeLaPeticion(), r.datos.token),
+    ir: { href: `/admin/clientes/${r.datos.organizationId}`, label: "Ir a la ficha del cliente" },
+  };
 }
 
 export async function accionArchivar(

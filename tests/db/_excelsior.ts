@@ -118,3 +118,113 @@ export async function crearContratacion(c: Client, organizationId: string, versi
   );
   return rows[0]!.id;
 }
+
+/**
+ * Como `actAs`, pero con el claim `amr` que pone Supabase Auth cuando la sesión
+ * verifica un código enviado por email (`hace` segundos). Es lo que exige la
+ * firma de un contrato.
+ */
+export async function actAsConCodigo(c: Client, userId: string, hace = 30): Promise<void> {
+  await c.query("set local role authenticated");
+  await c.query("select set_config('request.jwt.claims', $1, true)", [
+    JSON.stringify({
+      sub: userId,
+      role: "authenticated",
+      amr: [{ method: "otp", timestamp: Math.floor(Date.now() / 1000) - hace }],
+    }),
+  ]);
+}
+
+/** Firma dibujada de prueba: cabecera PNG válida y relleno. */
+export const FIRMA_PNG = `data:image/png;base64,${Buffer.concat([
+  Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+  Buffer.alloc(200, 1),
+]).toString("base64")}`;
+
+export async function datosFiscales(c: Client, organizationId: string) {
+  await c.query(
+    `insert into public.organization_billing
+       (organization_id, entity_type, legal_name, tax_id, address, postal_code, city, province, country)
+     values ($1, 'empresa', 'Acme Soluciones S.L.', 'b-12345678', 'Calle Mayor 1', '28001', 'Madrid', 'Madrid', 'ES')`,
+    [organizationId],
+  );
+}
+
+/**
+ * Escenario completo hasta un contrato ENVIADO y una contratación con los datos
+ * confirmados: empresa con propietario, datos fiscales, servicio, plantilla con
+ * huecos, una cláusula activada y un anexo. Todo como postgres.
+ */
+export async function contratoEnviado(c: Client) {
+  const owner = await createAuthUserLocal(c, "ana@acme.test");
+  const org = (
+    await c.query<{ id: string }>(
+      "insert into public.organizations (name) values ('Acme') returning id",
+    )
+  ).rows[0]!.id;
+  await c.query("insert into public.organization_members values ($1, $2, 'owner')", [org, owner]);
+  await datosFiscales(c, org);
+  const servicio = await crearServicio(c, "Web corporativa", { precio: 150000 });
+  const engagement = await crearContratacion(c, org, servicio.versionId);
+  await c.query("update public.engagements set status = 'invitada' where id = $1", [engagement]);
+  await c.query("update public.engagements set status = 'datos_completos' where id = $1", [
+    engagement,
+  ]);
+
+  const plantilla = (
+    await c.query<{ id: string }>(
+      "insert into public.contract_templates (name) values ('Prestación de servicios') returning id",
+    )
+  ).rows[0]!.id;
+  const version = (
+    await c.query<{ id: string }>(
+      `insert into public.contract_template_versions (template_id, body) values ($1,
+        '# Contrato {{contrato.referencia}}' || E'\n\n' ||
+        'Entre {{r3zon.razon_social}} y {{cliente.razon_social}} ({{cliente.nif}}), representada por {{firmante.nombre}} ({{firmante.dni}}).' || E'\n\n' ||
+        'Servicio: {{servicio.nombre}}. Precio: {{precio.base}} + IVA ({{precio.iva_porcentaje}}) = {{precio.total}}.')
+       returning id`,
+      [plantilla],
+    )
+  ).rows[0]!.id;
+  const clausula = (
+    await c.query<{ id: string }>(
+      "insert into public.contract_clauses (title) values ('Protección de datos') returning id",
+    )
+  ).rows[0]!.id;
+  const clausulaVersion = (
+    await c.query<{ id: string }>(
+      "insert into public.contract_clause_versions (clause_id, body) values ($1, 'R3ZON actuará como encargado del tratamiento.') returning id",
+      [clausula],
+    )
+  ).rows[0]!.id;
+  await c.query(
+    "update public.provider_profile set legal_name = 'R3ZON S.L.', tax_id = 'B00000000'",
+  );
+
+  const contrato = (
+    await c.query<{ id: string }>(
+      "insert into public.contracts (engagement_id, template_version_id) values ($1, $2) returning id",
+      [engagement, version],
+    )
+  ).rows[0]!.id;
+  await c.query(
+    "insert into public.contract_clause_selections (contract_id, clause_version_id) values ($1, $2)",
+    [contrato, clausulaVersion],
+  );
+  await c.query(
+    "insert into public.contract_annexes (contract_id, title, body) values ($1, 'Calendario', 'Entrega en 30 días.')",
+    [contrato],
+  );
+  await c.query("update public.contracts set status = 'enviado' where id = $1", [contrato]);
+  return { owner, org, engagement, contrato, servicio, plantilla, version };
+}
+
+async function createAuthUserLocal(c: Client, email: string): Promise<string> {
+  const { rows } = await c.query<{ id: string }>(
+    `insert into auth.users (id, instance_id, aud, role, email, raw_user_meta_data, created_at, updated_at)
+     values (gen_random_uuid(), '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', $1, '{}', now(), now())
+     returning id`,
+    [email],
+  );
+  return rows[0]!.id;
+}

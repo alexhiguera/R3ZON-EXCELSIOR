@@ -74,7 +74,8 @@ Matriz inicial de **recurso × acción** (se completa al implementar cada fase):
 | Usuarios de la empresa | invitar, cambiar rol, quitar | leer | leer | todo |
 | Catálogo de servicios ✅ | solo lo contratado | solo lo contratado | solo lo contratado | leer (staff), crear y versionar (**solo admin**) |
 | Contrataciones ✅ | leer las suyas | leer las suyas | leer las suyas | crear (invitar con servicio), cerrar con motivo |
-| Contratos | leer, **firmar** | leer | leer | crear, enviar, leer |
+| Datos fiscales ✅ | leer, editar | leer | leer, editar | todo |
+| Contratos ✅ | leer (no borradores), **firmar**, delegar | leer (no borradores) | leer, delegar | preparar, enviar, retirar, anular; plantillas y cláusulas: **solo admin** |
 | Propuestas | leer, **aceptar** / rechazar | leer | leer | crear, enviar |
 | Pagos y facturas | leer, pagar | — | leer, pagar | leer, marcar entrega |
 | Briefing y documentos | todo | todo | leer | todo |

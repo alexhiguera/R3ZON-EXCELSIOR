@@ -30,7 +30,15 @@ La revisión técnica de seguridad está en [auditoria.md](auditoria.md).
 | Contrataciones y su historial | `engagements`, `engagement_status_history` | Ejecución del contrato + obligación legal | **6 años** | ✅ (`on delete restrict`, sin `DELETE`) |
 | Registro de actividad | `audit_log` | Interés legítimo (seguridad, rendición de cuentas, art. 5.2 y 32) | **6 años**, purga solo de lo anterior | ✅ |
 | IP y agente en el login | Logs de Supabase Auth | Interés legítimo (seguridad) | Lo que retenga el plan de Supabase | ⬜ revisar plan |
-| Datos fiscales, firma, pagos, materiales, tickets | Fases 3–7 | Contrato + obligación legal | 6 años (facturas y contratos) | ⬜ |
+| Datos fiscales de la empresa | `organization_billing` | Contrato + obligación legal (facturación) | 6 años | ✅ (`on delete restrict`) |
+| Contrato firmado (texto y huella) | `contracts.signed_text`, `text_sha256` | Contrato + obligación legal | 6 años | ✅ inmutable |
+| Evidencias de la firma: nombre, DNI/NIE, cargo, email, firma dibujada, IP, agente, momento de verificación del código | `contract_signatures` | Contrato + interés legítimo (prueba de la firma) | 6 años | ✅ inmutable, sin FK al usuario |
+| Pagos, materiales, tickets | Fases 4–7 | Contrato + obligación legal | 6 años (facturas) | ⬜ |
+
+**Sobre la firma dibujada:** es una imagen estática, no una firma biométrica (no se
+captan presión, velocidad ni trazo para identificar a la persona), así que no es una
+categoría especial de datos (art. 9). Si algún día se capturan esos datos, hay que
+revisarlo.
 
 **Minimización aplicada desde el diseño (art. 25):**
 

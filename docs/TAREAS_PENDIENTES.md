@@ -14,23 +14,29 @@ en curso (y lo que surja); cuando arranca una fase, sus entregables bajan aquí.
 | Comprobación | Resultado |
 |---|---|
 | `npm run lint` · `typecheck` | ✅ |
-| `npm run test:run` (con el stack levantado) | ✅ 216 tests en 26 ficheros (71 contra Postgres) |
-| `npm run test:e2e` | ✅ 34 tests (17 en escritorio + 17 en móvil) |
+| `npm run test:run` (con el stack levantado) | ✅ 264 tests en 34 ficheros (93 contra Postgres) |
+| `npm run test:e2e` | ✅ 36 tests (18 en escritorio + 18 en móvil), incluido el alta completa con firma |
 | `npm run build` | ✅ |
 | `npm run db:drift` · `db:types:check` | ✅ |
 | `npm run docs:validar` · `docs:enlaces` | ✅ |
-| `npm audit` | ✅ 0 vulnerabilidades; dependencias en su última estable/LTS |
-| Migraciones | 7: core + 6 módulos (línea base, T-18), solo en local |
-| Entorno | **Solo local** (T-17). Sin producción ni servicios externos |
-| Fase en curso | **Fase 2** — panel hecho salvo «ver como cliente»; Fase 1 con lo pendiente aparcado |
+| `npm audit` | ✅ 0 vulnerabilidades |
+| Migraciones | 8: core + 7 módulos (línea base, T-18), solo en local |
+| Entorno | **Solo local** (T-17) |
+| Fase en curso | **Fase 3** — recorrido completo hecho; faltan las validaciones de la asesoría. Siguiente: Fase 4 (pagos) |
 
-## Fase 2 — Panel R3ZON
+## Fase 3 — Onboarding y contrato
 
-- [ ] 🟠 «Ver como cliente» (solo lectura, registrado). Antes, decisión D-14 de
-  [PLAN.md](PLAN.md).
-- [ ] 🟡 Crear el cliente «al vuelo» desde la invitación (hoy: crear y después invitar).
-- [ ] 🟡 Decisión D-08: el catálogo inicial real (hoy el catálogo está vacío en local;
-  los E2E crean servicios de prueba).
+- [ ] 🔴 Validación jurídica de la firma y de las evidencias (D-10) **antes de firmar un
+  contrato real**. Llevar a la asesoría `ARCHITECTURE.md` §17 y un PDF de muestra.
+- [ ] 🟠 Textos reales: plantilla marco, cláusulas (incluida la de encargado del
+  tratamiento, D-05) y datos de R3ZON (en `/admin/contratos`).
+- [ ] 🟡 Los formularios de crear cuenta, aceptar invitación y login vacían los campos al
+  fallar (comportamiento por defecto de React 19 con `action`). `FormAccion` ya lo evita;
+  pasarlos a ese patrón.
+- [ ] 🟡 Validar el NIF intracomunitario en VIES para clientes de la UE (necesita red:
+  al salir de local).
+- [ ] 🟢 Al cambiar a una versión nueva de una cláusula, el contrato en borrador que usaba
+  la anterior la muestra desactivada; volver a activarla usa la vigente.
 
 ## Fase 1 — Acceso (aparcadas por R3ZON, 2026-10-23)
 

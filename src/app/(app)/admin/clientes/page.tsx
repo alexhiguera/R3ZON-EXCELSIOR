@@ -9,7 +9,8 @@ import { FormAccion } from "@/components/ui/FormAccion";
 import { Input, Select } from "@/components/ui/Input";
 import { fecha } from "@/lib/formato";
 import { type FiltroClientes, listarClientes } from "@/modulos/organizaciones/servidor";
-import { accionCrearCliente } from "./actions";
+import { accionCrearCliente, accionCrearConInvitacion } from "./actions";
+import { CamposInvitacion } from "./CamposInvitacion";
 
 export const metadata: Metadata = { title: "Clientes" };
 
@@ -33,20 +34,48 @@ export default async function ClientesPage({
         descripcion="Empresas que trabajan con R3ZON. Desde la ficha de cada una se invita a sus personas y se les asigna un servicio."
       />
 
-      <Card>
-        <h2 className="mb-4 text-lg font-semibold">Nuevo cliente</h2>
-        <FormAccion
-          accion={accionCrearCliente}
-          boton="Crear cliente"
-          className="sm:flex-row sm:items-end"
-        >
-          <div className="flex-1">
+      <section aria-labelledby="nuevo-con-invitacion">
+        <Card>
+          <h2 id="nuevo-con-invitacion" className="mb-1 text-lg font-semibold">
+            Nuevo cliente con invitación
+          </h2>
+          <p className="mb-4 text-sm text-muted">
+            Crea la empresa e invita a su primera persona de una vez, con o sin servicio.
+          </p>
+          <FormAccion
+            accion={accionCrearConInvitacion}
+            boton="Crear cliente e invitar"
+            etiquetaEnlace="Enlace de invitación (cópialo ahora: no se vuelve a mostrar)"
+          >
             <Field label="Nombre de la empresa">
               <Input name="nombre" required maxLength={200} autoComplete="organization" />
             </Field>
-          </div>
-        </FormAccion>
-      </Card>
+            <CamposInvitacion conRol={false} />
+          </FormAccion>
+        </Card>
+      </section>
+
+      <section aria-labelledby="nuevo-cliente">
+        <Card>
+          <h2 id="nuevo-cliente" className="mb-1 text-lg font-semibold">
+            Nuevo cliente
+          </h2>
+          <p className="mb-4 text-sm text-muted">
+            Solo la empresa; las invitaciones, después, desde su ficha.
+          </p>
+          <FormAccion
+            accion={accionCrearCliente}
+            boton="Crear cliente"
+            className="sm:flex-row sm:items-end"
+          >
+            <div className="flex-1">
+              <Field label="Nombre de la empresa">
+                <Input name="nombre" required maxLength={200} autoComplete="organization" />
+              </Field>
+            </div>
+          </FormAccion>
+        </Card>
+      </section>
 
       <section aria-labelledby="listado" className="flex flex-col gap-4">
         <h2 id="listado" className="sr-only">

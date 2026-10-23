@@ -167,6 +167,10 @@ MCP.
   (y `npm run dev:staff -- dev@example.test admin` para volver a ver el panel).
 - **Playwright dice «Executable doesn't exist»** tras actualizarlo — falta su navegador:
   `npx playwright install chromium`.
+- **El código del email para firmar** — en local llega a Mailpit
+  (<http://127.0.0.1:55424>). Los E2E lo leen con su API (`e2e/support/correo.mjs`).
+- **Cambié `supabase/config.toml` (Auth, plantillas, límites) y no se nota** — la
+  configuración de Auth solo se lee al arrancar: `npm run db:stop && npm run db:start`.
 - **Para ver el panel de R3ZON en local** — `npm run dev:staff -- dev@example.test admin`
   y recarga. Los E2E usan además `admin-e2e@r3zon.test` (lo crea `seed:e2e`).
 - **`docs:validar` dice que la identidad no coincide** — un fichero que repite datos de

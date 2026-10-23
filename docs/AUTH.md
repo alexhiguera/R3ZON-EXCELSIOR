@@ -123,6 +123,16 @@ desde la invitación.
 - **Cambiarla exige sesión reciente** (`secure_password_change = true`).
 - Ambas cosas hay que replicarlas en el panel de Supabase Cloud al salir de local.
 
+## Código por email (confirmar acciones)
+
+Para firmar un contrato, la sesión tiene que haber verificado un código de un solo uso
+enviado al email de la cuenta (`signInWithOtp` con `shouldCreateUser: false` y
+`verifyOtp`). Supabase Auth deja constancia en el JWT (claim `amr`, método `otp`) y la
+base lo comprueba al firmar (`session_otp_verified_at`). Plantilla del email:
+[`supabase/templates/codigo.html`](../supabase/templates/codigo.html) (`magic_link` en
+`config.toml`; en Cloud se copia en el panel → Email Templates → Magic Link). En local
+llega a Mailpit.
+
 ## Google
 
 - Botón «Continuar con Google» en el login y en la invitación, **solo si**

@@ -1,0 +1,26 @@
+/** API de servidor del módulo CONTRATOS (solo Server Components, Actions y Route Handlers). */
+export {
+  anadirAnexo,
+  type Contrato,
+  type ContratoFirmado,
+  cambiarEstadoContrato,
+  contratoDe,
+  contratoFirmado,
+  crearContrato,
+  crearElemento,
+  type DatosPrestador,
+  datosPrestador,
+  delegarFirma,
+  type ElementoCatalogo,
+  elementoCatalogo,
+  enviarCodigo,
+  firmarConCodigo,
+  guardarClausulas,
+  guardarDatosPrestador,
+  listarCatalogo,
+  nuevaVersionTexto,
+  quitarAnexo,
+  textoContrato,
+  type VersionTexto,
+} from "./datos";
+export { pdfContrato } from "./pdf";
