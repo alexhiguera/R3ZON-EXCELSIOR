@@ -3,6 +3,7 @@ import { Input, Select, Textarea } from "@/components/ui/Input";
 import { euros } from "@/lib/formato";
 import { ETIQUETA_ROL } from "@/modulos/organizaciones";
 import { listarServicios } from "@/modulos/servicios/servidor";
+import { Interruptores } from "../contrataciones/Interruptores";
 
 /**
  * Campos de una invitación: email, servicio (opcional), precio final y
@@ -10,15 +11,26 @@ import { listarServicios } from "@/modulos/servicios/servidor";
  * entra como propietaria para completar el alta). Los usan la ficha del cliente
  * y el alta de cliente con invitación.
  */
-export async function CamposInvitacion({ conRol = true }: { conRol?: boolean }) {
+export async function CamposInvitacion({
+  conRol = true,
+  conEmail = true,
+  servicioObligatorio = false,
+}: {
+  conRol?: boolean;
+  /** Sin email: para crear una contratación en borrador e invitar después. */
+  conEmail?: boolean;
+  servicioObligatorio?: boolean;
+}) {
   const servicios = await listarServicios();
   const disponibles = servicios.ok ? servicios.datos.filter((s) => s.version_id) : [];
 
   return (
     <>
-      <Field label="Email">
-        <Input name="email" type="email" required autoComplete="off" />
-      </Field>
+      {conEmail && (
+        <Field label="Email">
+          <Input name="email" type="email" required autoComplete="off" />
+        </Field>
+      )}
       <Field
         label="Servicio"
         hint={
@@ -28,7 +40,7 @@ export async function CamposInvitacion({ conRol = true }: { conRol?: boolean }) 
         }
       >
         <Select name="servicio" defaultValue="">
-          <option value="">Sin servicio (solo acceso)</option>
+          {!servicioObligatorio && <option value="">Sin servicio (solo acceso)</option>}
           {disponibles.map((s) => (
             <option key={s.id} value={s.version_id ?? ""}>
               {s.name} · {euros(s.price_cents ?? 0)} + IVA
@@ -45,6 +57,7 @@ export async function CamposInvitacion({ conRol = true }: { conRol?: boolean }) 
       >
         <Textarea name="condiciones" maxLength={4000} rows={3} />
       </Field>
+      <Interruptores />
       {conRol && (
         <Field
           label="Rol"

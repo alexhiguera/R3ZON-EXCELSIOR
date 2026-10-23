@@ -17,9 +17,16 @@ export type Contratacion = {
   created_at: string;
   status_changed_at: string;
   invitacion_aceptada: boolean;
+  /** Hay una invitación enlazada (aceptada o no). */
+  invitada: boolean;
+  requires_signature: boolean;
+  requires_payment: boolean;
+  payment_review: boolean;
+  payment_review_note: string | null;
 };
 
 const SELECT = `id, organization_id, status, price_cents, conditions, created_at, status_changed_at,
+  invitation_id, requires_signature, requires_payment, payment_review, payment_review_note,
   organizations(name),
   service_versions(version, services(name)),
   invitations(accepted_at)`;
@@ -32,6 +39,11 @@ type Fila = {
   conditions: string | null;
   created_at: string;
   status_changed_at: string;
+  invitation_id: string | null;
+  requires_signature: boolean;
+  requires_payment: boolean;
+  payment_review: boolean;
+  payment_review_note: string | null;
   organizations: { name: string } | null;
   service_versions: { version: number; services: { name: string } | null } | null;
   invitations: { accepted_at: string | null } | null;
@@ -50,6 +62,11 @@ function aContratacion(f: Fila): Contratacion {
     created_at: f.created_at,
     status_changed_at: f.status_changed_at,
     invitacion_aceptada: Boolean(f.invitations?.accepted_at),
+    invitada: Boolean(f.invitation_id),
+    requires_signature: f.requires_signature,
+    requires_payment: f.requires_payment,
+    payment_review: f.payment_review,
+    payment_review_note: f.payment_review_note,
   };
 }
 
@@ -87,6 +104,8 @@ const invitacionSchema = z.object({
     return c;
   }),
   condiciones: z.string().max(4000, "Las condiciones son demasiado largas."),
+  pideFirma: z.boolean(),
+  pidePago: z.boolean(),
 });
 
 /**
@@ -95,7 +114,14 @@ const invitacionSchema = z.object({
  */
 export async function invitarAServicio(
   organizationId: string,
-  datos: { email: string; versionId: string; precio: string; condiciones: string },
+  datos: {
+    email: string;
+    versionId: string;
+    precio: string;
+    condiciones: string;
+    pideFirma: boolean;
+    pidePago: boolean;
+  },
 ): Promise<ResultadoAccion<string>> {
   const d = invitacionSchema.safeParse(datos);
   if (!d.success) return { ok: false, error: d.error.issues[0]!.message };
@@ -110,9 +136,93 @@ export async function invitarAServicio(
       // `undefined` y no `null`: así la función usa su DEFAULT (precio del catálogo).
       p_price_cents: d.data.precio ?? undefined,
       p_conditions: d.data.condiciones,
+      p_requires_signature: d.data.pideFirma,
+      p_requires_payment: d.data.pidePago,
     }),
     "No se ha podido crear la contratación.",
   );
+}
+
+/**
+ * Contratación en BORRADOR, sin invitar todavía: R3ZON fija precio,
+ * interruptores y cobros ya recibidos antes de mandar el enlace.
+ */
+export async function crearContratacion(
+  organizationId: string,
+  datos: {
+    versionId: string;
+    precio: string;
+    condiciones: string;
+    pideFirma: boolean;
+    pidePago: boolean;
+  },
+): Promise<ResultadoAccion<{ id: string }>> {
+  const d = invitacionSchema.omit({ email: true }).safeParse(datos);
+  if (!d.success) return { ok: false, error: d.error.issues[0]!.message };
+  const supabase = await createClient();
+  let precio = d.data.precio;
+  if (precio === null) {
+    const v = await supabase
+      .from("service_versions")
+      .select("price_cents")
+      .eq("id", d.data.versionId)
+      .single();
+    if (v.error || !v.data) return { ok: false, error: "El servicio no existe." };
+    precio = v.data.price_cents;
+  }
+  return escribir<{ id: string }>(
+    "contrataciones",
+    "crear",
+    supabase
+      .from("engagements")
+      .insert({
+        organization_id: organizationId,
+        service_version_id: d.data.versionId,
+        price_cents: precio,
+        conditions: d.data.condiciones.trim() || null,
+        requires_signature: d.data.pideFirma,
+        requires_payment: d.data.pidePago,
+      })
+      .select("id")
+      .single(),
+    "No se ha podido crear la contratación.",
+  );
+}
+
+/** Invita (o reinvita: revoca el enlace anterior) a una contratación. Devuelve el token una vez. */
+export async function invitarContratacion(
+  engagementId: string,
+  email: string,
+): Promise<ResultadoAccion<string>> {
+  const e = z.email("Escribe un email válido.").safeParse(email.trim().toLowerCase());
+  if (!e.success) return { ok: false, error: e.error.issues[0]!.message };
+  const supabase = await createClient();
+  return escribir<string>(
+    "contrataciones",
+    "invitar_existente",
+    supabase.rpc("invite_engagement", { p_engagement_id: engagementId, p_email: e.data }),
+    "No se ha podido crear la invitación.",
+  );
+}
+
+/** Interruptores: ¿el cliente firma en el portal? ¿paga en el portal? (las reglas, en la base). */
+export async function cambiarInterruptores(
+  engagementId: string,
+  valores: { pideFirma: boolean; pidePago: boolean },
+): Promise<ResultadoAccion<null>> {
+  const supabase = await createClient();
+  const r = await escribir(
+    "contrataciones",
+    "interruptores",
+    supabase
+      .from("engagements")
+      .update({ requires_signature: valores.pideFirma, requires_payment: valores.pidePago })
+      .eq("id", engagementId)
+      .select("id")
+      .single(),
+    "No se han podido guardar los cambios.",
+  );
+  return r.ok ? { ok: true, datos: null } : r;
 }
 
 export async function cambiarEstado(
@@ -153,6 +263,7 @@ export async function contratacion(id: string): Promise<Resultado<DetalleContrat
       .from("engagements")
       .select(
         `id, organization_id, status, price_cents, conditions, created_at, status_changed_at,
+         invitation_id, requires_signature, requires_payment, payment_review, payment_review_note,
          organizations(name),
          service_versions(version, vat_rate, payment_plans, deposit_percent, includes, services(name, summary)),
          invitations(accepted_at)`,
@@ -227,6 +338,8 @@ const nuevoClienteSchema = z.object({
   versionId: z.union([z.literal(""), z.uuid()]),
   precio: z.string(),
   condiciones: z.string().max(4000, "Las condiciones son demasiado largas."),
+  pideFirma: z.boolean(),
+  pidePago: z.boolean(),
 });
 
 /** Alta de cliente e invitación (con o sin servicio) en una transacción. */
@@ -236,6 +349,8 @@ export async function crearClienteConInvitacion(datos: {
   versionId: string;
   precio: string;
   condiciones: string;
+  pideFirma: boolean;
+  pidePago: boolean;
 }): Promise<ResultadoAccion<{ organizationId: string; token: string }>> {
   const d = nuevoClienteSchema.safeParse(datos);
   if (!d.success) return { ok: false, error: d.error.issues[0]!.message };
@@ -256,6 +371,8 @@ export async function crearClienteConInvitacion(datos: {
       p_service_version_id: d.data.versionId || undefined,
       p_price_cents: precio,
       p_conditions: d.data.condiciones,
+      p_requires_signature: d.data.pideFirma,
+      p_requires_payment: d.data.pidePago,
     }),
     "No se ha podido crear el cliente.",
   );

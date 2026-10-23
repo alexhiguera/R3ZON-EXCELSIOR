@@ -6,5 +6,9 @@ export {
   ETAPAS,
   type Etapa,
   etapaEmbudo,
+  type PasoAlta,
+  pasoCliente,
+  pasosAlta,
+  puedeActivarse,
   TRANSICIONES,
 } from "./estados";

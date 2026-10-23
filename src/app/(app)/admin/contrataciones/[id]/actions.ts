@@ -2,6 +2,19 @@
 
 import { revalidatePath } from "next/cache";
 import type { EstadoForm } from "@/components/ui/FormAccion";
+import { origenDeLaPeticion } from "@/lib/origen";
+import { enlaceInvitacion } from "@/modulos/acceso";
+import {
+  anularPago,
+  marcarFacturado,
+  marcarRevision,
+  registrarPagoExterno,
+} from "@/modulos/cobros/servidor";
+import {
+  cambiarEstado,
+  cambiarInterruptores,
+  invitarContratacion,
+} from "@/modulos/contrataciones/servidor";
 import {
   anadirAnexo,
   cambiarEstadoContrato,
@@ -9,6 +22,7 @@ import {
   guardarClausulas,
   quitarAnexo,
 } from "@/modulos/contratos/servidor";
+import { leerInterruptores } from "../Interruptores";
 
 /*
  * Preparación del contrato de una contratación (staff, por RLS). Qué se puede
@@ -87,4 +101,104 @@ export async function accionEstadoContrato(
     anulado: "Contrato anulado.",
   };
   return { error: null, ok: mensajes[estado] };
+}
+
+/* ───────────────────────────── Alta, interruptores y activación ───────────────────────────── */
+
+export async function accionInvitarContratacion(
+  engagementId: string,
+  _: EstadoForm,
+  datos: FormData,
+): Promise<EstadoForm> {
+  const email = String(datos.get("email") ?? "");
+  const r = await invitarContratacion(engagementId, email);
+  if (!r.ok) return { error: r.error };
+  revalidatePath(ruta(engagementId));
+  return {
+    error: null,
+    ok: `Invitación lista para ${email.trim().toLowerCase()}. Válida 7 días; la anterior, si había, queda anulada.`,
+    enlace: enlaceInvitacion(await origenDeLaPeticion(), r.datos),
+  };
+}
+
+export async function accionInterruptores(
+  engagementId: string,
+  _: EstadoForm,
+  datos: FormData,
+): Promise<EstadoForm> {
+  const r = await cambiarInterruptores(engagementId, leerInterruptores(datos));
+  if (!r.ok) return { error: r.error };
+  revalidatePath(ruta(engagementId));
+  return { error: null, ok: "Guardado." };
+}
+
+export async function accionActivar(
+  engagementId: string,
+  _: EstadoForm,
+  datos: FormData,
+): Promise<EstadoForm> {
+  const motivo = String(datos.get("motivo") ?? "").trim() || "Puesta en marcha";
+  const r = await cambiarEstado(engagementId, "activa", motivo);
+  if (!r.ok) return { error: r.error };
+  revalidatePath(ruta(engagementId));
+  return { error: null, ok: "Contratación activa: el proyecto está en marcha." };
+}
+
+/* ───────────────────────────── Cobros ───────────────────────────── */
+
+export async function accionRegistrarCobro(
+  engagementId: string,
+  _: EstadoForm,
+  datos: FormData,
+): Promise<EstadoForm> {
+  const campo = (k: string) => String(datos.get(k) ?? "");
+  const r = await registrarPagoExterno(engagementId, {
+    importe: campo("importe"),
+    metodo: campo("metodo") as "transferencia" | "otro",
+    fecha: campo("fecha"),
+    referencia: campo("referencia"),
+    justificante: campo("justificante"),
+  });
+  if (!r.ok) return { error: r.error };
+  revalidatePath(ruta(engagementId));
+  return { error: null, ok: "Cobro registrado." };
+}
+
+export async function accionAnularCobro(
+  engagementId: string,
+  pagoId: string,
+  _: EstadoForm,
+  datos: FormData,
+): Promise<EstadoForm> {
+  const r = await anularPago(pagoId, String(datos.get("motivo") ?? ""));
+  if (!r.ok) return { error: r.error };
+  revalidatePath(ruta(engagementId));
+  return { error: null, ok: "Cobro anulado." };
+}
+
+export async function accionFacturado(
+  engagementId: string,
+  pagoId: string,
+  _: EstadoForm,
+  datos: FormData,
+): Promise<EstadoForm> {
+  const r = await marcarFacturado(pagoId, String(datos.get("factura") ?? ""));
+  if (!r.ok) return { error: r.error };
+  revalidatePath(ruta(engagementId));
+  return { error: null, ok: "Factura anotada." };
+}
+
+export async function accionRevision(
+  engagementId: string,
+  revisar: boolean,
+  _: EstadoForm,
+  datos: FormData,
+): Promise<EstadoForm> {
+  const r = await marcarRevision(engagementId, revisar, String(datos.get("nota") ?? ""));
+  if (!r.ok) return { error: r.error };
+  revalidatePath(ruta(engagementId));
+  return {
+    error: null,
+    ok: revisar ? "Marcada como pendiente de revisión." : "Revisión cerrada.",
+  };
 }

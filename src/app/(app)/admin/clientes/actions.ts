@@ -6,8 +6,13 @@ import type { EstadoForm } from "@/components/ui/FormAccion";
 import { origenDeLaPeticion } from "@/lib/origen";
 import { enlaceInvitacion } from "@/modulos/acceso";
 import { crearInvitacion, revocarInvitacion } from "@/modulos/acceso/servidor";
-import { crearClienteConInvitacion, invitarAServicio } from "@/modulos/contrataciones/servidor";
+import {
+  crearClienteConInvitacion,
+  crearContratacion,
+  invitarAServicio,
+} from "@/modulos/contrataciones/servidor";
 import { archivarCliente, crearCliente } from "@/modulos/organizaciones/servidor";
+import { leerInterruptores } from "../contrataciones/Interruptores";
 
 /*
  * Acciones del panel de clientes. Quién puede ejecutarlas NO se decide aquí:
@@ -36,6 +41,7 @@ export async function accionCrearConInvitacion(
     versionId: texto(datos, "servicio"),
     precio: texto(datos, "precio"),
     condiciones: texto(datos, "condiciones"),
+    ...leerInterruptores(datos),
   });
   if (!r.ok) return { error: r.error };
   revalidatePath("/admin/clientes");
@@ -78,6 +84,7 @@ export async function accionInvitar(
         versionId,
         precio: texto(datos, "precio"),
         condiciones: texto(datos, "condiciones"),
+        ...leerInterruptores(datos),
       })
     : await crearInvitacion(organizationId, email, texto(datos, "rol") || "owner");
   if (!r.ok) return { error: r.error };
@@ -88,6 +95,26 @@ export async function accionInvitar(
     ok: `Invitación creada para ${email.trim().toLowerCase()}. Válida 7 días.`,
     enlace: enlaceInvitacion(await origenDeLaPeticion(), r.datos),
   };
+}
+
+/**
+ * Contratación en borrador, SIN invitar: para registrar antes los cobros ya
+ * recibidos y fijar los interruptores. Se invita desde su ficha.
+ */
+export async function accionCrearContratacion(
+  organizationId: string,
+  _: EstadoForm,
+  datos: FormData,
+): Promise<EstadoForm> {
+  const r = await crearContratacion(organizationId, {
+    versionId: texto(datos, "servicio"),
+    precio: texto(datos, "precio"),
+    condiciones: texto(datos, "condiciones"),
+    ...leerInterruptores(datos),
+  });
+  if (!r.ok) return { error: r.error };
+  revalidatePath(`/admin/clientes/${organizationId}`);
+  redirect(`/admin/contrataciones/${r.datos.id}`);
 }
 
 export async function accionRevocar(

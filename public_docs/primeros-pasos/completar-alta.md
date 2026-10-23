@@ -1,10 +1,10 @@
 ---
-title: "Cómo completar tu alta y firmar el contrato"
+title: "Cómo completar tu alta, firmar el contrato y ver tu pago"
 sidebar_label: "Completar tu alta y firmar"
 sidebar_position: 2
 slug: /primeros-pasos/completar-alta
-description: "Desde tu inicio pulsa Continuar, revisa lo que incluye tu servicio, da los datos de tu empresa y firma el contrato con tu firma y un código que te enviamos por email."
-keywords: [alta, contrato, firmar, firma electrónica, datos fiscales, código]
+description: "Pulsa Continuar en tu inicio, da los datos de tu empresa y, si te toca, firma el contrato con un código por email y revisa tu pago."
+keywords: [alta, contrato, firmar, firma electrónica, datos fiscales, código, pago]
 tags: [contrato]
 last_update:
   date: 2026-10-23
@@ -18,16 +18,17 @@ r3zon:
 ---
 
 **Respuesta corta.** En tu inicio, pulsa **Continuar** en tu servicio. Revisa lo que
-incluye, escribe los datos de tu empresa y, cuando R3ZON te envíe el contrato, léelo,
-pide el código a tu email, firma y pulsa **Firmar contrato**. Al terminar puedes
-descargar el contrato firmado en PDF.
+incluye y escribe los datos de tu empresa. Si R3ZON te pide firmar en el portal, lee el
+contrato, pide el código a tu email y pulsa **Firmar contrato**. Si te pide pagar en el
+portal, verás lo que has pagado y lo pendiente. Si ya firmaste o pagaste con R3ZON por
+otra vía, esos pasos no aparecen.
 
 ## Qué necesitas antes de empezar
 
 - Tu cuenta en el área de clientes ([Cómo crear tu cuenta](aceptar-invitacion.md)).
 - Los datos fiscales de tu empresa: razón social, NIF o CIF y dirección fiscal.
-- Para firmar: ser propietario de la empresa en el área de clientes, tu DNI o NIE y
-  acceso a tu email.
+- Si te toca firmar: ser propietario de la empresa en el área de clientes, tu DNI o
+  NIE y acceso a tu email.
 
 ## Cómo completar tu alta, paso a paso
 
@@ -35,15 +36,24 @@ descargar el contrato firmado en PDF.
 2. Lee la bienvenida (qué incluye tu servicio, el precio y las condiciones) y pulsa
    **Empezar**.
 3. Escribe los datos de tu empresa y pulsa **Guardar y continuar**.
-4. Cuando R3ZON tenga listo tu contrato, lo verás en el paso **Contrato**. Léelo entero.
+4. Si tienes el paso **Contrato**: cuando R3ZON tenga listo tu contrato, lo verás ahí.
+   Léelo entero.
 5. Pulsa **Enviarme el código**: te llega a tu email un código de 6 cifras.
 6. Escribe tu nombre y apellidos, tu DNI o NIE y tu cargo, y firma en el recuadro con el
    dedo o el ratón (o pulsa **Usar mi nombre**).
 7. Escribe el código del email, marca que has leído y aceptas el contrato, y pulsa
    **Firmar contrato**.
-8. Verás **¡Enhorabuena!** y podrás **descargar el contrato (PDF)**.
+8. Si tienes el paso **Pago**, verás el total con IVA, lo que ya has pagado y lo
+   pendiente. Por ahora el pago no se hace en el portal: el equipo de R3ZON te indica
+   cómo hacerlo. Pulsa **Continuar**.
+9. Verás **¡Enhorabuena!** y, si has firmado, podrás **descargar el contrato (PDF)**.
 
 ## Qué tener en cuenta
+
+- **No todos ven todos los pasos.** R3ZON decide si firmas y si pagas en el portal; si
+  ya lo hiciste por otra vía, no se te vuelve a pedir.
+- **Los pagos que haces fuera del portal** (por ejemplo, por transferencia) los registra
+  el equipo de R3ZON; aparecen en tu inicio como **Pagado** o **Pago parcial**.
 
 - **Puedes dejarlo a medias.** Lo que hayas guardado se queda; vuelve desde **Inicio** →
   **Continuar** cuando quieras.

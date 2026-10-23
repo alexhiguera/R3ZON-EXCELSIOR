@@ -14,15 +14,29 @@ en curso (y lo que surja); cuando arranca una fase, sus entregables bajan aquí.
 | Comprobación | Resultado |
 |---|---|
 | `npm run lint` · `typecheck` | ✅ |
-| `npm run test:run` (con el stack levantado) | ✅ 264 tests en 34 ficheros (93 contra Postgres) |
-| `npm run test:e2e` | ✅ 36 tests (18 en escritorio + 18 en móvil), incluido el alta completa con firma |
+| `npm run test:run` (con el stack levantado) | ✅ 287 tests en 35 ficheros (105 contra Postgres) |
+| `npm run test:e2e` | ✅ 38 tests (19 en escritorio + 19 en móvil): alta completa con firma, y cliente ya pagado sin firma |
 | `npm run build` | ✅ |
 | `npm run db:drift` · `db:types:check` | ✅ |
 | `npm run docs:validar` · `docs:enlaces` | ✅ |
 | `npm audit` | ✅ 0 vulnerabilidades |
-| Migraciones | 8: core + 7 módulos (línea base, T-18), solo en local |
+| Migraciones | 9: core + 8 módulos (línea base, T-18), solo en local |
 | Entorno | **Solo local** (T-17) |
-| Fase en curso | **Fase 3** — recorrido completo hecho; faltan las validaciones de la asesoría. Siguiente: Fase 4 (pagos) |
+| Fase en curso | **Fase 4** — cobros externos, estado económico y alta condicional hechos; Stripe espera a D-04 y a una cuenta de pruebas. De la Fase 3 faltan las validaciones de la asesoría |
+
+## Fase 4 — Cobros
+
+- [ ] 🔴 Decidir D-04 (pago embebido o Stripe Checkout) y crear una cuenta de Stripe en
+  modo test: bloquea toda la integración con Stripe ([PLAN.md](PLAN.md) → Fase 4, 8–10).
+- [ ] 🟠 Contrato con ANTARES (D-06): quién escucha a Stripe y cómo vuelve la referencia
+  de la factura, también para los cobros externos.
+- [ ] 🟠 Señal + entrega: `amount_due_now` devuelve hoy el saldo entero; con la señal,
+  hasta que R3ZON marque la entrega.
+- [ ] 🟡 Pago delegado a un usuario `billing` (resto de T-25).
+- [ ] 🟡 Requisitos del informe que no llegaron (Apple Pay, Google Pay, Link, descuentos,
+  financiación externa): pedírselos a R3ZON antes de la parte de Stripe.
+- [ ] 🟢 Justificante de un cobro externo como fichero (hoy es una referencia de texto):
+  con el almacenamiento seguro de la Fase 5.
 
 ## Fase 3 — Onboarding y contrato
 
@@ -71,7 +85,7 @@ en curso (y lo que surja); cuando arranca una fase, sus entregables bajan aquí.
 ## Asesoría (no depende de que sea local)
 
 - [ ] 🟠 Pedir ya lo que bloquea el Hito V, porque tarda: validación de la firma propia
-  (D-10), validación fiscal de Stripe Invoicing (D-11), textos de contrato y DPA (D-05) y
+  (D-10), textos de contrato y DPA (D-05) y
   plazos de retención (D-13) ([PLAN.md](PLAN.md) → Decisiones abiertas).
 
 ## Heredadas de la plantilla (antes del hito MVP)

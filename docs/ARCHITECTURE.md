@@ -210,17 +210,31 @@ sin sacar al cliente a otra web en el momento crítico. Si un cliente exige firm
 avanzada, la generación del documento y las evidencias están separadas de «quién firma»,
 para poder enchufar un proveedor sin rehacer el flujo.
 
-## 18. Pagos: Stripe es la fuente de verdad del cobro
+## 18. Cobros: un libro inmutable, separado del contrato
 
-- La app **nunca** marca algo como pagado por una petición del cliente: solo el
-  **webhook** de Stripe, con la firma verificada y deduplicado por id de evento.
+- **Dos estados, dos máquinas** (T-26). La contratación lleva el estado **contractual**
+  (invitada, datos, firmada, activa…); el **económico** (`no_pagado`,
+  `parcialmente_pagado`, `pagado`, `pendiente_revision`) lo calcula la vista
+  `engagement_collections` a partir del libro de cobros (`payments`). Nunca se guarda a
+  mano: un dato derivado guardado acaba contradiciendo a su origen.
+- **El libro no se edita.** Un cobro no se modifica ni se borra: se anula con motivo (si
+  no está facturado) y se registra otro. Todo queda en `audit_log`.
+- **Las reglas viven en triggers** sobre `payments`: no pasar del total (con bloqueo de la
+  fila de la contratación contra la carrera de dos registros), fecha no futura, cobros
+  externos solo confirmados, cobros `stripe` solo desde el servidor.
+- **El importe a cobrar lo decide la base** (`amount_due_now`), nunca el cliente ni la
+  página: 0 si no paga en el portal, si está en revisión o con un cobro pendiente.
+- **Stripe es la fuente de verdad de sus cobros**: la app nunca marca algo como pagado por
+  una petición del cliente; solo el **webhook**, con la firma verificada y deduplicado
+  (`provider_reference` única).
 - Los estados de pago contemplan los **asíncronos** (transferencia y SEPA tardan días y
   un adeudo SEPA puede devolverse después).
 - Versión de la API de Stripe **fijada** en el código.
 - Las claves secretas de Stripe solo en servidor ([DEVELOPMENT.md](DEVELOPMENT.md) →
   «Añadir una variable de entorno»).
-- La factura legal la emite hoy Stripe y mañana ANTARES: la app guarda una
-  **referencia** a la factura del emisor, no la reconstruye.
+- La factura legal la emite **ANTARES con TicketBAI** (T-29): la app guarda una
+  **referencia** a la factura (`invoice_reference`), no la reconstruye. Un cobro
+  facturado no se anula aquí: se rectifica en ANTARES.
 
 ## 19. Ficheros del cliente
 
@@ -255,9 +269,9 @@ demás se escriben con su fase siguiendo esta tabla:
 | Entidad | Estados | Caminos no felices que tienen que existir |
 |---|---|---|
 | Invitación ✅ | `pendiente → aceptada` | `revocada`, `caducada`; reenvío = invitación nueva que revoca la anterior. **Implementada** con estado derivado de columnas (`accepted_at`, `revoked_at`, `expires_at`) y el trigger `invitations_guard_transition` |
-| Contratación ✅ | `borrador → invitada → datos_completos → firmada → pago_en_curso → pagada → activa → finalizada` | `cancelada` (antes de firmar), `rescindida` (después), `en_impago` (desde el pago, la activa o la pagada; vuelve a `pago_en_curso` o `activa`, o se rescinde). **Implementada**: `engagement_transition_allowed()` + trigger, historial inmutable con motivo; la interfaz repite la tabla y un test comprueba que coinciden |
+| Contratación ✅ | `borrador → invitada → datos_completos → [firmada] → activa → finalizada` | `cancelada` (antes de firmar), `rescindida` (después). Sin firma en el portal (T-27) se salta `firmada`; `activa` la pone el equipo a mano. **Sin estados de pago** (T-26). **Implementada**: `engagement_transition_allowed()` + trigger, historial inmutable con motivo; la interfaz repite la tabla y un test comprueba que coinciden |
 | Contrato ✅ | `borrador ⇄ enviado → firmado` | `anulado` (antes de firmar), **`sustituido`** por otro contrato (anexo o nueva versión): el firmado no cambia, se enlaza el que lo sustituye |
-| Pago | `pendiente → en_curso → pagado` | `fallido`, **`devuelto`** (adeudo SEPA rechazado días después), **`en_disputa`** (y su resolución), **`reembolsado`** total o parcial; cada reembolso o devolución con su **abono / factura rectificativa** |
+| Cobro ✅ | `pendiente → confirmado` (Stripe); los externos nacen `confirmado` | `fallido`, **`devuelto`** (adeudo SEPA rechazado, reembolso), `anulado` (corrección del equipo, con motivo). La rectificativa, en ANTARES. **Implementado** en `payments`; las transiciones de Stripe esperan al webhook |
 | Proyecto | `briefing → diseño → desarrollo → revisión → lanzado → mantenimiento` | `en_pausa` (p. ej. por impago), `cancelado` |
 
 Reglas:
@@ -265,8 +279,9 @@ Reglas:
 - Stripe **no entrega los eventos en orden** y puede repetirlos: el webhook aplica una
   transición solo si es válida desde el estado actual, y un evento antiguo nunca hace
   retroceder un estado.
-- Los estados de pago y contratación están relacionados pero no son el mismo: un pago
-  devuelto lleva la contratación a `en_impago`, no la «desfirma».
+- Los estados de cobro y contratación son independientes (T-26): un cobro devuelto
+  vuelve a dejar saldo pendiente; no «desfirma» ni desactiva nada. Qué hacer con un
+  impago lo decide R3ZON (rescindir es una transición manual).
 - La interfaz se deriva del estado (qué botones aparecen), nunca al revés.
 
 ## 21. Un monolito modular que no colapsa entero

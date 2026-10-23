@@ -73,11 +73,12 @@ Matriz inicial de **recurso × acción** (se completa al implementar cada fase):
 | Datos fiscales de la empresa | leer, editar | leer | leer, editar | todo |
 | Usuarios de la empresa | invitar, cambiar rol, quitar | leer | leer | todo |
 | Catálogo de servicios ✅ | solo lo contratado | solo lo contratado | solo lo contratado | leer (staff), crear y versionar (**solo admin**) |
-| Contrataciones ✅ | leer las suyas | leer las suyas | leer las suyas | crear (invitar con servicio), cerrar con motivo |
+| Contrataciones ✅ | leer las suyas | leer las suyas | leer las suyas | crear, invitar, interruptores de firma y pago, activar, cerrar con motivo |
 | Datos fiscales ✅ | leer, editar | leer | leer, editar | todo |
 | Contratos ✅ | leer (no borradores), **firmar**, delegar | leer (no borradores) | leer, delegar | preparar, enviar, retirar, anular; plantillas y cláusulas: **solo admin** |
 | Propuestas | leer, **aceptar** / rechazar | leer | leer | crear, enviar |
-| Pagos y facturas | leer, pagar | — | leer, pagar | leer, marcar entrega |
+| Cobros ✅ | leer los suyos | leer los suyos | leer los suyos | registrar externos, anular con motivo, marcar facturado y revisión; los de Stripe solo el servidor |
+| Pagar en el portal | pagar | — | pagar | — |
 | Briefing y documentos | todo | todo | leer | todo |
 | Tickets | abrir, responder | abrir, responder | abrir, responder | todo + notas internas |
 

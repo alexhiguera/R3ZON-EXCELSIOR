@@ -8,6 +8,8 @@ import { Field } from "@/components/ui/Field";
 import { FormAccion } from "@/components/ui/FormAccion";
 import { Input, Select } from "@/components/ui/Input";
 import { euros, fecha } from "@/lib/formato";
+import { ESTADOS_COBRO } from "@/modulos/cobros";
+import { type ResumenCobro, resumenCobros } from "@/modulos/cobros/servidor";
 import {
   CIERRES_MANUALES,
   ESTADOS,
@@ -41,6 +43,9 @@ export default function ContratacionesPage() {
 
 async function Embudo() {
   const r = await listarContrataciones();
+  // Si el módulo de cobros falla, el embudo se sigue viendo, sin el estado de cobro.
+  const cobros = r.ok ? await resumenCobros(r.datos.map((c) => c.id)) : null;
+  const cobroDe = (id: string) => (cobros?.ok ? cobros.datos.get(id) : undefined);
   if (!r.ok) return <BloqueNoDisponible nombre="El embudo de contrataciones" />;
 
   const porEtapa = new Map<string, Contratacion[]>(ETAPAS.map((e) => [e.id, []]));
@@ -75,7 +80,7 @@ async function Embudo() {
             <ul className="flex flex-col gap-3">
               {lista.map((c) => (
                 <li key={c.id}>
-                  <FilaContratacion c={c} />
+                  <FilaContratacion c={c} cobro={cobroDe(c.id)} />
                 </li>
               ))}
             </ul>
@@ -86,12 +91,12 @@ async function Embudo() {
       {cerradas.length > 0 && (
         <details className="surface-card rounded-2xl p-5">
           <summary className="cursor-pointer text-sm font-medium">
-            Cerradas y borradores ({cerradas.length})
+            Cerradas ({cerradas.length})
           </summary>
           <ul className="mt-4 flex flex-col gap-3">
             {cerradas.map((c) => (
               <li key={c.id}>
-                <FilaContratacion c={c} />
+                <FilaContratacion c={c} cobro={cobroDe(c.id)} />
               </li>
             ))}
           </ul>
@@ -108,7 +113,7 @@ async function Embudo() {
   );
 }
 
-function FilaContratacion({ c }: { c: Contratacion }) {
+function FilaContratacion({ c, cobro }: { c: Contratacion; cobro: ResumenCobro | undefined }) {
   const cierres = CIERRES_MANUALES.filter((e) => TRANSICIONES[c.status].includes(e));
   return (
     <Card className="flex flex-col gap-3 p-4 sm:p-5" data-testid="fila-contratacion">
@@ -129,6 +134,11 @@ function FilaContratacion({ c }: { c: Contratacion }) {
         </span>
         <span className="flex flex-wrap items-center gap-2 text-xs text-muted">
           <Badge tone={ESTADOS[c.status].tono}>{ESTADOS[c.status].etiqueta}</Badge>
+          {cobro && (
+            <Badge tone={ESTADOS_COBRO[cobro.status].tono}>
+              {ESTADOS_COBRO[cobro.status].etiqueta}
+            </Badge>
+          )}
           {c.status === "invitada" && (
             <Badge tone={c.invitacion_aceptada ? "success" : "neutral"}>
               {c.invitacion_aceptada ? "Cuenta creada" : "Sin cuenta aún"}

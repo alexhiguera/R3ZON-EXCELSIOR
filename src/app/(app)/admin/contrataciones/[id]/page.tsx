@@ -28,6 +28,8 @@ import {
   accionGuardarClausulas,
   accionQuitarAnexo,
 } from "./actions";
+import { SeccionAlta } from "./SeccionAlta";
+import { SeccionCobro } from "./SeccionCobro";
 
 export const metadata: Metadata = { title: "Contratación" };
 
@@ -64,9 +66,26 @@ export default async function ContratacionPage({ params }: { params: Promise<{ i
         }
       />
 
-      <ModuloSeguro nombre="El contrato">
-        <SeccionContrato engagementId={e.id} estadoContratacion={e.status} />
+      <ModuloSeguro nombre="El alta">
+        <SeccionAlta e={e} />
       </ModuloSeguro>
+
+      <ModuloSeguro nombre="El cobro">
+        <SeccionCobro e={e} />
+      </ModuloSeguro>
+
+      {e.requires_signature ? (
+        <ModuloSeguro nombre="El contrato">
+          <SeccionContrato engagementId={e.id} estadoContratacion={e.status} />
+        </ModuloSeguro>
+      ) : (
+        <Card>
+          <h2 className="text-lg font-semibold">Contrato</h2>
+          <p className="mt-1 text-sm text-muted">
+            Esta contratación no se firma en el portal (firmada fuera, o no lo necesita).
+          </p>
+        </Card>
+      )}
 
       <Card>
         <h2 className="mb-3 text-lg font-semibold">Historial</h2>

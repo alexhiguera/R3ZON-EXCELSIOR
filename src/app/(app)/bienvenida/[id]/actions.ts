@@ -30,7 +30,8 @@ export async function accionGuardarDatos(
   const c = await confirmarDatos(engagementId);
   if (!c.ok) return { error: c.error };
   revalidatePath(ruta(engagementId));
-  redirect(`${ruta(engagementId)}?paso=contrato`);
+  // Al paso que toque (contrato, pago o listo): lo decide la página.
+  redirect(ruta(engagementId));
 }
 
 export async function accionEnviarCodigo(_: EstadoForm, _datos: FormData): Promise<EstadoForm> {
@@ -59,7 +60,7 @@ export async function accionFirmar(
   });
   if (!r.ok) return { error: r.error };
   revalidatePath(ruta(engagementId));
-  redirect(`${ruta(engagementId)}?paso=listo`);
+  redirect(ruta(engagementId));
 }
 
 export async function accionDelegar(

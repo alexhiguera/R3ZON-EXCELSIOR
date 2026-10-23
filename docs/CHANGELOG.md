@@ -7,6 +7,55 @@ nunca se renumeran.
 
 ---
 
+### Iteración 7 — *2026-10-23* — Cobros: estado económico separado, interruptores y cobros externos
+
+R3ZON trae un informe de pagos: hay clientes que **ya pagaron fuera** (transferencia) sin
+haber firmado, y otros al revés. Con el flujo fijo «firma → pago» de la Fase 3 se les
+pediría firmar o pagar dos veces. Decisiones de R3ZON: la activación la hace el equipo a
+mano (T-26); el equipo decide por contratación si el cliente firma y si paga en el
+portal (T-27); **sin efectivo** (T-28); la factura la emite **ANTARES con TicketBAI**,
+probablemente escuchando a Stripe desde ANTARES (T-29, sustituye a T-06 y cierra D-11).
+
+- **La contratación pierde sus estados de pago** (`pago_en_curso`, `pagada`,
+  `en_impago`). Mezclar los dos ejes obligaba a inventar combinaciones («pagada pero sin
+  firmar») como estados nuevos. El estado económico se **calcula** en la vista
+  `engagement_collections` a partir del libro de cobros; no se guarda, para que no pueda
+  contradecir al libro. Descartado: una columna `collection_status` mantenida por
+  trigger (otro sitio donde puede divergir).
+- **Interruptores** `requires_signature` y `requires_payment` (línea base reescrita,
+  T-18). Sin firma, `datos_completos → activa` es válida y `→ firmada` no; la firma se
+  puede cambiar solo hasta firmarse. Se pueden fijar al crear la contratación sin invitar
+  (nueva sección en la ficha) o al invitar; `invite_engagement()` re-invita revocando la
+  invitación anterior (escenario 9: nunca dos enlaces vivos para la misma alta).
+- **Libro de cobros** (`payments`, migración `20261023000800_cobros.sql`): céntimos, IVA
+  incluido, inmutable (se anula con motivo; facturado, ni eso: se rectifica en
+  ANTARES), sin `DELETE`, auditado sin copiar las referencias que escribe el equipo. El
+  trigger de alta **bloquea la fila de la contratación** (`FOR UPDATE`) antes de sumar:
+  sin el bloqueo, dos registros simultáneos pasaban los dos el control del total (lo
+  prueba un test con dos conexiones). Los cobros `stripe` solo los crea
+  `service_role`/`postgres`, con `provider_reference` única: la idempotencia del webhook
+  queda impuesta antes de escribirlo.
+- `amount_due_now()` decide qué se le pide al cliente (0 si no paga en el portal, si
+  está en revisión o con un cobro pendiente): cuando llegue Stripe, el importe no saldrá
+  nunca de la página.
+- **Asistente condicional**: `pasosAlta()` (pura, con tests) decide los pasos; el nuevo
+  paso de pago muestra total, pagado y pendiente, sin cobrar todavía («el equipo te
+  indicará cómo»). «Listo» ya no dice «contrato firmado» si no lo hubo. El inicio del
+  cliente y el panel muestran el estado de cobro.
+- Panel: sección de alta (invitar, interruptores, activar con aviso de saldo) y de cobro
+  (resumen, movimientos, registrar, anular, facturado, revisión) en la contratación.
+- Tests: `tests/db/cobros.test.ts` con los escenarios 1–10 del informe, autorización
+  entre empresas, idempotencia, auditoría y concurrencia; E2E `cobros.spec.ts` (cliente
+  ya pagado en dos transferencias y sin firma: entra, da sus datos y termina sin firmar
+  ni pagar; un cobro de más lo rechaza la base); `onboarding.spec.ts` pasa ahora por el
+  paso de pago.
+- Errores del camino: un test de inserción del cliente esperaba un rechazo de la RLS y
+  lo da el trigger («la contratación no existe», porque con RLS no la ve), y otro
+  esperaba error en una actualización que no cambiaba nada. Corregidos los dos tests, no
+  el código: el comportamiento era el correcto.
+- Pendiente: Stripe (cuenta de pruebas y D-04), contrato con ANTARES (D-06), señal +
+  entrega y pago delegado.
+
 ### Iteración 6 — *2026-10-23* — Cierre de la Fase 2 y Fase 3: alta, contrato y firma
 
 R3ZON decide: «ver como cliente» de solo lectura (T-22), las dos vías de alta de

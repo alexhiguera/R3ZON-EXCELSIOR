@@ -136,6 +136,10 @@ test("alta completa: invitación, datos, contrato y firma con código", async ({
   await cliente.getByLabel("Código del email").fill(codigo);
   await cliente.getByLabel(/He leído el contrato/).check();
   await cliente.getByRole("button", { name: "Firmar contrato" }).click();
+  // Firmado y sin pagar: el asistente sigue en el pago, con el total pendiente.
+  await expect(cliente.getByTestId("paso-pago")).toBeVisible();
+  await expect(cliente.getByTestId("pendiente-cliente")).toContainText("2420,00");
+  await cliente.getByRole("link", { name: "Continuar" }).click();
   await expect(cliente.getByRole("heading", { level: 1 })).toHaveText("¡Enhorabuena!");
 
   const pdf = await cliente.request.get(

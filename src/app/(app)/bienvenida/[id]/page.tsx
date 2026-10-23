@@ -9,8 +9,10 @@ import { Field } from "@/components/ui/Field";
 import { FormAccion } from "@/components/ui/FormAccion";
 import { Input, Select } from "@/components/ui/Input";
 import { type Step, Stepper } from "@/components/ui/Stepper";
-import { euros } from "@/lib/formato";
-import type { Estado } from "@/modulos/contrataciones";
+import { euros, fecha } from "@/lib/formato";
+import { ESTADOS_COBRO, ETIQUETA_METODO } from "@/modulos/cobros";
+import { importeExigible, pagos, resumenCobro } from "@/modulos/cobros/servidor";
+import { type PasoAlta, pasosAlta } from "@/modulos/contrataciones";
 import { contratacion, type DetalleContratacion } from "@/modulos/contrataciones/servidor";
 import { FirmaDibujada, TextoContrato } from "@/modulos/contratos";
 import { contratoDe, textoContrato } from "@/modulos/contratos/servidor";
@@ -20,25 +22,19 @@ import { accionDelegar, accionEnviarCodigo, accionFirmar, accionGuardarDatos } f
 
 export const metadata: Metadata = { title: "Tu alta" };
 
-const PASOS: Step[] = [
-  { id: "bienvenida", label: "Bienvenida" },
-  { id: "datos", label: "Datos de tu empresa" },
-  { id: "contrato", label: "Contrato" },
-  { id: "listo", label: "Listo" },
-];
-type Paso = "bienvenida" | "datos" | "contrato" | "listo";
-
-/** Hasta qué paso puede llegar el cliente, según el estado REAL de su contratación. */
-function pasoMaximo(estado: Estado): number {
-  if (estado === "invitada") return 1;
-  if (estado === "datos_completos") return 2;
-  return 3;
-}
+const ETIQUETAS: Record<PasoAlta, string> = {
+  bienvenida: "Bienvenida",
+  datos: "Datos de tu empresa",
+  contrato: "Contrato",
+  pago: "Pago",
+  listo: "Listo",
+};
 
 /**
- * Asistente de alta (Fase 3). El paso no lo decide la URL: `?paso=` solo puede
- * ir a uno ya alcanzado. Los permisos (rol, estado, código) los vuelve a
- * comprobar la base en cada acción.
+ * Asistente de alta. Sus pasos dependen de lo que R3ZON pidió (firmar y pagar
+ * en el portal: T-27) y del estado real (`pasosAlta`). El paso no lo decide la
+ * URL: `?paso=` solo puede ir a uno ya alcanzado. Los permisos (rol, estado,
+ * código) los vuelve a comprobar la base en cada acción.
  */
 export default async function BienvenidaPage({
   params,
@@ -57,14 +53,22 @@ export default async function BienvenidaPage({
   const e = r.datos;
   if (["borrador", "cancelada", "rescindida"].includes(e.status)) notFound();
 
-  const rol = await rolEnEmpresa(e.organization_id);
+  const [rol, exigible] = await Promise.all([
+    rolEnEmpresa(e.organization_id),
+    importeExigible(e.id),
+  ]);
   const miRol = rol.ok ? rol.datos : null;
 
-  const maximo = pasoMaximo(e.status);
-  const porDefecto = e.status === "invitada" ? 0 : maximo;
-  const indicePedido = PASOS.findIndex((p) => p.id === pedido);
+  const { pasos, maximo, porDefecto } = pasosAlta({
+    status: e.status,
+    requiresSignature: e.requires_signature,
+    requiresPayment: e.requires_payment,
+    pagoPendiente: exigible.ok && exigible.datos > 0,
+  });
+  const indicePedido = pasos.indexOf(pedido as PasoAlta);
   const actual = indicePedido >= 0 && indicePedido <= maximo ? indicePedido : porDefecto;
-  const paso = PASOS[actual]!.id as Paso;
+  const paso = pasos[actual]!;
+  const steps: Step[] = pasos.map((p) => ({ id: p, label: ETIQUETAS[p] }));
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-8">
@@ -73,12 +77,13 @@ export default async function BienvenidaPage({
         <h1 className="text-3xl font-semibold sm:text-4xl">
           {paso === "listo" ? "¡Enhorabuena!" : e.servicio}
         </h1>
-        <Stepper steps={PASOS} current={actual} />
+        <Stepper steps={steps} current={actual} />
       </header>
 
       {paso === "bienvenida" && <Bienvenida e={e} />}
       {paso === "datos" && <Datos e={e} rol={miRol} />}
       {paso === "contrato" && <PasoContrato e={e} rol={miRol} />}
+      {paso === "pago" && <PasoPago e={e} />}
       {paso === "listo" && <Listo e={e} />}
     </div>
   );
@@ -387,18 +392,33 @@ async function PasoContrato({ e, rol }: { e: DetalleContratacion; rol: RolEmpres
 }
 
 async function Listo({ e }: { e: DetalleContratacion }) {
-  const c = await contratoDe(e.id);
+  const [c, cobro] = await Promise.all([contratoDe(e.id), resumenCobro(e.id)]);
   const contrato = c.ok ? c.datos : null;
+  const firmado = contrato?.status === "firmado";
+  const estadoCobro = cobro.ok ? cobro.datos?.status : undefined;
+  const debe =
+    e.requires_payment && (estadoCobro === "no_pagado" || estadoCobro === "parcialmente_pagado");
+
   return (
-    <Card className="flex flex-col gap-4">
+    <Card className="flex flex-col gap-4" data-testid="paso-listo">
       <h2 className="text-xl font-semibold">
-        Contrato <span className="text-gradient">firmado</span>
+        {firmado ? (
+          <>
+            Contrato <span className="text-gradient">firmado</span>
+          </>
+        ) : (
+          <>
+            Tu alta está <span className="text-gradient">completa</span>
+          </>
+        )}
       </h2>
       <p className="text-muted">
-        Gracias. Ya tienes tu contrato firmado. El siguiente paso es el pago; muy pronto podrás
-        hacerlo desde aquí y te avisaremos.
+        Gracias por confiar en R3ZON.{" "}
+        {debe
+          ? "Te queda un pago pendiente: lo verás en el paso de pago y te avisaremos cuando puedas hacerlo desde aquí."
+          : "No tienes nada pendiente: te avisaremos al poner en marcha tu proyecto."}
       </p>
-      {contrato?.status === "firmado" && (
+      {firmado && (
         <a
           href={`/contratos/${contrato.id}/pdf`}
           className="inline-flex w-fit items-center gap-2 rounded-full border border-border px-5 py-2.5 text-sm hover:bg-white/5 focus-visible:outline-2 focus-visible:outline-brand"
@@ -410,6 +430,82 @@ async function Listo({ e }: { e: DetalleContratacion }) {
       )}
       <Link href="/inicio" className="text-sm text-brand underline-offset-4 hover:underline">
         Volver al inicio
+      </Link>
+    </Card>
+  );
+}
+
+/**
+ * Pago (T-26). Enseña el total, lo ya pagado (también lo cobrado fuera) y lo
+ * pendiente, y NUNCA pide lo ya cobrado: el importe lo calcula la base. En
+ * revisión no pide nada. El pago online (Stripe) llega con la Fase 4.
+ */
+async function PasoPago({ e }: { e: DetalleContratacion }) {
+  const [resumen, historial, exigible] = await Promise.all([
+    resumenCobro(e.id),
+    pagos(e.id),
+    importeExigible(e.id),
+  ]);
+  if (!resumen.ok || !resumen.datos || !historial.ok || !exigible.ok) {
+    return <BloqueNoDisponible nombre="Tu pago" />;
+  }
+  const c = resumen.datos;
+  const cobrados = historial.datos.filter((p) => p.status === "confirmado");
+
+  return (
+    <Card className="flex flex-col gap-5" data-testid="paso-pago">
+      <h2 className="text-xl font-semibold">Pago · {ESTADOS_COBRO[c.status].etiqueta}</h2>
+      <dl className="grid grid-cols-3 gap-3 rounded-xl border border-border p-4 text-sm">
+        <div>
+          <dt className="text-xs text-muted">Total (IVA incl.)</dt>
+          <dd className="font-medium">{euros(c.total_cents)}</dd>
+        </div>
+        <div>
+          <dt className="text-xs text-muted">Pagado</dt>
+          <dd className="font-medium">{euros(c.paid_cents)}</dd>
+        </div>
+        <div>
+          <dt className="text-xs text-muted">Pendiente</dt>
+          <dd className="font-medium" data-testid="pendiente-cliente">
+            {euros(c.status === "pagado" ? 0 : c.balance_cents)}
+          </dd>
+        </div>
+      </dl>
+
+      {cobrados.length > 0 && (
+        <div>
+          <h3 className="mb-2 text-sm font-medium">Lo que ya has pagado</h3>
+          <ul className="flex flex-col gap-1 text-sm">
+            {cobrados.map((p) => (
+              <li key={p.id} className="flex justify-between gap-3">
+                <span>
+                  {fecha(p.paid_on)} · {ETIQUETA_METODO[p.method]}
+                </span>
+                <span>{euros(p.amount_cents)}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {c.status === "pagado" && <p className="text-sm">Está todo pagado. ¡Gracias!</p>}
+      {c.status === "pendiente_revision" && (
+        <p className="text-sm text-muted">
+          Estamos revisando tus pagos para que no se cobre nada dos veces. No tienes que hacer nada:
+          te avisaremos.
+        </p>
+      )}
+      {exigible.datos > 0 && (
+        <p className="rounded-xl border border-border bg-white/[0.03] p-4 text-sm">
+          Te queda por pagar <strong>{euros(exigible.datos)}</strong>. Muy pronto podrás hacerlo
+          aquí mismo con tarjeta o SEPA; mientras tanto, el equipo de R3ZON te indicará cómo.
+        </p>
+      )}
+      <Link
+        href={`/bienvenida/${e.id}?paso=listo`}
+        className="text-sm text-brand underline-offset-4 hover:underline"
+      >
+        Continuar
       </Link>
     </Card>
   );

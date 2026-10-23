@@ -33,7 +33,8 @@ La revisión técnica de seguridad está en [auditoria.md](auditoria.md).
 | Datos fiscales de la empresa | `organization_billing` | Contrato + obligación legal (facturación) | 6 años | ✅ (`on delete restrict`) |
 | Contrato firmado (texto y huella) | `contracts.signed_text`, `text_sha256` | Contrato + obligación legal | 6 años | ✅ inmutable |
 | Evidencias de la firma: nombre, DNI/NIE, cargo, email, firma dibujada, IP, agente, momento de verificación del código | `contract_signatures` | Contrato + interés legítimo (prueba de la firma) | 6 años | ✅ inmutable, sin FK al usuario |
-| Pagos, materiales, tickets | Fases 4–7 | Contrato + obligación legal | 6 años (facturas) | ⬜ |
+| Cobros: importe, método, fecha, referencia y justificante que escribe el equipo, referencia de factura | `payments` | Contrato + obligación legal (contabilidad) | 6 años | ✅ inmutable, sin `DELETE`; el registro de actividad no copia las referencias |
+| Materiales, tickets | Fases 5–7 | Contrato | 6 años | ⬜ |
 
 **Sobre la firma dibujada:** es una imagen estática, no una firma biométrica (no se
 captan presión, velocidad ni trazo para identificar a la persona), así que no es una

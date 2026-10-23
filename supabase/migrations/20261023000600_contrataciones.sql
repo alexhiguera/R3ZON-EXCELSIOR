@@ -7,16 +7,28 @@
 --   sus condiciones particulares. Dato con obligación de conservación (6 años):
 --   `on delete restrict` hacia la organización y no se borra desde la app.
 -- · engagement_status_history: cada cambio de estado, quién y cuándo.
--- · invite_to_service(): el paso estrella de la Fase 2. En una transacción:
---   contratación + invitación, y devuelve el enlace.
+-- · invite_to_service(): contratación + invitación en una transacción.
+--   invite_engagement(): invitar a una contratación ya preparada en borrador
+--   (precio, interruptores y cobros externos registrados ANTES de invitar).
+--
+-- El estado de la contratación es CONTRACTUAL; el económico va aparte (módulo
+-- cobros: no pagado, parcial, pagado, pendiente de revisión). Un pago
+-- completado no es un contrato finalizado (decisión de R3ZON, 2026-10-23).
 --
 -- Máquina de estados (docs/ARCHITECTURE.md §20). Solo se permiten estas
 -- transiciones, valga para quien valga la escritura (trigger):
 --
---   borrador ─► invitada ─► datos_completos ─► firmada ─► pago_en_curso ─► pagada ─► activa ─► finalizada
---      │           │              │               │              │            │         │
---      └───────────┴──────────────┴─► cancelada   ├─► rescindida ◄┴────────────┴─────────┘
---                                                 └─ pago_en_curso/pagada/activa ─► en_impago ─► (pago_en_curso | activa | rescindida)
+--   borrador ─► invitada ─► datos_completos ─┬─► firmada ─► activa ─► finalizada
+--      │           │              │          └──────────────►┘  │
+--      └───────────┴──────────────┴─► cancelada     firmada | activa ─► rescindida
+--
+-- `datos_completos → activa` solo si la contratación NO pide firma en el
+-- portal; `→ firmada` solo si la pide (y solo la pone sign_contract). Activar
+-- lo hace R3ZON a mano.
+--
+-- Interruptores que fija R3ZON antes de invitar: `requires_signature` (el
+-- cliente firma en el portal) y `requires_payment` (el cliente paga en el
+-- portal). Cubren a clientes que ya firmaron o pagaron fuera.
 --
 -- «Cuenta creada» no es un estado: se deriva de la invitación aceptada.
 --
@@ -24,8 +36,7 @@
 -- =============================================================================
 
 create type public.engagement_status as enum (
-  'borrador', 'invitada', 'datos_completos', 'firmada', 'pago_en_curso', 'pagada',
-  'activa', 'finalizada', 'cancelada', 'rescindida', 'en_impago'
+  'borrador', 'invitada', 'datos_completos', 'firmada', 'activa', 'finalizada', 'cancelada', 'rescindida'
 );
 
 comment on type public.engagement_status is
@@ -42,6 +53,8 @@ create table public.engagements (
   status             public.engagement_status not null default 'borrador',
   price_cents        bigint not null,
   conditions         text,
+  requires_signature boolean not null default true,
+  requires_payment   boolean not null default true,
   created_by         uuid references auth.users (id) on delete set null,
   created_at         timestamptz not null default now(),
   updated_at         timestamptz not null default now(),
@@ -52,7 +65,7 @@ create table public.engagements (
 );
 
 comment on table public.engagements is
-  'Contratación: servicio (versión) contratado por un cliente, con precio final y estado. Se conserva 6 años.';
+  'Contratación: servicio (versión) contratado por un cliente, con precio, estado CONTRACTUAL e interruptores de firma y pago en el portal. Se conserva 6 años.';
 
 create index engagements_organization_id_idx on public.engagements (organization_id, created_at desc);
 create index engagements_service_version_id_idx on public.engagements (service_version_id);
@@ -93,12 +106,9 @@ as $$
   select (p_from::text, p_to::text) in (
     ('borrador', 'invitada'), ('borrador', 'cancelada'),
     ('invitada', 'datos_completos'), ('invitada', 'cancelada'),
-    ('datos_completos', 'firmada'), ('datos_completos', 'cancelada'),
-    ('firmada', 'pago_en_curso'), ('firmada', 'rescindida'),
-    ('pago_en_curso', 'pagada'), ('pago_en_curso', 'en_impago'), ('pago_en_curso', 'rescindida'),
-    ('pagada', 'activa'), ('pagada', 'en_impago'), ('pagada', 'rescindida'),
-    ('activa', 'finalizada'), ('activa', 'en_impago'), ('activa', 'rescindida'),
-    ('en_impago', 'pago_en_curso'), ('en_impago', 'activa'), ('en_impago', 'rescindida')
+    ('datos_completos', 'firmada'), ('datos_completos', 'activa'), ('datos_completos', 'cancelada'),
+    ('firmada', 'activa'), ('firmada', 'rescindida'),
+    ('activa', 'finalizada'), ('activa', 'rescindida')
   );
 $$;
 
@@ -140,9 +150,27 @@ begin
     raise exception 'La invitación solo se enlaza al principio' using errcode = 'P0001';
   end if;
 
+  -- Firma en el portal: se decide antes de que haya nada firmado.
+  if new.requires_signature is distinct from old.requires_signature
+     and old.status not in ('borrador', 'invitada', 'datos_completos') then
+    raise exception 'Ya no se puede cambiar si se firma en el portal' using errcode = 'P0001';
+  end if;
+  -- Pago en el portal: mientras la contratación siga viva.
+  if new.requires_payment is distinct from old.requires_payment
+     and old.status in ('finalizada', 'cancelada', 'rescindida') then
+    raise exception 'La contratación está cerrada' using errcode = 'P0001';
+  end if;
+
   if new.status is distinct from old.status then
     if not public.engagement_transition_allowed(old.status, new.status) then
       raise exception 'Transición no permitida: % → %', old.status, new.status using errcode = 'P0001';
+    end if;
+    if old.status = 'datos_completos' and new.status = 'activa' and new.requires_signature then
+      raise exception 'Falta la firma del contrato (o desmarca «firma en el portal» si ya se firmó fuera)'
+        using errcode = 'P0001';
+    end if;
+    if new.status = 'firmada' and not new.requires_signature then
+      raise exception 'Esta contratación no se firma en el portal' using errcode = 'P0001';
     end if;
     new.status_changed_at := now();
   end if;
@@ -217,7 +245,9 @@ create function public.invite_to_service(
   p_email text,
   p_service_version_id uuid,
   p_price_cents bigint default null,
-  p_conditions text default null
+  p_conditions text default null,
+  p_requires_signature boolean default true,
+  p_requires_payment boolean default true
 )
 returns text
 language plpgsql
@@ -236,24 +266,65 @@ begin
     raise exception 'El servicio no existe' using errcode = 'P0001';
   end if;
 
-  insert into public.engagements (organization_id, service_version_id, price_cents, conditions)
-  values (p_organization_id, p_service_version_id, coalesce(p_price_cents, v_price), nullif(btrim(p_conditions), ''))
+  insert into public.engagements
+    (organization_id, service_version_id, price_cents, conditions, requires_signature, requires_payment)
+  values (p_organization_id, p_service_version_id, coalesce(p_price_cents, v_price), nullif(btrim(p_conditions), ''),
+          coalesce(p_requires_signature, true), coalesce(p_requires_payment, true))
   returning id into v_engagement_id;
 
-  v_token := public.create_invitation(p_organization_id, p_email, 'owner');
+  return public.invite_engagement(v_engagement_id, p_email);
+end;
+$$;
+
+-- Invitar (o reinvitar) a una contratación ya creada: la que el equipo preparó
+-- en borrador, o una invitada cuya invitación hay que reenviar. Invoker: solo
+-- staff (RLS). Reenviar revoca la invitación anterior de la contratación, sea
+-- al mismo email o a otro: nunca quedan dos enlaces vivos para la misma alta.
+create function public.invite_engagement(p_engagement_id uuid, p_email text)
+returns text
+language plpgsql
+volatile
+security invoker
+set search_path = ''
+as $$
+declare
+  v_engagement public.engagements;
+  v_token text;
+  v_invitation_id uuid;
+begin
+  select * into v_engagement from public.engagements e where e.id = p_engagement_id for update;
+  if not found then
+    raise exception 'La contratación no existe' using errcode = 'P0001';
+  end if;
+  if v_engagement.status not in ('borrador', 'invitada') then
+    raise exception 'Esta contratación ya no admite invitaciones (estado %)', v_engagement.status
+      using errcode = 'P0001';
+  end if;
+
+  if v_engagement.invitation_id is not null then
+    update public.invitations set revoked_at = now()
+     where id = v_engagement.invitation_id and accepted_at is null and revoked_at is null;
+  end if;
+
+  v_token := public.create_invitation(v_engagement.organization_id, p_email, 'owner');
   select i.id into v_invitation_id from public.invitations i
    where i.token_hash = extensions.digest(v_token, 'sha256');
 
-  update public.engagements set invitation_id = v_invitation_id, status = 'invitada'
-   where id = v_engagement_id;
-
+  update public.engagements
+     set invitation_id = v_invitation_id,
+         status = 'invitada'
+   where id = p_engagement_id;
   return v_token;
 end;
 $$;
 
-comment on function public.invite_to_service(uuid, text, uuid, bigint, text) is
+comment on function public.invite_engagement(uuid, text) is
+  'Invita (o reinvita) a una contratación en borrador o invitada. Revoca la invitación anterior. Solo staff (RLS).';
+grant execute on function public.invite_engagement(uuid, text) to authenticated;
+
+comment on function public.invite_to_service(uuid, text, uuid, bigint, text, boolean, boolean) is
   'Crea una contratación y la invitación para el cliente (solo staff, por RLS). Devuelve el token una vez.';
-grant execute on function public.invite_to_service(uuid, text, uuid, bigint, text) to authenticated;
+grant execute on function public.invite_to_service(uuid, text, uuid, bigint, text, boolean, boolean) to authenticated;
 
 -- Cambiar de estado con motivo (cancelar, rescindir…). Invoker: la RLS decide
 -- quién; el trigger, qué transición.
@@ -288,8 +359,8 @@ grant execute on function public.change_engagement_status(uuid, public.engagemen
 revoke all on table public.engagements, public.engagement_status_history from anon, authenticated;
 
 grant select,
-      insert (organization_id, service_version_id, price_cents, conditions),
-      update (service_version_id, price_cents, conditions, status, invitation_id)
+      insert (organization_id, service_version_id, price_cents, conditions, requires_signature, requires_payment),
+      update (service_version_id, price_cents, conditions, status, invitation_id, requires_signature, requires_payment)
   on table public.engagements to authenticated;
 grant select on table public.engagement_status_history to authenticated;
 
@@ -358,7 +429,9 @@ create function public.create_client_with_invitation(
   p_email text,
   p_service_version_id uuid default null,
   p_price_cents bigint default null,
-  p_conditions text default null
+  p_conditions text default null,
+  p_requires_signature boolean default true,
+  p_requires_payment boolean default true
 )
 returns table (organization_id uuid, token text)
 language plpgsql
@@ -374,15 +447,16 @@ begin
   if p_service_version_id is null then
     token := public.create_invitation(v_org, p_email, 'owner');
   else
-    token := public.invite_to_service(v_org, p_email, p_service_version_id, p_price_cents, p_conditions);
+    token := public.invite_to_service(v_org, p_email, p_service_version_id, p_price_cents, p_conditions,
+                                      p_requires_signature, p_requires_payment);
   end if;
   return next;
 end;
 $$;
 
-comment on function public.create_client_with_invitation(text, text, uuid, bigint, text) is
+comment on function public.create_client_with_invitation(text, text, uuid, bigint, text, boolean, boolean) is
   'Crea el cliente y la invitación (con o sin servicio) en una transacción. Solo staff, por RLS.';
-grant execute on function public.create_client_with_invitation(text, text, uuid, bigint, text) to authenticated;
+grant execute on function public.create_client_with_invitation(text, text, uuid, bigint, text, boolean, boolean) to authenticated;
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 6. Pasos del cliente (Fase 3)

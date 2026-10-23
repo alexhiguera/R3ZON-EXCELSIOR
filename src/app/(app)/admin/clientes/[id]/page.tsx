@@ -14,7 +14,7 @@ import { ESTADOS } from "@/modulos/contrataciones";
 import { listarContrataciones } from "@/modulos/contrataciones/servidor";
 import { ETIQUETA_ROL } from "@/modulos/organizaciones";
 import { actividad, cliente, datosFiscales, directorio } from "@/modulos/organizaciones/servidor";
-import { accionArchivar, accionInvitar, accionRevocar } from "../actions";
+import { accionArchivar, accionCrearContratacion, accionInvitar, accionRevocar } from "../actions";
 import { CamposInvitacion } from "../CamposInvitacion";
 
 export const metadata: Metadata = { title: "Ficha de cliente" };
@@ -64,8 +64,10 @@ export default async function ClientePage({ params }: { params: Promise<{ id: st
       />
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <h2 className="mb-1 text-lg font-semibold">Invitar a una persona</h2>
+        <Card role="region" aria-labelledby="invitar-persona">
+          <h2 id="invitar-persona" className="mb-1 text-lg font-semibold">
+            Invitar a una persona
+          </h2>
           <p className="mb-4 text-sm text-muted">
             Con un servicio, se crea la contratación y la persona entra como propietaria para
             completar el alta. Sin servicio, solo se le da acceso con el rol elegido.
@@ -86,6 +88,27 @@ export default async function ClientePage({ params }: { params: Promise<{ id: st
           </ModuloSeguro>
         </Card>
       </div>
+
+      <section aria-labelledby="nueva-contratacion">
+        <Card>
+          <h2 id="nueva-contratacion" className="mb-1 text-lg font-semibold">
+            Nueva contratación (sin invitar todavía)
+          </h2>
+          <p className="mb-4 text-sm text-muted">
+            Para clientes que ya pagaron o firmaron fuera: créala, registra lo cobrado y después
+            invita desde su ficha.
+          </p>
+          <ModuloSeguro nombre="El formulario de contratación">
+            <FormAccion
+              accion={accionCrearContratacion.bind(null, c.id)}
+              boton="Crear contratación"
+              variante="secondary"
+            >
+              <CamposInvitacion conEmail={false} conRol={false} servicioObligatorio />
+            </FormAccion>
+          </ModuloSeguro>
+        </Card>
+      </section>
 
       <Card>
         <h2 className="mb-4 text-lg font-semibold">Contrataciones</h2>

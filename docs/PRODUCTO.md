@@ -78,7 +78,7 @@ Términos del dominio. El código usa estos nombres (ver
 | **Cliente** (organización) | Empresa (o autónomo) que contrata a R3ZON. Agrupa usuarios, proyectos, contratos y facturas |
 | **Usuario** | Persona con cuenta. Pertenece a R3ZON (staff) o a un cliente |
 | **Servicio** | Tipo de cosa que R3ZON vende: web corporativa, ecommerce, mantenimiento, SEO… Define su onboarding, su briefing, su plantilla de contrato y sus precios |
-| **Contratación** | Un servicio concreto contratado por un cliente, con su precio, modalidad de pago y estado (borrador → firmado → pagado → activo) |
+| **Contratación** | Un servicio concreto contratado por un cliente, con su precio, modalidad de pago y dos estados independientes: el **contractual** (invitada → datos → firmada → activa) y el **económico** (no pagado, parcialmente pagado, pagado, pendiente de revisión) |
 | **Proyecto** | El trabajo que nace de una contratación (la web de la empresa X). Tiene briefing, documentos y tickets |
 | **Invitación** | Enlace de un solo uso que genera R3ZON para que alguien cree su cuenta, ya vinculado a un cliente y, la primera vez, a un servicio |
 | **Onboarding** | Recorrido guiado tras aceptar la invitación: bienvenida → datos → contrato → pago → confirmación → briefing |
@@ -117,6 +117,10 @@ R3ZON recibe aviso en cada paso ◄──── 14. Proyecto en marcha
 
 Detalles que el diseño tiene que resolver (ver [PLAN.md](PLAN.md) → Fase 3 y 4):
 
+- **No todos los clientes recorren todos los pasos** (T-27): el equipo decide por
+  contratación si el cliente firma y si paga en el portal (hay clientes que ya pagaron o
+  firmaron fuera). Los cobros de fuera los registra el equipo; el estado económico es
+  independiente del contrato (T-26).
 - **El pago por transferencia o SEPA no es inmediato** (días). El paso 11 tiene dos
   variantes: «pago recibido» y «pago en curso: te avisaremos». El proyecto puede
   arrancar con el contrato firmado y el pago en curso si R3ZON lo decide.
@@ -162,9 +166,10 @@ Quién puede reabrirlo: el responsable de producto de R3ZON (ver `CLAUDE.md` §0
 - **Pasarelas distintas de Stripe.** PayPal y criptomonedas se valorarán **a través de
   Stripe** si está disponible para la cuenta; ninguna integración directa
   ([mejoras.md](mejoras.md)).
-- **Facturación propia certificada (VeriFactu).** De momento factura Stripe; la
-  integración con **ANTARES** (producto de facturación de R3ZON) es una fase posterior
-  ([PLAN.md](PLAN.md) → Fase 8).
+- **Emitir facturas desde el portal.** La factura (TicketBAI) la emite **ANTARES**, el
+  producto de facturación de R3ZON; el portal solo guarda y muestra su referencia (T-29,
+  [PLAN.md](PLAN.md) → Fase 8).
+- **Pago en efectivo** (T-28).
 - **Firma electrónica avanzada o cualificada.** Se usa firma electrónica simple propia
   con evidencias ([ARCHITECTURE.md](ARCHITECTURE.md) §17).
 - **App nativa.** El portal es web responsive (y quizá PWA).

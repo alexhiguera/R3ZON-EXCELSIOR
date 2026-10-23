@@ -1,4 +1,5 @@
 import { moduloAcceso } from "./acceso/modulo";
+import { moduloCobros } from "./cobros/modulo";
 import { moduloContrataciones } from "./contrataciones/modulo";
 import { moduloContratos } from "./contratos/modulo";
 import { moduloInicio } from "./inicio/modulo";
@@ -19,4 +20,5 @@ export const MODULOS: readonly DefinicionModulo[] = [
   moduloOrganizaciones,
   moduloServicios,
   moduloContratos,
+  moduloCobros,
 ];

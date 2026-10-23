@@ -81,19 +81,9 @@ describe.skipIf(!db)("contrataciones", () => {
       const id = await crearContratacion(c, acme, versionId);
 
       expect(
-        await fallo(c, "update public.engagements set status = 'pagada' where id = $1", [id]),
-      ).toMatch(/Transición no permitida: borrador → pagada/);
-      const recorrido = [
-        "invitada",
-        "datos_completos",
-        "firmada",
-        "pago_en_curso",
-        "en_impago",
-        "pago_en_curso",
-        "pagada",
-        "activa",
-        "finalizada",
-      ];
+        await fallo(c, "update public.engagements set status = 'activa' where id = $1", [id]),
+      ).toMatch(/Transición no permitida: borrador → activa/);
+      const recorrido = ["invitada", "datos_completos", "firmada", "activa", "finalizada"];
       for (const estado of recorrido) {
         await c.query("update public.engagements set status = $2 where id = $1", [id, estado]);
       }
@@ -110,7 +100,7 @@ describe.skipIf(!db)("contrataciones", () => {
       expect(
         await fallo(
           c,
-          "insert into public.engagements (organization_id, service_version_id, price_cents, status) values ($1, $2, 1, 'pagada')",
+          "insert into public.engagements (organization_id, service_version_id, price_cents, status) values ($1, $2, 1, 'activa')",
           [acme, versionId],
         ),
       ).toMatch(/nace en borrador/);

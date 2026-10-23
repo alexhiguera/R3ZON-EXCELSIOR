@@ -55,12 +55,13 @@ test.describe("panel de R3ZON", () => {
     const fichaUrl = page.url();
 
     // 3. Invitación con servicio y precio final.
-    await page.getByLabel("Email").fill(email);
-    const opcion = page.locator("select[name=servicio] option", { hasText: servicio });
-    await page.getByLabel("Servicio").selectOption((await opcion.getAttribute("value")) ?? "");
-    await page.getByLabel("Precio final (€, sin IVA)").fill("1.200");
-    await page.getByRole("button", { name: "Crear invitación" }).click();
-    const enlace = (await page.getByTestId("texto-copiable").textContent())?.trim() ?? "";
+    const invitar = page.getByRole("region", { name: "Invitar a una persona" });
+    await invitar.getByLabel("Email").fill(email);
+    const opcion = invitar.locator("select[name=servicio] option", { hasText: servicio });
+    await invitar.getByLabel("Servicio").selectOption((await opcion.getAttribute("value")) ?? "");
+    await invitar.getByLabel("Precio final (€, sin IVA)").fill("1.200");
+    await invitar.getByRole("button", { name: "Crear invitación" }).click();
+    const enlace = (await invitar.getByTestId("texto-copiable").textContent())?.trim() ?? "";
     expect(enlace).toMatch(/\/invitacion\/[0-9a-f]{64}$/);
     await page.reload();
     await expect(page.getByTestId("invitacion")).toHaveText(email);
@@ -91,7 +92,7 @@ test.describe("panel de R3ZON", () => {
     await fila.getByLabel("Motivo").fill("Prueba E2E");
     await fila.getByRole("button", { name: "Cerrar", exact: true }).click();
     await expect(fila).toBeHidden();
-    await page.getByText(/Cerradas y borradores/).click();
+    await page.getByText(/^Cerradas \(/).click();
     await expect(page.getByTestId("fila-contratacion").filter({ hasText: empresa })).toContainText(
       "Cancelada",
     );

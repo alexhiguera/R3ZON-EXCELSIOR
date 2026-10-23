@@ -67,9 +67,9 @@ Secciones propias de Excelsior. Detalle de cada una en [PLAN.md](PLAN.md).
 | Catálogo de servicios | 2 | ✅ | `src/modulos/servicios`: versiones inmutables, precio, IVA, modalidades, señal. Las plantillas de contrato y briefing llegan en las fases 3 y 5 |
 | Contrataciones | 2–4 | 🚧 | `src/modulos/contrataciones`: máquina de estados completa, invitación con servicio, embudo y cierres manuales. Los pasos del cliente (datos, firma, pago), en las fases 3 y 4 |
 | RGPD | MVP | ⬜ | Exportación, importación, bloqueo legal y supresión ([RGPD.md](RGPD.md)) |
-| Asistente de onboarding | 3 | ✅ | `/bienvenida/[id]`: bienvenida, datos fiscales, contrato y firma, enhorabuena |
+| Asistente de onboarding | 3–4 | ✅ | `/bienvenida/[id]`: bienvenida, datos fiscales, [contrato y firma], [pago], listo; los pasos dependen de los interruptores (T-27) |
 | Contratos y firma | 3 | ✅ | `src/modulos/contratos`: plantillas, cláusulas, anexos, firma con código y evidencias, PDF ([ARCHITECTURE.md](ARCHITECTURE.md) §17) |
-| Pagos y facturas | 4 | ⬜ | Stripe; después ANTARES (Fase 8) |
+| Cobros | 4 | 🚧 | `src/modulos/cobros`: libro de cobros, cobros externos, estado económico, revisión. Falta Stripe (D-04); la factura, en ANTARES (T-29) |
 | Proyectos y briefing | 5 | ⬜ | Checklist de materiales por servicio, datos legales |
 | Documentos | 5 | ⬜ | Zona tipo Drive por proyecto |
 | Propuestas y presupuestos | 6 | ⬜ | Aceptar → firmar → pagar |

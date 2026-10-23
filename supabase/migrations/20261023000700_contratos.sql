@@ -325,6 +325,10 @@ begin
       raise exception 'Esta contratación ya no admite un contrato nuevo (estado %)', v_engagement.status
         using errcode = 'P0001';
     end if;
+    if not v_engagement.requires_signature then
+      raise exception 'Esta contratación no se firma en el portal (activa «firma en el portal» para prepararle un contrato)'
+        using errcode = 'P0001';
+    end if;
     new.organization_id := v_engagement.organization_id;
     new.created_by := (select auth.uid());
     if new.status <> 'borrador' or new.signed_text is not null or new.text_sha256 is not null then
