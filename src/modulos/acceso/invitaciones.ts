@@ -1,3 +1,5 @@
+import { LONGITUD_MINIMA_CONTRASENA } from "@/lib/auth/politica";
+
 /**
  * Lógica pura de las invitaciones del lado de la app. Las REGLAS (quién puede
  * entrar, caducidad, un solo uso, email) están en la base: el hook
@@ -23,7 +25,7 @@ export function mensajeErrorAlta(error: { code?: string; status?: number }): str
     return "Ya hay una cuenta con este email. Inicia sesión para aceptar la invitación.";
   }
   if (error.code === "weak_password") {
-    return "Elige una contraseña más segura, de al menos 8 caracteres.";
+    return `Elige una contraseña más segura, de al menos ${LONGITUD_MINIMA_CONTRASENA} caracteres.`;
   }
   if (error.code === "over_request_rate_limit" || error.status === 429) {
     return "Demasiados intentos seguidos. Espera un minuto y vuelve a probar.";

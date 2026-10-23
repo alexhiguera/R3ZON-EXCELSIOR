@@ -1,17 +1,20 @@
 import type { Metadata } from "next";
+import { BloqueNoDisponible, ModuloSeguro } from "@/components/app-shell/ModuloSeguro";
 import { Card } from "@/components/ui/Card";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
+import { misEmpresas } from "@/modulos/organizaciones/servidor";
 
 export const metadata: Metadata = { title: "Inicio" };
 
 /**
- * Inicio del cliente. Lee su propio perfil (el filtro por id elige la fila, no
- * protege nada: el staff puede ver todos los perfiles y un cliente solo el suyo,
- * y eso lo decide la RLS) y las empresas a las que pertenece, sin filtrar: la
- * RLS solo devuelve las suyas.
+ * Inicio. Cada bloque que viene de un módulo va dentro de `ModuloSeguro`: si
+ * ese módulo falla, su bloque dice «no disponible» y el resto de la página
+ * sigue en pie (docs/ARCHITECTURE.md §21).
  *
- * Los pendientes (firmar, pagar, aportar materiales) llegan con las fases 3–6
- * (docs/PLAN.md).
+ * El perfil se lee por id (el filtro elige la fila; quién puede verla lo decide
+ * la RLS: el staff ve todos los perfiles y un cliente solo el suyo).
+ *
+ * Los pendientes (firmar, pagar, aportar materiales) llegan con las fases 3–6.
  */
 export default async function InicioPage() {
   const user = await getCurrentUser();
@@ -21,7 +24,6 @@ export default async function InicioPage() {
     .select("display_name")
     .eq("id", user?.id ?? "")
     .maybeSingle();
-  const { data: empresas } = await supabase.from("organizations").select("id, name").order("name");
 
   return (
     <div className="flex flex-col gap-8">
@@ -35,24 +37,9 @@ export default async function InicioPage() {
         </p>
       </header>
 
-      {empresas && empresas.length > 0 && (
-        <section aria-labelledby="empresas" className="flex flex-col gap-3">
-          <h2 id="empresas" className="text-sm font-medium text-muted">
-            {empresas.length === 1 ? "Tu empresa" : "Tus empresas"}
-          </h2>
-          <ul className="grid gap-3 sm:grid-cols-2">
-            {empresas.map((e) => (
-              <li key={e.id}>
-                <Card className="p-4 sm:p-5">
-                  <p className="font-medium" data-testid="empresa">
-                    {e.name}
-                  </p>
-                </Card>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+      <ModuloSeguro nombre="Tus empresas">
+        <Empresas />
+      </ModuloSeguro>
 
       <Card>
         <h2 className="text-lg font-semibold">Todo al día</h2>
@@ -62,5 +49,30 @@ export default async function InicioPage() {
         </p>
       </Card>
     </div>
+  );
+}
+
+async function Empresas() {
+  const empresas = await misEmpresas();
+  if (!empresas.ok) return <BloqueNoDisponible nombre="Tus empresas" />;
+  if (empresas.datos.length === 0) return null;
+
+  return (
+    <section aria-labelledby="empresas" className="flex flex-col gap-3">
+      <h2 id="empresas" className="text-sm font-medium text-muted">
+        {empresas.datos.length === 1 ? "Tu empresa" : "Tus empresas"}
+      </h2>
+      <ul className="grid gap-3 sm:grid-cols-2">
+        {empresas.datos.map((e) => (
+          <li key={e.id}>
+            <Card className="p-4 sm:p-5">
+              <p className="font-medium" data-testid="empresa">
+                {e.name}
+              </p>
+            </Card>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }

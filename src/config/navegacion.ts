@@ -1,9 +1,11 @@
-import { House, type LucideIcon } from "lucide-react";
-import { project } from "./project";
+import { MODULOS } from "@/modulos/registro";
+import type { Audiencia, EntradaNavegacion } from "@/modulos/tipos";
+
+export type { Audiencia, EntradaNavegacion } from "@/modulos/tipos";
 
 /**
- * Secciones de la zona con sesión. Añadir un apartado es añadir una entrada
- * aquí (docs/ARCHITECTURE.md §15), no tocar el layout.
+ * Secciones de la zona con sesión: la suma de lo que declara cada módulo
+ * (src/modulos/registro.ts). Añadir un apartado no toca el layout.
  *
  * `audiencia` dice quién VE el enlace. Es experiencia de usuario: quien no deba
  * entrar en una sección lo impide la RLS (y, para /admin, el proxy y su
@@ -12,18 +14,7 @@ import { project } from "./project";
  * Solo se listan rutas que existen: tests/unit/navegacion.test.ts falla si una
  * entrada apunta a una página que no está en src/app/(app)/.
  */
-export type Audiencia = "cliente" | "staff";
-
-export type EntradaNavegacion = {
-  href: string;
-  label: string;
-  icon: LucideIcon;
-  audiencia: readonly Audiencia[];
-};
-
-export const NAVEGACION: readonly EntradaNavegacion[] = [
-  { href: project.homePath, label: "Inicio", icon: House, audiencia: ["cliente", "staff"] },
-];
+export const NAVEGACION: readonly EntradaNavegacion[] = MODULOS.flatMap((m) => m.navegacion);
 
 export function navegacionPara(audiencia: Audiencia): EntradaNavegacion[] {
   return NAVEGACION.filter((e) => e.audiencia.includes(audiencia));

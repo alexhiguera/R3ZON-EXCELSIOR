@@ -22,6 +22,9 @@ ellos no es recuperable pidiéndoselo otra vez al cliente. Por eso:
 - Plan de Supabase con backups (Pro) **antes del hito MVP** (decisión D-07 de
   [PLAN.md](PLAN.md)), y aun así el módulo `backups` para **Storage**.
 - Simulacro de restauración hecho y anotado en la bitácora antes del primer cliente real.
+- **Conservación de 6 años** (decisión de R3ZON, [RGPD.md](RGPD.md) §5): backups cifrados,
+  en la UE, destruidos al cumplir 6 años, y un **registro de supresiones** que se vuelve
+  a aplicar si se restaura un backup antiguo.
 
 ## Qué debe cubrir un backup
 

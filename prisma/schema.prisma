@@ -35,7 +35,51 @@ model audit_log {
   details         Json     @default("{}")
 
   @@index([actor_id])
+  @@index([created_at])
   @@index([organization_id, created_at(sort: Desc)], map: "audit_log_organization_id_idx")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model engagement_status_history {
+  id            String             @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  engagement_id String             @db.Uuid
+  from_status   engagement_status?
+  to_status     engagement_status
+  changed_by    String?            @db.Uuid
+  changed_at    DateTime           @default(now()) @db.Timestamptz(6)
+  reason        String?
+  engagements   engagements        @relation(fields: [engagement_id], references: [id], onUpdate: NoAction)
+
+  @@index([engagement_id, changed_at], map: "engagement_status_history_engagement_idx")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model engagements {
+  id                        String                      @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  organization_id           String                      @db.Uuid
+  service_version_id        String                      @db.Uuid
+  invitation_id             String?                     @db.Uuid
+  status                    engagement_status           @default(borrador)
+  price_cents               BigInt
+  conditions                String?
+  created_by                String?                     @db.Uuid
+  created_at                DateTime                    @default(now()) @db.Timestamptz(6)
+  updated_at                DateTime                    @default(now()) @db.Timestamptz(6)
+  status_changed_at         DateTime                    @default(now()) @db.Timestamptz(6)
+  engagement_status_history engagement_status_history[]
+  invitations               invitations?                @relation(fields: [invitation_id], references: [id], onUpdate: NoAction)
+  organizations             organizations               @relation(fields: [organization_id], references: [id], onUpdate: NoAction)
+  service_versions          service_versions            @relation(fields: [service_version_id], references: [id], onUpdate: NoAction)
+
+  @@index([created_by])
+  @@index([invitation_id])
+  @@index([organization_id, created_at(sort: Desc)], map: "engagements_organization_id_idx")
+  @@index([service_version_id])
+  @@index([status])
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -53,6 +97,7 @@ model invitations {
   accepted_at     DateTime?     @db.Timestamptz(6)
   accepted_by     String?       @db.Uuid
   revoked_at      DateTime?     @db.Timestamptz(6)
+  engagements     engagements[]
   organizations   organizations @relation(fields: [organization_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@unique([organization_id, email], map: "invitations_one_open_per_org_email", where: raw("((accepted_at IS NULL) AND (revoked_at IS NULL))"))
@@ -84,6 +129,8 @@ model organizations {
   created_by           String?                @db.Uuid
   created_at           DateTime               @default(now()) @db.Timestamptz(6)
   updated_at           DateTime               @default(now()) @db.Timestamptz(6)
+  archived_at          DateTime?              @db.Timestamptz(6)
+  engagements          engagements[]
   invitations          invitations[]
   organization_members organization_members[]
 
@@ -101,11 +148,70 @@ model profiles {
   platform_role platform_role @default(client)
 }
 
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model service_versions {
+  id              String         @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  service_id      String         @db.Uuid
+  version         Int            @default(0)
+  price_cents     BigInt
+  vat_rate        Decimal        @default(21.00) @db.Decimal(5, 2)
+  payment_plans   payment_plan[] @default([pago_unico])
+  deposit_percent Int?           @db.SmallInt
+  includes        String[]       @default([])
+  created_by      String?        @db.Uuid
+  created_at      DateTime       @default(now()) @db.Timestamptz(6)
+  engagements     engagements[]
+  services        services       @relation(fields: [service_id], references: [id], onUpdate: NoAction)
+
+  @@unique([service_id, version], map: "service_versions_unique")
+  @@index([created_by])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
+model services {
+  id               String             @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  name             String
+  summary          String?
+  created_by       String?            @db.Uuid
+  created_at       DateTime           @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime           @default(now()) @db.Timestamptz(6)
+  archived_at      DateTime?          @db.Timestamptz(6)
+  service_versions service_versions[]
+
+  @@index([created_by])
+}
+
+/// This enum is commented in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+enum engagement_status {
+  borrador
+  invitada
+  datos_completos
+  firmada
+  pago_en_curso
+  pagada
+  activa
+  finalizada
+  cancelada
+  rescindida
+  en_impago
+}
+
 /// This enum is commented in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 enum org_role {
   owner
   member
   billing
+}
+
+/// This enum is commented in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+enum payment_plan {
+  pago_unico
+  senal_entrega
 }
 
 /// This enum is commented in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments

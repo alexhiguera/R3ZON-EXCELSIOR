@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/Field";
 import { Input } from "@/components/ui/Input";
+import { LONGITUD_MINIMA_CONTRASENA } from "@/lib/auth/politica";
 import { crearCuenta, type InvitacionState } from "./actions";
 
 const INITIAL: InvitacionState = { error: null };
@@ -27,8 +28,14 @@ export function CrearCuentaForm({ token }: { token: string }) {
       <Field label="Email" hint="El mismo al que te llegó la invitación.">
         <Input name="email" type="email" autoComplete="email" required />
       </Field>
-      <Field label="Contraseña" hint="Al menos 8 caracteres.">
-        <Input name="password" type="password" autoComplete="new-password" required minLength={8} />
+      <Field label="Contraseña" hint={`Al menos ${LONGITUD_MINIMA_CONTRASENA} caracteres.`}>
+        <Input
+          name="password"
+          type="password"
+          autoComplete="new-password"
+          required
+          minLength={LONGITUD_MINIMA_CONTRASENA}
+        />
       </Field>
       {state.error && (
         <p role="alert" className="text-sm text-danger">

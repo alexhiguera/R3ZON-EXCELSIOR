@@ -25,6 +25,17 @@ describe.skipIf(!db)("uuidv7", () => {
     expect(Math.abs(Number(rows[0]!.ms) - Number(rows[0]!.ahora))).toBeLessThan(1000);
   });
 
+  it("dos ids del mismo milisegundo, generados uno tras otro, salen en orden", async () => {
+    // Sin pausas: los 12 bits tras el milisegundo llevan la fracción
+    // (RFC 9562, método 3), como el uuidv7() de Postgres 18.
+    const ids: string[] = [];
+    for (let i = 0; i < 100; i++) {
+      const { rows } = await db!.query<{ id: string }>("select public.uuidv7()::text as id");
+      ids.push(rows[0]!.id);
+    }
+    expect([...ids].sort()).toEqual(ids);
+  });
+
   it("los generados en milisegundos posteriores ordenan después", async () => {
     await inRollback(async (c) => {
       const ids: string[] = [];

@@ -84,3 +84,37 @@ export function eventoAlta(email: string, provider: "email" | "google", metadata
     user: { email, app_metadata: { provider, providers: [provider] }, user_metadata: metadata },
   });
 }
+
+/** Crea un servicio con su primera versión (como postgres). Devuelve los ids. */
+export async function crearServicio(
+  c: Client,
+  nombre: string,
+  opciones: { precio?: number; planes?: string[]; senal?: number | null } = {},
+): Promise<{ serviceId: string; versionId: string }> {
+  const s = await c.query<{ id: string }>(
+    "insert into public.services (name) values ($1) returning id",
+    [nombre],
+  );
+  const serviceId = s.rows[0]!.id;
+  const v = await c.query<{ id: string }>(
+    `insert into public.service_versions (service_id, price_cents, payment_plans, deposit_percent)
+     values ($1, $2, $3::public.payment_plan[], $4) returning id`,
+    [
+      serviceId,
+      opciones.precio ?? 150000,
+      opciones.planes ?? ["pago_unico"],
+      opciones.senal ?? null,
+    ],
+  );
+  return { serviceId, versionId: v.rows[0]!.id };
+}
+
+/** Crea una contratación en borrador (como postgres). */
+export async function crearContratacion(c: Client, organizationId: string, versionId: string) {
+  const { rows } = await c.query<{ id: string }>(
+    `insert into public.engagements (organization_id, service_version_id, price_cents)
+     values ($1, $2, 150000) returning id`,
+    [organizationId, versionId],
+  );
+  return rows[0]!.id;
+}

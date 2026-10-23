@@ -34,14 +34,29 @@ const DEFINER_FUNCTIONS_FOR_AUTHENTICATED: ReadonlySet<string> = new Set([
   // su pertenencia. Las reglas (email, caducidad, un solo uso) las aplica el
   // trigger invitations_guard_transition, no la función.
   "accept_invitation",
+  // Emails de los miembros de una empresa, para que el equipo contacte con el
+  // cliente. El email vive en auth.users (la app no lo lee) y no se duplica en
+  // profiles. La comprobación de staff está DENTRO de la función.
+  "organization_directory",
 ]);
 
 /**
  * Claves primarias UUID con DEFAULT que no usan `public.uuidv7()`. Vacía a
- * propósito: los ids nuevos son UUIDv7 (migración 20261022120000_uuidv7.sql).
+ * propósito: los ids nuevos son UUIDv7 (migración 20261023000100_base_uuidv7.sql).
  * `profiles.id` no aparece porque no tiene DEFAULT: viene de auth.users.
  */
 const UUID_PKS_NOT_V7: ReadonlySet<string> = new Set([]);
+
+/**
+ * Tablas que pueden borrarse EN CASCADA al borrar una organización. Solo datos
+ * de ACCESO (quién entra): los datos de negocio con obligación de conservación
+ * (contratos, facturas, contrataciones…) apuntan con `on delete restrict`, para
+ * que nada los arrastre por accidente (docs/RGPD.md, 6 años).
+ */
+const CASCADE_FROM_ORGANIZATIONS: ReadonlySet<string> = new Set([
+  "organization_members",
+  "invitations",
+]);
 
 describe.skipIf(!db)("catálogo de seguridad", () => {
   afterAll(async () => {
@@ -148,6 +163,37 @@ describe.skipIf(!db)("catálogo de seguridad", () => {
       (r) => !/^(public\.)?uuidv7\(\)$/.test(r.def) && !UUID_PKS_NOT_V7.has(r.col),
     );
     expect(offenders, "PK UUID sin uuidv7()").toEqual([]);
+  });
+
+  it("toda tabla de public con RLS tiene al menos una policy", async () => {
+    // RLS sin policies deja la tabla cerrada para todos (no es una fuga), pero
+    // casi siempre es un olvido; y una tabla sin policy de SELECT no se puede
+    // probar por rol.
+    const { rows } = await db!.query<{ table: string }>(
+      `select c.relname as table
+         from pg_class c join pg_namespace n on n.oid = c.relnamespace
+        where n.nspname = 'public' and c.relkind in ('r', 'p') and c.relrowsecurity
+          and not exists (select 1 from pg_policy p where p.polrelid = c.oid)
+        order by 1`,
+    );
+    expect(
+      rows.map((r) => r.table),
+      "tablas con RLS y sin policies",
+    ).toEqual([]);
+  });
+
+  it("solo los datos de acceso se borran en cascada con la organización", async () => {
+    const { rows } = await db!.query<{ table: string }>(
+      `select c.conrelid::regclass::text as table
+         from pg_constraint c
+        where c.contype = 'f' and c.confrelid = 'public.organizations'::regclass
+          and c.confdeltype = 'c'
+        order by 1`,
+    );
+    const offenders = rows
+      .map((r) => r.table.replace(/^public\./, ""))
+      .filter((t) => !CASCADE_FROM_ORGANIZATIONS.has(t));
+    expect(offenders, "datos de negocio con on delete cascade").toEqual([]);
   });
 
   it("las funciones nuevas de public nacen sin EXECUTE para PUBLIC ni anon", async () => {

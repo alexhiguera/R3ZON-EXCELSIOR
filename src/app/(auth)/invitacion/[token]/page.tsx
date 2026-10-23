@@ -1,12 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { AuthLayout } from "@/components/app-shell/AuthLayout";
-import { GoogleButton } from "@/components/auth/GoogleButton";
-import { Separador } from "@/components/auth/Separador";
 import { project } from "@/config/project";
 import { googleAuthEnabled } from "@/lib/env";
-import { tieneFormatoDeToken } from "@/lib/invitaciones";
 import { getCurrentUser } from "@/lib/supabase/server";
+import { GoogleButton, Separador, tieneFormatoDeToken } from "@/modulos/acceso";
 import { AceptarForm } from "./AceptarForm";
 import { CrearCuentaForm } from "./CrearCuentaForm";
 

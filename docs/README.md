@@ -30,6 +30,8 @@ R3ZON (`clientes.r3zon.com`). La documentación para los usuarios del producto e
 - [AUTH.md](AUTH.md) — sesión, login, callback, logout y rutas públicas.
 - [ROLES.md](ROLES.md) — modelo de roles y permisos, y cómo crece.
 - [auditoria.md](auditoria.md) — revisiones de seguridad y estado de cada hallazgo.
+- [RGPD.md](RGPD.md) — datos personales, bases legales, conservación (6 años), derechos,
+  exportación e importación.
 - [RESTAURACION.md](RESTAURACION.md) — backups y restauración.
 
 ### Seguimiento

@@ -3,14 +3,15 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { project } from "@/config/project";
+import { LONGITUD_MAXIMA_CONTRASENA, LONGITUD_MINIMA_CONTRASENA } from "@/lib/auth/politica";
+import { logger } from "@/lib/logger";
+import { createClient } from "@/lib/supabase/server";
 import {
   MENSAJE_INVITACION_NO_VALIDA,
   mensajeErrorAceptar,
   mensajeErrorAlta,
   tieneFormatoDeToken,
-} from "@/lib/invitaciones";
-import { logger } from "@/lib/logger";
-import { createClient } from "@/lib/supabase/server";
+} from "@/modulos/acceso";
 
 const log = logger("auth/invitacion");
 
@@ -19,8 +20,7 @@ export type InvitacionState = { error: string | null; info?: string | null };
 const altaSchema = z.object({
   nombre: z.string().trim().min(1).max(120),
   email: z.email().transform((e) => e.trim().toLowerCase()),
-  // 72: el límite de bcrypt, lo que de verdad usa Supabase Auth.
-  password: z.string().min(8).max(72),
+  password: z.string().min(LONGITUD_MINIMA_CONTRASENA).max(LONGITUD_MAXIMA_CONTRASENA),
 });
 
 /**
@@ -44,7 +44,7 @@ export async function crearCuenta(
   });
   if (!parsed.success) {
     return {
-      error: "Escribe tu nombre, un email válido y una contraseña de al menos 8 caracteres.",
+      error: `Escribe tu nombre, un email válido y una contraseña de al menos ${LONGITUD_MINIMA_CONTRASENA} caracteres.`,
     };
   }
 

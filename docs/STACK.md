@@ -1,7 +1,7 @@
 # Stack tecnológico
 
-Versiones de la creación de la plantilla (2026-09-23). Se eligieron las estables
-vigentes, no las de ningún proyecto anterior.
+Versiones de la creación de la plantilla (2026-09-23), **actualizadas en Excelsior el
+2026-10-23** a las últimas estables o LTS de cada una (ver «Decisiones de versión»).
 
 ## Capas
 
@@ -35,6 +35,19 @@ Tailwind 4 (`color-mix`, `@property`).
 - **Supabase CLI como devDependency** (`supabase`), no `npx supabase@latest`: la versión
   queda fijada en el lockfile y es la misma en todas las máquinas y en CI.
 
+**Actualización 2026-10-23** (todo lo demás, a la última estable):
+
+- **Node 24.22.1** (LTS «Krypton»). Node 26 existe, pero aún no es LTS.
+- **Postgres 17**: Supabase todavía no ofrece Postgres 18 (la CLI 2.121 rechaza
+  `major_version = 18`). Por eso UUIDv7 va en SQL ([DATABASE.md](DATABASE.md)).
+- **Prisma 7.10.1**, no 8: Prisma 8 sigue en *release candidate*.
+- **`@types/node` 24.x**, no 26: los tipos van con el runtime.
+- **Sentry 11**: ya no usa `@sentry/cli` para los source maps (lo hace
+  `@sentry/bundler-plugins`), así que su aprobación de `allowScripts` desaparece.
+- **Biome 2.6** trae formateador de Markdown, que quitaba la línea en blanco antes de
+  las listas y realineaba todas las tablas de `docs/`: el Markdown queda fuera de Biome
+  (`biome.json`).
+
 ## Dependencias de la app
 
 La lista la manda `dependencies` de `package.json`; aquí va el motivo de cada una.
@@ -50,6 +63,7 @@ explica, para que el documento no se quede atrás.
 | `clsx`, `tailwind-merge` | La función `cn()` para combinar clases |
 | `@sentry/nextjs` | Errores (solo se carga con DSN) |
 | `@vercel/speed-insights` | Web Vitals |
+| `server-only` | Marca el código que solo puede correr en el servidor (las puertas `servidor.ts` de los módulos, `src/lib/origen.ts`): importarlo desde un componente de cliente rompe el build en vez de filtrar código con acceso a datos |
 
 ### Previstas en Excelsior
 
@@ -62,7 +76,6 @@ explica, para que el documento no se quede atrás.
 | `resend` · `react-email` | 1 | Emails transaccionales con la marca |
 | `@react-pdf/renderer` o `pdf-lib` | 3 | PDF del contrato en servidor y hoja de evidencias (elegir al empezar la fase) |
 | Un componente de firma dibujada (p. ej. `signature_pad`) | 3 | Firma en el navegador, también táctil |
-| `server-only` | 1 | Que un import de código con secretos desde el cliente rompa el build |
 
 Todo lo demás es de desarrollo. `@vitejs/plugin-react` no hace falta: Vite transforma el
 JSX de los tests por su cuenta (se comprobó al quitarlo).
@@ -87,12 +100,11 @@ Cuando Prisma suba sus rangos, `deps:overrides` los marcará como obsoletos.
 
 npm 11 **omite en silencio** los scripts de instalación de paquetes no aprobados en el
 campo `allowScripts` de `package.json`, y cada aprobación va ligada a una **versión
-exacta**. Están aprobados los tres que hacen falta:
+exacta**. Están aprobados los dos que hacen falta:
 
 | Paquete | Qué hace su script | Qué se rompe si no corre |
 |---|---|---|
 | `prisma`, `@prisma/engines` | Descarga el motor de esquemas | `db:pull` y `db:drift` (y el paso de drift de CI) |
-| `@sentry/cli` | Descarga el binario de la CLI | La subida de source maps en el build de Vercel |
 
 **Procedimiento al actualizar cualquiera de ellos (o al añadir un paquete que traiga
 scripts de instalación):**

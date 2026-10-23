@@ -30,8 +30,18 @@ Además del core:
 
 | Migración | Qué añade |
 |---|---|
-| [`20261022120000_uuidv7.sql`](../supabase/migrations/20261022120000_uuidv7.sql) | `public.uuidv7()`: default de toda PK nueva (abajo) |
-| [`20261022120100_organizations_invitations.sql`](../supabase/migrations/20261022120100_organizations_invitations.sql) | `profiles.platform_role`, `organizations`, `organization_members`, `invitations`, `audit_log`, funciones de permiso, hook de alta solo por invitación ([AUTH.md](AUTH.md)) |
+| [`20261023000100_base_uuidv7.sql`](../supabase/migrations/20261023000100_base_uuidv7.sql) | Módulo **base**: `public.uuidv7()`, default de toda PK (abajo) |
+| [`20261023000200_plataforma.sql`](../supabase/migrations/20261023000200_plataforma.sql) | Módulo **plataforma**: `profiles.platform_role`, `is_staff()`, `is_admin()`, `audit_log` inmutable con purga a 6 años |
+| [`20261023000300_organizaciones.sql`](../supabase/migrations/20261023000300_organizaciones.sql) | Módulo **organizaciones**: empresas (se archivan, no se borran), miembros, `is_org_member()`, `org_role_of()` |
+| [`20261023000400_invitaciones.sql`](../supabase/migrations/20261023000400_invitaciones.sql) | Módulo **invitaciones**: tabla, hook de alta solo por invitación, purga de invitaciones cerradas ([AUTH.md](AUTH.md)) |
+| [`20261023000500_servicios.sql`](../supabase/migrations/20261023000500_servicios.sql) | Módulo **servicios**: catálogo, versiones inmutables (precio, IVA, modalidades, señal), vista `services_current`. Solo `admin` escribe |
+| [`20261023000600_contrataciones.sql`](../supabase/migrations/20261023000600_contrataciones.sql) | Módulo **contrataciones**: `engagements` con máquina de estados, historial inmutable, `invite_to_service()`, `change_engagement_status()` |
+
+**Línea base hasta el primer despliegue (T-18).** Mientras no exista ningún entorno
+compartido (T-17), estos ficheros son la **línea base** del esquema y se reescriben si
+hace falta, en vez de acumular migraciones que corrigen migraciones: el esquema nace
+como debe ser. **Desde el primer `db push` a un entorno compartido**, la regla de
+`CLAUDE.md` §4 es estricta: una migración aplicada no se edita.
 
 | Pieza | Qué hace |
 |---|---|
@@ -44,13 +54,16 @@ Además del core:
 
 ### UUIDv7
 
-Decisión de R3ZON (2026-10-22): las claves primarias nuevas son **UUIDv7** (RFC 9562).
-Postgres 17 no la trae (llega en Postgres 18) y Supabase no ofrece extensión, así que
-`public.uuidv7()` la implementa en SQL con el **mismo nombre que la nativa**: al pasar a
-Postgres 18 bastará una migración que cambie los defaults y la borre.
+Decisión de R3ZON (T-16): las claves primarias son **UUIDv7** (RFC 9562). Postgres 18
+la trae de serie, pero **Supabase aún no ofrece Postgres 18** (comprobado el 2026-10-23:
+la CLI 2.121 rechaza `major_version = 18`). `public.uuidv7()` la implementa en SQL con
+el **mismo método que la nativa** (RFC 9562, método 3): 48 bits de milisegundos, 12 bits
+de fracción de milisegundo y 62 aleatorios. Es **definitiva**: produce UUIDv7 válidos y
+no habrá que migrar nada cuando llegue Postgres 18.
 
 - **Por qué:** ordenan por fecha de alta, los B-tree insertan al final (menos
-  fragmentación) y `order by id` equivale a orden de creación.
+  fragmentación) y `order by id` equivale a orden de creación, también entre filas del
+  mismo milisegundo (la fracción lo resuelve; lo cazó un test que ordenaba por id).
 - **Contrapartida:** el id revela cuándo se creó la fila. Nunca es un secreto.
 - **Excepción:** `auth.users.id` (y `profiles.id`) lo genera Supabase Auth como v4.
 - **Vigilancia:** `security-catalog.test.ts` falla si una PK UUID con default no usa
@@ -208,7 +221,7 @@ audit_log (quién, qué, cuándo, sobre qué organización)
 | Fase | Tablas | Reglas que van en triggers (no en la app) |
 |---|---|---|
 | 1 ✅ | `organizations`, `organization_members`, `invitations`, `audit_log`; nivel de plataforma en `profiles` | Implementado (arriba, «Qué hay en la base de Excelsior») |
-| 2 | `services`, `service_versions`, `engagements`, historial de estados | Una contratación apunta a una **versión** del servicio: cambiar el catálogo no altera lo contratado. Solo las transiciones de estado permitidas ([ARCHITECTURE.md](ARCHITECTURE.md) §20) |
+| 2 ✅ | `services`, `service_versions`, `engagements`, historial de estados | Una contratación apunta a una **versión** del servicio: cambiar el catálogo no altera lo contratado. Solo las transiciones de estado permitidas ([ARCHITECTURE.md](ARCHITECTURE.md) §20) |
 | 3 | `organization_billing`, `contract_templates`, `contracts`, `contract_signatures`, `onboarding_progress` | Contrato firmado inmutable (sin `UPDATE` ni `DELETE`); solo un `owner` firma |
 | 4 | `payments`, `refunds`, `invoices` (incluidas rectificativas), `stripe_events` | `stripe_events` deduplica webhooks por id; el estado «pagado» solo lo escribe el webhook; un evento antiguo no hace retroceder un estado |
 | 5 | `projects`, `briefing_templates`, `briefing_items`, `documents` (+ policies de `storage.objects`) | Ruta del fichero con la organización; límites de tamaño; un fichero en cuarentena no es descargable |

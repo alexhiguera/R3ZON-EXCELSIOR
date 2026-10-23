@@ -14,31 +14,47 @@ en curso (y lo que surja); cuando arranca una fase, sus entregables bajan aquí.
 | Comprobación | Resultado |
 |---|---|
 | `npm run lint` · `typecheck` | ✅ |
-| `npm run test:run` (con el stack levantado) | ✅ 150 tests en 18 ficheros (también con los datos que dejan los E2E) |
-| `npm run test:e2e` | ✅ 30 tests (15 en escritorio + 15 en móvil) |
+| `npm run test:run` (con el stack levantado) | ✅ 216 tests en 26 ficheros (71 contra Postgres) |
+| `npm run test:e2e` | ✅ 34 tests (17 en escritorio + 17 en móvil) |
 | `npm run build` | ✅ |
 | `npm run db:drift` · `db:types:check` | ✅ |
 | `npm run docs:validar` · `docs:enlaces` | ✅ |
-| Migraciones | 3 (`core_profiles`, `uuidv7`, `organizations_invitations`), solo en local |
+| `npm audit` | ✅ 0 vulnerabilidades; dependencias en su última estable/LTS |
+| Migraciones | 7: core + 6 módulos (línea base, T-18), solo en local |
 | Entorno | **Solo local** (T-17). Sin producción ni servicios externos |
-| Fase en curso | **Fase 1** — hechos el modelo de empresas y roles, las invitaciones y el alta solo por invitación |
+| Fase en curso | **Fase 2** — panel hecho salvo «ver como cliente»; Fase 1 con lo pendiente aparcado |
 
-## Fase 1 — Acceso
+## Fase 2 — Panel R3ZON
+
+- [ ] 🟠 «Ver como cliente» (solo lectura, registrado). Antes, decisión D-14 de
+  [PLAN.md](PLAN.md).
+- [ ] 🟡 Crear el cliente «al vuelo» desde la invitación (hoy: crear y después invitar).
+- [ ] 🟡 Decisión D-08: el catálogo inicial real (hoy el catálogo está vacío en local;
+  los E2E crean servicios de prueba).
+
+## Fase 1 — Acceso (aparcadas por R3ZON, 2026-10-23)
 
 - [ ] 🔴 Recuperación de contraseña (`/recuperar` → callback `recovery` → nueva
   contraseña). En local los emails van a Mailpit (`http://127.0.0.1:55424`).
 - [ ] 🔴 «Mi cuenta»: nombre, cambio de contraseña pidiendo la actual.
-- [ ] 🟠 2FA (TOTP) obligatorio para el staff.
-- [ ] 🟠 Selector de empresa para quien pertenece a varias (T-13). Hoy el inicio las
-  lista todas; hará falta al aparecer datos por empresa (Fase 2).
-- [ ] 🟡 Decidir si «Cerrar sesión» cierra solo este dispositivo o todos (**aparcada** por
-  R3ZON). Hoy `auth/logout` llama a `signOut()` sin `scope`, que cierra **todas** las
-  sesiones; los E2E van con un solo worker por eso.
-- [ ] 🟡 Probar «Continuar con Google» con una cuenta real (necesita un cliente OAuth de
-  Google Cloud; pasos en [DEVELOPMENT.md](DEVELOPMENT.md)). Hook y alta ya probados con
-  eventos `google` contra Postgres.
+- [ ] 🔴 2FA (TOTP) obligatorio para el staff (hallazgo A1-10 de [auditoria.md](auditoria.md)):
+  antes del primer cliente real. Con él, las policies de staff exigirán `aal2`.
+- [ ] 🟠 Selector de empresa para quien pertenece a varias (T-13).
+- [ ] 🟡 Decidir si «Cerrar sesión» cierra solo este dispositivo o todos (**aparcada**).
+  Hoy `signOut()` sin `scope` cierra todas; los E2E van con un solo worker por eso.
+- [ ] 🟡 Probar «Continuar con Google» con una cuenta real (necesita credenciales de
+  Google Cloud; pasos en [DEVELOPMENT.md](DEVELOPMENT.md)).
 - [ ] 🟢 Emails con la marca (invitación, recuperación) vía Resend: aplazado mientras todo
-  sea local (T-17). Mientras, el enlace de invitación sale de `npm run dev:invitar`.
+  sea local (T-17). Mientras, el enlace se copia desde el panel.
+
+## RGPD y conservación ([RGPD.md](RGPD.md))
+
+- [ ] 🔴 Módulo `rgpd`: exportación (acceso y portabilidad) e importación, bloqueo legal y
+  supresión. Antes del primer cliente real.
+- [ ] 🟠 Tareas programadas de purga: invitaciones cerradas (plazo en D-13) y registro de
+  actividad de más de 6 años (`audit_log_purge`).
+- [ ] 🟠 Registro de actividades de tratamiento, política de privacidad y procedimiento
+  de brechas (con la asesoría).
 
 ## Al salir de local (aplazado, T-17)
 

@@ -31,7 +31,7 @@ cuenta**. Entrarás directamente en tu área de cliente.
 1. Abre el enlace de la invitación. Verás la página **Te damos la bienvenida**.
 2. Escribe tu nombre en **Nombre**.
 3. Escribe en **Email** el mismo email al que te llegó la invitación.
-4. Elige una contraseña de al menos 8 caracteres y escríbela en **Contraseña**.
+4. Elige una contraseña de al menos 12 caracteres y escríbela en **Contraseña**.
 5. Pulsa **Crear mi cuenta**.
 
 ## Qué tener en cuenta

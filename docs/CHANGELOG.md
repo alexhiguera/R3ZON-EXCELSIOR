@@ -7,6 +7,75 @@ nunca se renumeran.
 
 ---
 
+### Iteración 5 — *2026-10-23* — Dependencias al día, línea base modular, seguridad y RGPD, y Fase 2
+
+R3ZON aprueba T-15, aparca lo pendiente de la Fase 1 y pide cuatro cosas antes de
+seguir: dependencias en su última estable, UUIDv7 «bien desde el principio» y sin
+migraciones que parcheen migraciones, una app modular que no colapse por un módulo, y
+una revisión de la compartimentación de datos al nivel industrial y del RGPD (con
+conservación de 6 años, backups y exportación e importación). Después, Fase 2.
+
+**Dependencias**
+
+- Todo a la última estable: Next 16.4, React 19.3.1, Sentry 11, supabase-js 2.118, Biome
+  2.6, Playwright 1.64, CLI de Supabase 2.121, Prisma 7.10.1. Node 24.22.1 (LTS).
+- **No** se subió: Node 26 (no es LTS), Prisma 8 (RC), `@types/node` 26 (no casa con el
+  runtime) ni Postgres 18 (Supabase no lo ofrece: la CLI rechaza `major_version = 18`).
+- Sentry 11 ya no usa `@sentry/cli`: su aprobación de `allowScripts` desaparece. Prisma
+  7.10.1 se volvió a aprobar tras revisar sus scripts (iguales).
+- Biome 2.6 formateaba el Markdown y estropeó 19 documentos (quitaba la línea antes de
+  las listas, realineaba tablas). Se deshizo y el Markdown sale de Biome.
+- Nuevo `server-only`.
+
+**Base de datos: línea base modular (T-18) y UUIDv7**
+
+- Las dos migraciones de la iteración 4 se reescriben como seis ficheros, uno por
+  módulo. Se puede porque no existe ningún entorno compartido; desde el primer `db push`
+  vuelve la regla estricta (CLAUDE.md §4).
+- UUIDv7 con el método de Postgres 18 (fracción de milisegundo en 12 bits). La primera
+  versión solo llevaba milisegundos y un test de actividad salió desordenado: dos filas
+  del mismo milisegundo. Es definitiva: no habrá que migrar al llegar Postgres 18.
+
+**Seguridad y RGPD** (detalle en `auditoria.md`, Auditoría 1, y en el nuevo `RGPD.md`)
+
+- Revisión sobre el catálogo real de Postgres, no sobre el código. Cerrados: emails en el
+  registro de actividad (A1-1), registro modificable por `postgres`/`service_role`
+  (A1-2), actor perdido al suprimir un usuario (A1-3), riesgo de borrado en cascada de
+  datos con obligación de conservación (A1-4), contraseña de 8 (A1-5, ahora 12: T-19),
+  invitaciones de validez arbitraria (A1-6), funciones de trigger ejecutables (A1-9).
+- Conservación de 6 años desde el esquema: organizaciones archivables, contrataciones con
+  `on delete restrict` y sin `DELETE`, registros inmutables con purga solo de lo que
+  pase de 6 años, purga de invitaciones cerradas (minimización).
+- Dos reglas nuevas en el catálogo: toda tabla con RLS tiene policies, y solo los datos
+  de acceso se borran en cascada con la organización.
+- Abiertos con su plan: 2FA del equipo (A1-10, el más importante), CSP y el módulo
+  `rgpd` (exportación e importación).
+
+**Modularidad (T-20, ARCHITECTURE §21)**
+
+- `src/modulos/<modulo>/` con `index.ts` y `servidor.ts` como únicas puertas, registro
+  único, y un test que falla si un módulo usa las tripas de otro.
+- Las consultas no lanzan (`src/lib/datos.ts`); cada bloque va en `ModuloSeguro`
+  (límite de error + Suspense), con test de que un bloque roto no tumba a sus vecinos;
+  `(app)/error.tsx` conserva la navegación.
+- Descartado `loading.tsx` en la zona con sesión: con él, el 404 del panel salía con
+  estado 200 (lo cazó un E2E).
+
+**Fase 2: panel de R3ZON**
+
+- Módulos `servicios` (catálogo con versiones inmutables; solo admin) y
+  `contrataciones` (máquina de estados completa con caminos no felices, historial
+  inmutable con motivo, `invite_to_service()` en una transacción).
+- `/admin/clientes` (listado, búsqueda, filtro, alta, ficha, archivo, invitación con o
+  sin servicio y enlace para copiar), `/admin/servicios` y `/admin/contrataciones`
+  (embudo y cierre con motivo). El equipo ve el email de los miembros con
+  `organization_directory()`, que comprueba dentro que es staff (el email no se duplica).
+- Fallos cazados por tests: un CHECK que se evaluaba a `NULL` y dejaba pasar una señal
+  vacía; una referencia ambigua en una policy (`id` resolvía a la tabla equivocada)
+  que se corrigió antes de que llegara a probarse.
+- Pendiente: «ver como cliente» (D-14), crear el cliente al vuelo y el envío por email.
+- **Sin anunciar a usuarios** (`CLAUDE.md` §8): no hay usuarios ni `whats-new`.
+
 ### Iteración 4 — *2026-10-23* — Fase 1: empresas, roles, alta solo por invitación y UUIDv7
 
 R3ZON decide trabajar solo en local por ahora (T-17) y pide UUIDv7 para la base (T-16).

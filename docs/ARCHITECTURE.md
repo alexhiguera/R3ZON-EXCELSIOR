@@ -242,12 +242,13 @@ Invitaciones, contrataciones, contratos, pagos y proyectos tienen **máquinas de
 explícitas**: un `enum` (o tabla de estados) por entidad, una tabla de transiciones
 permitidas y un **trigger** que rechaza cualquier otra, de modo que ninguna vía de
 escritura (app, RPC, webhook, panel) pueda saltarse un paso. Cada cambio de estado deja
-rastro (quién, cuándo, por qué). Borrador inicial — se cierra en la Fase 2, entregable 0:
+rastro (quién, cuándo, por qué). Invitación y contratación ya están implementadas; las
+demás se escriben con su fase siguiendo esta tabla:
 
 | Entidad | Estados | Caminos no felices que tienen que existir |
 |---|---|---|
 | Invitación ✅ | `pendiente → aceptada` | `revocada`, `caducada`; reenvío = invitación nueva que revoca la anterior. **Implementada** con estado derivado de columnas (`accepted_at`, `revoked_at`, `expires_at`) y el trigger `invitations_guard_transition` |
-| Contratación | `borrador → invitada → datos_completos → firmada → pago_en_curso → pagada → activa → finalizada` | `cancelada` (antes de firmar), `rescindida` (después), `en_impago` |
+| Contratación ✅ | `borrador → invitada → datos_completos → firmada → pago_en_curso → pagada → activa → finalizada` | `cancelada` (antes de firmar), `rescindida` (después), `en_impago` (desde el pago, la activa o la pagada; vuelve a `pago_en_curso` o `activa`, o se rescinde). **Implementada**: `engagement_transition_allowed()` + trigger, historial inmutable con motivo; la interfaz repite la tabla y un test comprueba que coinciden |
 | Contrato | `generado → enviado → firmado` | `anulado` (antes de firmar), **`sustituido`** por otro contrato (anexo o nueva versión): el firmado no cambia, se enlaza el que lo sustituye |
 | Pago | `pendiente → en_curso → pagado` | `fallido`, **`devuelto`** (adeudo SEPA rechazado días después), **`en_disputa`** (y su resolución), **`reembolsado`** total o parcial; cada reembolso o devolución con su **abono / factura rectificativa** |
 | Proyecto | `briefing → diseño → desarrollo → revisión → lanzado → mantenimiento` | `en_pausa` (p. ej. por impago), `cancelado` |
@@ -260,3 +261,47 @@ Reglas:
 - Los estados de pago y contratación están relacionados pero no son el mismo: un pago
   devuelto lleva la contratación a `en_impago`, no la «desfirma».
 - La interfaz se deriva del estado (qué botones aparecen), nunca al revés.
+
+## 21. Un monolito modular que no colapsa entero
+
+Excelsior es **una sola app** (un despliegue, una base): más simple de operar y de
+asegurar que varios servicios. El riesgo de un monolito es que un fallo en un apartado
+lo tumbe entero, o que los apartados se enreden hasta que no se pueda cambiar uno sin
+romper otro. Las defensas, todas vigentes:
+
+**En la base**
+
+- **Un fichero de migración por módulo**, en orden de dependencia (base → plataforma →
+  organizaciones → invitaciones → servicios → contrataciones). Un módulo solo depende de
+  los anteriores; si concede acceso a datos de otro (p. ej. que el cliente vea el
+  servicio que contrató), la policy la añade el módulo que sabe por qué.
+- **Cada módulo trae sus tests** (`tests/db/<modulo>.test.ts`) y el **catálogo** vigila
+  reglas globales para todos, también para los que aún no existen.
+
+**En la app** ([`src/modulos/`](../src/modulos/registro.ts))
+
+- **Cada módulo en su carpeta**, con dos puertas públicas: `index.ts` (seguro en cliente
+  y servidor) y `servidor.ts` (solo servidor, marcado con `server-only`: importarlo desde
+  el navegador rompe el build). Lo demás es interno. `tests/unit/modulos.test.ts` falla
+  si un módulo usa las tripas de otro, si algo de fuera las usa, o si una carpeta no
+  está registrada.
+- **Registro único** (`src/modulos/registro.ts`): cada módulo declara sus secciones del
+  menú; añadir un apartado no toca el layout.
+- **Las consultas no lanzan** ([`src/lib/datos.ts`](../src/lib/datos.ts)): devuelven
+  `{ ok: false }` y registran el fallo con el módulo y la operación. Las escrituras
+  devuelven el mensaje de la regla de negocio (los triggers lo escriben en español) o
+  uno genérico, nunca detalles internos.
+- **Cada bloque de una página va en `ModuloSeguro`**: límite de error + `Suspense`. Si un
+  módulo falla al pintarse, su hueco dice «no disponible» y el resto sigue; si tarda, no
+  bloquea a los demás.
+- **`(app)/error.tsx`** vive bajo el layout: si una sección entera falla, la navegación
+  sigue en pie y se puede ir a otra.
+
+**Lo que se descartó**: microservicios o paquetes por módulo (coste de despliegue,
+versionado y seguridad desproporcionado para el tamaño actual; ARCHITECTURE §14) y
+*feature flags* para apagar módulos (no aportan nada mientras un despliegue tarda
+minutos; se reconsideran con usuarios reales).
+
+**Excepción conocida**: la zona con sesión no tiene `loading.tsx`. Un `Suspense` por
+encima del layout del panel hace que la respuesta salga con 200 antes de que el layout
+decida el 404 (lo cazó un E2E). El esqueleto de carga lo pone cada `ModuloSeguro`.

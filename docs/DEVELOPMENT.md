@@ -163,7 +163,12 @@ MCP.
   a la migración.
 - **`db:types:check` falla** — la migración nueva vino sin sus tipos:
   `npm run db:types` y commitea `src/lib/database.types.ts` junto a ella.
-- **Tras un E2E no puedo entrar con `dev@`** — el E2E resetea la base: `npm run seed:dev`.
+- **Tras un E2E no puedo entrar con `dev@`** — el E2E resetea la base: `npm run seed:dev`
+  (y `npm run dev:staff -- dev@example.test admin` para volver a ver el panel).
+- **Playwright dice «Executable doesn't exist»** tras actualizarlo — falta su navegador:
+  `npx playwright install chromium`.
+- **Para ver el panel de R3ZON en local** — `npm run dev:staff -- dev@example.test admin`
+  y recarga. Los E2E usan además `admin-e2e@r3zon.test` (lo crea `seed:e2e`).
 - **`docs:validar` dice que la identidad no coincide** — un fichero que repite datos de
   `src/config/project.ts` se quedó sin actualizar; el mensaje dice cuál
   ([TEMPLATE.md](TEMPLATE.md) → Personalizar la identidad).

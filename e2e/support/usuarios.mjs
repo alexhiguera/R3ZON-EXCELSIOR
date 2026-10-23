@@ -10,3 +10,10 @@ export const USUARIO_E2E = {
   password: "e2e-password-local-only",
   displayName: "Usuario E2E",
 };
+
+/** Administrador de R3ZON (nivel `admin`): panel, catálogo y clientes. */
+export const ADMIN_E2E = {
+  email: "admin-e2e@r3zon.test",
+  password: "admin-e2e-password-local-only",
+  displayName: "Admin E2E",
+};

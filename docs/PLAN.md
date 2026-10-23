@@ -21,7 +21,7 @@ Leyenda: ⬜ sin empezar · 🚧 en curso · ✅ cerrada. Tamaño relativo: **S*
 | 0 | Adaptar el repositorio y cimientos (identidad, marca, servicios, decisiones) | M | ✅ en local (servicios externos y CI, aplazados al salir de local) |
 | 1 | Acceso: invitaciones, login con email y Google, contraseña, empresas y roles | L | 🚧 |
 | **🧪 Hito V** | **Recorrido vertical mínimo**: un servicio, un contrato, un medio de pago y una checklist, de invitación a proyecto (partes «V» de las fases 2–5) | L | ⬜ |
-| 2 | Panel R3ZON: clientes, catálogo de servicios e invitaciones con servicio | L | ⬜ |
+| 2 | Panel R3ZON: clientes, catálogo de servicios e invitaciones con servicio | L | 🚧 (falta «ver como cliente» y el envío por email) |
 | 3 | Onboarding de contratación: bienvenida, datos, contrato y firma | XL | ⬜ |
 | 4 | Pagos con Stripe y facturas | L | ⬜ |
 | 5 | Briefing del proyecto y zona de documentos (tipo Drive) | L | ⬜ |
@@ -167,26 +167,26 @@ enviarle el enlace, todo desde el panel.
 
 **Entregables**
 
-0. **Máquinas de estados** de invitación, contratación, contrato, pago y proyecto,
-   escritas en [ARCHITECTURE.md](ARCHITECTURE.md) §20 **antes** de la primera migración
-   de esta fase, incluidos los caminos no felices (revocación, devolución, disputa,
-   reembolso, abono, contrato sustituido). Cada transición permitida se aplica con un
-   trigger y tiene su test.
-1. **Zona `/admin`** (solo staff; protegida en el proxy, en el layout y por RLS).
-2. **Clientes**: listado con búsqueda y filtro por estado, alta manual, ficha (datos
-   fiscales, usuarios, contrataciones, actividad). Alta manual **sin** invitación posible
-   (cliente que aún no usa el portal).
-3. **Catálogo de servicios** (`services`): nombre, descripción comercial, qué incluye,
-   precio base, IVA, modalidades de pago permitidas (pago único / señal + entrega,
-   porcentaje de señal), plantilla de contrato asociada y plantilla de briefing.
-   Versionado: cambiar un servicio no altera lo ya contratado.
-4. **Generar invitación con servicio**: elegir cliente (o crearlo al vuelo) + email +
-   servicio + precio final (con descuento si aplica) + condiciones particulares → crea la
-   **contratación en borrador** y la invitación. Copiar enlace o enviarlo por email.
-   Reenviar, revocar, ver caducidad.
-5. **Embudo de onboarding**: en qué paso está cada contratación (invitado → cuenta creada
-   → datos → firmado → pagado → briefing completo), con fecha de cada paso.
-6. **Ver como cliente** (solo lectura, registrado en el audit log) para soporte.
+0. ✅ **Máquinas de estados** en [ARCHITECTURE.md](ARCHITECTURE.md) §20. Implementadas
+   las de invitación y contratación (con trigger, historial y test de paridad con la
+   interfaz); contrato, pago y proyecto se implementan con su fase siguiendo la tabla.
+1. ✅ **Zona `/admin`**: proxy (sesión), layout (404 real a quien no es del equipo) y RLS.
+2. ✅ **Clientes**: listado con búsqueda y filtro (activos, archivados, todos), alta
+   manual sin invitación, ficha con personas (y su email), invitaciones abiertas,
+   contrataciones y actividad; archivar y reactivar (nunca borrar). Los **datos
+   fiscales** llegan con la Fase 3 (`organization_billing`).
+3. ✅ **Catálogo de servicios**: nombre, resumen, qué incluye, precio, IVA, modalidades y
+   señal; versiones inmutables; solo `admin` lo cambia. Las **plantillas** de contrato y
+   de briefing se asocian en las fases 3 y 5, cuando existan.
+4. ✅ **Invitación con servicio**: email + servicio + precio final + condiciones →
+   contratación e invitación en una transacción; el enlace se enseña una vez para
+   copiarlo; anular y ver caducidad; reenviar = invitar otra vez (revoca la anterior).
+   ⬜ **Envío por email**: aplazado mientras todo sea local (T-17). ⬜ Crear el cliente
+   «al vuelo» desde la invitación: hoy se crea primero (dos clics).
+5. ✅ **Embudo**: invitado → cuenta creada → datos → firmado → pago → en marcha, con la
+   fecha del último cambio. Las etapas siguientes se llenarán con las fases 3 y 4.
+6. ⬜ **Ver como cliente** (solo lectura, registrado en el audit log). Pendiente: exige
+   decidir cómo se suplanta sin saltarse la RLS (decisión D-14).
 
 **Hecho cuando:** E2E del staff: crear cliente, crear servicio, generar invitación y
 verla aceptada en el embudo. Tests de BD: un usuario cliente no puede leer `services`
@@ -462,6 +462,10 @@ candidatas, con lo que desbloquea cada una, están en [mejoras.md](mejoras.md).
 | T-14 | Interfaz **solo en modo oscuro**, como r3zon.com | 2026-10-22 | «Misma estética que la web»: la web no tiene tema claro. Los tokens permiten añadir uno sin tocar componentes |
 | T-15 | **Alta por invitación resuelta en la base**: hook `before_user_created` (con contraseña exige el token de ese email; con Google, invitación pendiente para el email verificado) y aceptación por trigger en la misma transacción. La página de invitación no consulta la invitación sin sesión | 2026-10-23 | Resultado del prototipo de la Fase 1: evita llevar el token a través de OAuth y no abre ninguna función a `anon` |
 | T-16 | Claves primarias **UUIDv7** (`public.uuidv7()`, mismo nombre que la nativa de Postgres 18) | 2026-10-23 | Petición de R3ZON: orden temporal y menos fragmentación de índices. El id revela la fecha de alta: nunca se usa como secreto |
+| T-18 | **Línea base modular** de migraciones hasta el primer despliegue: un fichero por módulo que se reescribe en vez de parchearse | 2026-10-23 | Petición de R3ZON («hacerlo bien desde el principio»). Termina con el primer `db push` a un entorno compartido |
+| T-19 | Contraseña mínima de **12 caracteres** y reautenticación para cambiarla | 2026-10-23 | Revisión de seguridad (NIST SP 800-63B). Ajustable en `src/lib/auth/politica.ts` + `config.toml` |
+| T-20 | **Monolito modular**: módulos con API pública, consultas que no lanzan, bloques aislados (ARCHITECTURE §21) | 2026-10-23 | Petición de R3ZON: que un fallo de un módulo no tumbe el resto |
+| T-21 | **Conservación de 6 años** y backups durante ese plazo; exportación e importación RGPD | 2026-10-23 | Decisión de R3ZON. Diseño en [RGPD.md](RGPD.md); cierra parte de D-13 |
 | T-17 | **Solo en local** por ahora: sin Supabase Cloud, Vercel, Stripe ni Resend reales | 2026-10-23 | Decisión de R3ZON. Lo que depende de servicios externos (emails, Google real, CI) se aplaza sin bloquear el resto |
 
 ## Decisiones abiertas
@@ -478,7 +482,8 @@ Bloquean la fase indicada. Cada una lleva una recomendación; la decisión es de
 | D-10 | **Validación jurídica de la firma propia**: ¿para qué contratos y servicios basta la firma simple con estas evidencias? ¿Qué evidencias exige la asesoría, cuánto se conservan y cómo? ¿Hace falta sello de tiempo cualificado? | Llevar a la asesoría el diseño de [ARCHITECTURE.md](ARCHITECTURE.md) §17 y un PDF de ejemplo con su hoja de evidencias | Fase 3 (Hito V) |
 | D-11 | **Validación fiscal de Stripe Invoicing**: ¿cumplen sus facturas los requisitos españoles (numeración, datos, rectificativas, IVA intracomunitario) y el calendario de adaptación de la AEAT? Si no, ¿se adelanta ANTARES o se factura fuera mientras tanto? | Revisión con la asesoría con una factura de prueba real de Stripe | Fase 4 (Hito V) |
 | D-12 | **¿Quién firma y quién paga?** Quien abre la invitación puede no ser el representante legal ni administración | El asistente permite delegar firma (a un `owner`) y pago (a un `billing`) de la misma empresa | Fase 3 |
-| D-13 | **Retención de datos**: plazos por tipo de dato, exportación, baja, anonimización y bloqueo legal | Plazos de la asesoría; aplicarlos por trigger y tarea programada | Hito MVP |
+| D-14 | **«Ver como cliente»**: ¿vista de solo lectura construida con los datos del cliente vistos como staff (sin suplantar), o suplantación real con un JWT del cliente y caducidad corta? | La primera: no exige emitir tokens de otro usuario ni tocar Auth, y la RLS del staff ya ve esos datos | Fase 2, entregable 6 |
+| D-13 | **Retención de datos** (6 años ya decidido, T-21): plazos de lo que NO es obligación legal (invitaciones cerradas, logs de Auth), anonimización y bloqueo legal | Plazos de la asesoría; aplicarlos por trigger y tarea programada | Hito MVP |
 
 ## Riesgos
 

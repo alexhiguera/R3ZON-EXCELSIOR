@@ -4,7 +4,7 @@ import {
   mensajeErrorAceptar,
   mensajeErrorAlta,
   tieneFormatoDeToken,
-} from "@/lib/invitaciones";
+} from "@/modulos/acceso";
 
 describe("tieneFormatoDeToken", () => {
   it("acepta 64 caracteres hexadecimales en minúscula", () => {

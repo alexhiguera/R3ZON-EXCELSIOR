@@ -14,7 +14,8 @@
 # · `edge_runtime` y `analytics` apagados: el core no tiene Edge Functions y
 #   Logflare solo alarga el arranque (local y CI). Se encienden si un módulo
 #   los necesita.
-# · `minimum_password_length = 8`: replicarlo en el panel de Supabase Cloud.
+# · `minimum_password_length = 12` (Excelsior, src/lib/auth/politica.ts) y
+#   `secure_password_change = true`: replicarlos en el panel de Supabase Cloud.
 # ─────────────────────────────────────────────────────────────────────────────
 project_id = "excelsior"
 
@@ -197,7 +198,7 @@ enable_anonymous_sign_ins = false
 # Allow/disallow testing manual linking of accounts
 enable_manual_linking = false
 # Passwords shorter than this value will be rejected as weak. Minimum 6, recommended 8 or more.
-minimum_password_length = 8
+minimum_password_length = 12
 # Passwords that do not meet the following requirements will be rejected as weak. Supported values
 # are: `letters_digits`, `lower_upper_letters_digits`, `lower_upper_letters_digits_symbols`
 password_requirements = ""
@@ -243,7 +244,7 @@ double_confirm_changes = true
 # If enabled, users need to confirm their email address before signing in.
 enable_confirmations = false
 # If enabled, users will need to reauthenticate or have logged in recently to change their password.
-secure_password_change = false
+secure_password_change = true
 # Controls the minimum amount of time that must pass before sending another signup confirmation or password reset email.
 max_frequency = "1s"
 # Number of characters used in the email OTP.
@@ -295,7 +296,7 @@ max_frequency = "5s"
 
 # This hook runs before a new user is created and allows developers to reject the request based on the incoming user object.
 # R3ZON (Excelsior): ALTA SOLO POR INVITACIÓN. Rechaza toda alta sin invitación válida
-# (migración 20261022120100_organizations_invitations.sql, docs/AUTH.md). En Supabase Cloud
+# (migración 20261023000400_invitaciones.sql, docs/AUTH.md). En Supabase Cloud
 # se activa a mano en el panel → Authentication → Hooks, con la misma función.
 [auth.hook.before_user_created]
 enabled = true

@@ -24,8 +24,12 @@
 │   │   └── error.tsx · global-error.tsx · not-found.tsx
 │   ├── components/ui/        primitivos accesibles: Button, Field, Input, Card, Badge, Stepper
 │   ├── components/app-shell/ armazón con sesión (AppShell, NavLinks) y de acceso (AuthLayout)
+│   ├── modulos/              módulos de negocio (docs/ARCHITECTURE.md §21)
+│   │   ├── registro.ts       qué módulos hay y qué secciones aportan al menú
+│   │   ├── tipos.ts
+│   │   └── <modulo>/         index.ts (público) · servidor.ts (solo servidor) · modulo.ts · internos
+│   │                         acceso · contrataciones · inicio · organizaciones · servicios
 │   ├── components/brand/     logotipo de R3ZON
-│   ├── components/auth/      botón de Google, separador
 │   └── lib/
 │       ├── supabase/         client.ts (navegador) · server.ts · proxy.ts
 │       ├── public-paths.ts   lista de rutas sin sesión
@@ -66,7 +70,8 @@
 | Variable de entorno nueva | `src/lib/env.ts` (pública) o el módulo de servidor que la usa | Procedimiento en [DEVELOPMENT.md](DEVELOPMENT.md) |
 | Página pública nueva | `src/app/…` + `src/lib/public-paths.ts` + su test | Todo lo que no está en la lista exige sesión |
 | Página con sesión | `src/app/(app)/…` | El layout del grupo añade la segunda comprobación |
-| Lógica de dominio | `src/lib/<dominio>.ts`, pura | Se prueba sin montar nada |
+| Lógica de un módulo de negocio | `src/modulos/<modulo>/`, expuesta por `index.ts` o `servidor.ts` | Fronteras vigiladas por `tests/unit/modulos.test.ts` |
+| Utilidades sin dominio (formato, datos) | `src/lib/*.ts`, puras | Se prueban sin montar nada |
 | Hooks de React | `src/lib/use*.ts(x)` | |
 | Componentes de un módulo de negocio | `src/components/<modulo>/` | |
 | Cambio de esquema | migración nueva en `supabase/migrations/` | Nunca en otro sitio |

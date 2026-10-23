@@ -63,9 +63,10 @@ Secciones propias de Excelsior. Detalle de cada una en [PLAN.md](PLAN.md).
 |---|---|---|---|
 | Organizaciones y usuarios | 1 | 🚧 | Base hecha (empresas, miembros, niveles, audit log); falta «Mi cuenta» y el selector de empresa |
 | Invitaciones | 1–2 | 🚧 | Alta y aceptación hechas; falta el envío por email y el servicio preseleccionado (Fase 2) |
-| Panel de administración | 2 | ⬜ | `/admin`: clientes, embudo de onboarding, ver como cliente |
-| Catálogo de servicios | 2 | ⬜ | Precios, modalidades, plantillas de contrato y briefing; versionado |
-| Contrataciones | 2–4 | ⬜ | Servicio contratado por un cliente y su estado |
+| Panel de administración | 2 | 🚧 | `/admin`: clientes (alta, ficha, archivo, invitación con servicio), servicios, embudo. Falta «ver como cliente» |
+| Catálogo de servicios | 2 | ✅ | `src/modulos/servicios`: versiones inmutables, precio, IVA, modalidades, señal. Las plantillas de contrato y briefing llegan en las fases 3 y 5 |
+| Contrataciones | 2–4 | 🚧 | `src/modulos/contrataciones`: máquina de estados completa, invitación con servicio, embudo y cierres manuales. Los pasos del cliente (datos, firma, pago), en las fases 3 y 4 |
+| RGPD | MVP | ⬜ | Exportación, importación, bloqueo legal y supresión ([RGPD.md](RGPD.md)) |
 | Asistente de onboarding | 3 | ⬜ | Motor de pasos reutilizable (también para propuestas) |
 | Contratos y firma | 3 | ⬜ | Plantillas versionadas, PDF, firma con evidencias ([ARCHITECTURE.md](ARCHITECTURE.md) §17) |
 | Pagos y facturas | 4 | ⬜ | Stripe; después ANTARES (Fase 8) |

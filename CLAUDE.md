@@ -15,7 +15,7 @@ regla lleva su motivo: una norma sin motivo se salta en cuanto estorba.
   propuestas, documentos y tickets. Qué y por qué: [`docs/PRODUCTO.md`](docs/PRODUCTO.md).
   Nombre visible **«R3ZON Clientes»**. Identidad en código:
   [`src/config/project.ts`](src/config/project.ts). Puertos locales 5542x.
-- **Plan y fase en curso:** [`docs/PLAN.md`](docs/PLAN.md). Hoy: **Fase 1**. Las
+- **Plan y fase en curso:** [`docs/PLAN.md`](docs/PLAN.md). Hoy: **Fase 2**. Las
   decisiones tomadas (T-xx) no se reabren sin preguntar; las abiertas (D-xx) se preguntan
   antes de implementar lo que bloquean.
 - **Entornos:** **solo local** (Supabase en Docker) por decisión de R3ZON (T-17,
@@ -110,6 +110,12 @@ que es peor que no tenerlos.
 - **Una migración aplicada no se edita jamás.** Si falta algo, migración nueva. Editar
   una aplicada crea una divergencia que solo se ve en producción (pasó: tres `db push`
   fallidos en el proyecto de origen), y `npm run db:reset` en local no la detecta.
+  **Excepción hasta el primer despliegue (T-18):** mientras no exista ningún entorno
+  compartido, las migraciones son una línea base modular (un fichero por módulo) que se
+  reescribe en vez de parchearse. Se acaba con el primer `db push`.
+- **Un fichero de migración por módulo**, con sus tests en `tests/db/<modulo>.test.ts`.
+  Los datos con obligación de conservación (6 años) apuntan a la organización con
+  `on delete restrict` y no tienen `DELETE` para la app ([`docs/RGPD.md`](docs/RGPD.md)).
 - **Toda migración nueva viaja con su `prisma/schema.prisma` y sus tipos:** aplicarla en
   local, `npm run db:pull`, `npm run db:types`, y todo en el mismo commit. CI lo exige.
 - **Prisma es solo para local y pruebas** (introspección, Studio, drift). **Nunca**
@@ -126,7 +132,7 @@ que es peor que no tenerlos.
   RPC ni en el cliente. La RLS **no se aplica dentro de una `SECURITY DEFINER`**: una
   guarda por RPC deja fuera la ruta que alguien olvide. Lo del cliente es UX.
 - **Claves primarias: `default public.uuidv7()`** (decisión de R3ZON; migración
-  `20261022120000_uuidv7.sql`). Ordenan por fecha y no fragmentan los índices. El test de
+  `20261023000100_base_uuidv7.sql`). Ordenan por fecha y no fragmentan los índices. El test de
   catálogo falla si una PK UUID nueva usa otro default. Un UUIDv7 revela cuándo se creó
   la fila: **nunca se usa un UUID como secreto** (los tokens son bytes aleatorios
   guardados como hash). Fuera de PKs, `gen_random_uuid()`; nunca `uuid_generate_v4()`
@@ -150,7 +156,12 @@ Guía completa: [`docs/DATABASE.md`](docs/DATABASE.md).
 - **Secretos:** nunca con prefijo `NEXT_PUBLIC_`, nunca en el repo, nunca en logs (el
   logger y Sentry los redactan; no los esquives).
 - **Dato personal:** si puedes evitar guardarlo o duplicarlo, evítalo. Lo que no existe
-  no hay que proteger, exportar ni borrar.
+  no hay que proteger, exportar ni borrar. **Nunca en `audit_log`** (solo ids y estados).
+- **Módulos de la app** (`src/modulos/`): se usan solo por `index.ts` o `servidor.ts`; las
+  consultas no lanzan (`src/lib/datos.ts`) y cada bloque de una página va en
+  `ModuloSeguro` (docs/ARCHITECTURE.md §21).
+- **Una Server Action no decide permisos**: es un endpoint público más. Quién puede
+  hacer algo lo decide la base (RLS y triggers).
 - No leas `.env.local` ni ficheros de secretos, por ninguna vía. `.claude/settings.json`
   bloquea `Read` y los lectores habituales por Bash (`cat`, `head`, `tail`, `less`…),
   pero es una red, no una garantía: la regla es no leerlos.

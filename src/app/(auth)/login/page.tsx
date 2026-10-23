@@ -1,12 +1,11 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { AuthLayout } from "@/components/app-shell/AuthLayout";
-import { GoogleButton } from "@/components/auth/GoogleButton";
-import { Separador } from "@/components/auth/Separador";
 import { project } from "@/config/project";
 import { googleAuthEnabled } from "@/lib/env";
 import { safeRedirectPath } from "@/lib/safe-redirect";
 import { getCurrentUser } from "@/lib/supabase/server";
+import { GoogleButton, Separador } from "@/modulos/acceso";
 import { LoginForm } from "./LoginForm";
 
 export const metadata: Metadata = { title: "Iniciar sesión" };

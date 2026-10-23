@@ -68,7 +68,7 @@ Hoy solo existe `/api/health`, pública.
 
 No existe registro libre, **ni en la interfaz ni en el servidor**. Una cuenta nace de
 una invitación de R3ZON ([PRODUCTO.md](PRODUCTO.md) §4). Implementado en
-[`20261022120100_organizations_invitations.sql`](../supabase/migrations/20261022120100_organizations_invitations.sql).
+[`20261023000400_invitaciones.sql`](../supabase/migrations/20261023000400_invitaciones.sql).
 
 ```text
 Staff (o `npm run dev:invitar` en local)
@@ -113,6 +113,15 @@ entra en el código). `npm run seed:dev` y `seed:e2e` crean así sus usuarios en
 usar esta invitación…» con qué hacer; un email que ya tiene cuenta lleva a iniciar
 sesión. Con Google, el callback vuelve a `/login?error=oauth` con el aviso de entrar
 desde la invitación.
+
+## Contraseñas
+
+- **12 caracteres como mínimo** (T-19), en Supabase Auth (`minimum_password_length`) y en
+  el formulario ([`src/lib/auth/politica.ts`](../src/lib/auth/politica.ts)); un test
+  comprueba que coinciden. Referencia: NIST SP 800-63B pide 15 si la contraseña es el
+  único factor y 8 con segundo factor.
+- **Cambiarla exige sesión reciente** (`secure_password_change = true`).
+- Ambas cosas hay que replicarlas en el panel de Supabase Cloud al salir de local.
 
 ## Google
 
