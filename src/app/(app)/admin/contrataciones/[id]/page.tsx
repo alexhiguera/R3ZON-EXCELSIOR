@@ -30,6 +30,7 @@ import {
 } from "./actions";
 import { SeccionAlta } from "./SeccionAlta";
 import { SeccionCobro } from "./SeccionCobro";
+import { SeccionCondiciones } from "./SeccionCondiciones";
 
 export const metadata: Metadata = { title: "Contratación" };
 
@@ -51,7 +52,7 @@ export default async function ContratacionPage({ params }: { params: Promise<{ i
         volver={{ href: "/admin/contrataciones", label: "Contrataciones" }}
         titulo={
           <span className="flex flex-wrap items-center gap-3">
-            {e.servicio}
+            {e.titulo}
             <Badge tone={ESTADOS[e.status].tono}>{ESTADOS[e.status].etiqueta}</Badge>
           </span>
         }
@@ -60,11 +61,14 @@ export default async function ContratacionPage({ params }: { params: Promise<{ i
             <Link href={`/admin/clientes/${e.organization_id}`} className="hover:underline">
               {e.organizacion}
             </Link>{" "}
-            · {euros(e.price_cents)} + {e.vat_rate} % IVA
-            {e.conditions ? ` · ${e.conditions}` : ""}
+            · {euros(e.vigente.total_cents)} IVA incluido
           </>
         }
       />
+
+      <ModuloSeguro nombre="Las condiciones económicas">
+        <SeccionCondiciones e={e} />
+      </ModuloSeguro>
 
       <ModuloSeguro nombre="El alta">
         <SeccionAlta e={e} />
@@ -76,7 +80,11 @@ export default async function ContratacionPage({ params }: { params: Promise<{ i
 
       {e.requires_signature ? (
         <ModuloSeguro nombre="El contrato">
-          <SeccionContrato engagementId={e.id} estadoContratacion={e.status} />
+          <SeccionContrato
+            engagementId={e.id}
+            estadoContratacion={e.status}
+            hayCambio={Boolean(e.cambio)}
+          />
         </ModuloSeguro>
       ) : (
         <Card>
@@ -100,20 +108,35 @@ export default async function ContratacionPage({ params }: { params: Promise<{ i
 async function SeccionContrato({
   engagementId,
   estadoContratacion,
+  hayCambio,
 }: {
   engagementId: string;
   estadoContratacion: string;
+  /** Hay un cambio de condiciones en curso: el contrato firmado se puede sustituir. */
+  hayCambio: boolean;
 }) {
   const r = await contratoDe(engagementId);
   if (!r.ok) return <BloqueNoDisponible nombre="El contrato" />;
   const contrato = r.datos;
+  // Con el contrato firmado y un cambio de condiciones en curso, se prepara uno
+  // nuevo que lo sustituye al firmarse (lo firmado no se toca).
+  const sustituible = contrato?.status === "firmado" && hayCambio;
 
-  if (!contrato || contrato.status === "anulado") {
-    const admite = ["borrador", "invitada", "datos_completos"].includes(estadoContratacion);
+  if (!contrato || contrato.status === "anulado" || sustituible) {
+    const admite =
+      sustituible || ["borrador", "invitada", "datos_completos"].includes(estadoContratacion);
     return (
       <Card className="flex flex-col gap-4">
         <h2 className="text-lg font-semibold">Contrato</h2>
-        {contrato && <p className="text-sm text-muted">El contrato anterior está anulado.</p>}
+        {contrato?.status === "anulado" && (
+          <p className="text-sm text-muted">El contrato anterior está anulado.</p>
+        )}
+        {sustituible && (
+          <p className="text-sm text-muted">
+            El contrato firmado sigue en vigor. Prepara uno nuevo con las condiciones propuestas:
+            cuando el cliente lo firme, sustituirá al anterior y aceptará el cambio.
+          </p>
+        )}
         {admite ? (
           <NuevoContrato engagementId={engagementId} />
         ) : (

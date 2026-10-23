@@ -10,8 +10,8 @@ import { pagos, resumenCobro } from "@/modulos/cobros/servidor";
 import type { DetalleContratacion } from "@/modulos/contrataciones/servidor";
 import {
   accionAnularCobro,
-  accionEntrega,
   accionFacturado,
+  accionLiberarHito,
   accionRegistrarCobro,
   accionRevision,
 } from "./actions";
@@ -58,29 +58,40 @@ export async function SeccionCobro({ e }: { e: DetalleContratacion }) {
           </dd>
         </div>
       </dl>
-      {c.payment_plan === "senal_entrega" && (
+      {c.milestones > 0 && (
         <section
-          aria-labelledby="senal-entrega"
+          aria-labelledby="hitos-cobro"
           className="flex flex-col gap-3 rounded-xl border border-border p-4 text-sm"
-          data-testid="senal-entrega"
+          data-testid="hitos-cobro"
         >
-          <h3 id="senal-entrega" className="font-medium">
-            Señal + entrega
+          <h3 id="hitos-cobro" className="font-medium">
+            Pagos por hitos
           </h3>
+          <ol className="flex flex-col gap-1">
+            {e.vigente.hitos.map((h, i) => (
+              <li key={h.id} className="flex justify-between gap-3">
+                <span>
+                  {h.label}{" "}
+                  <span className="text-xs text-muted">
+                    {i < c.released_milestones ? "· se le puede pedir" : "· aún no"}
+                  </span>
+                </span>
+                <span>{euros(h.amount_cents)}</span>
+              </li>
+            ))}
+          </ol>
           <p className="text-muted">
-            Señal: {euros(c.deposit_cents ?? 0)} · resto:{" "}
-            {euros(c.total_cents - (c.deposit_cents ?? 0))}.{" "}
-            {c.delivered_at
-              ? `Entrega marcada el ${fecha(c.delivered_at)}: el portal pide el resto.`
-              : "Hasta que marques la entrega, el portal solo pide la señal."}
+            Liberado: {euros(c.released_cents)} de {euros(c.total_cents)}. Ahora se le puede pedir:{" "}
+            <strong data-testid="exigible">{euros(c.due_now_cents)}</strong>.
           </p>
-          {!c.delivered_at && ["datos_completos", "firmada", "activa"].includes(e.status) && (
-            <FormAccion
-              accion={accionEntrega.bind(null, e.id)}
-              boton="Marcar entrega"
-              variante="secondary"
-            />
-          )}
+          {c.released_milestones < c.milestones &&
+            ["datos_completos", "firmada", "activa"].includes(e.status) && (
+              <FormAccion
+                accion={accionLiberarHito.bind(null, e.id, c.released_milestones)}
+                boton={`Liberar «${e.vigente.hitos[c.released_milestones]?.label ?? "siguiente pago"}»`}
+                variante="secondary"
+              />
+            )}
         </section>
       )}
       {e.payment_review && (

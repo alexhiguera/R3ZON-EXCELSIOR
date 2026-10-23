@@ -2,33 +2,58 @@
 -- Excelsior · módulo SERVICIOS — catálogo de lo que vende R3ZON (Fase 2)
 -- =============================================================================
 --
--- · services: el servicio (web corporativa, ecommerce, mantenimiento…).
--- · service_versions: sus condiciones comerciales (precio, IVA, modalidades de
---   pago, qué incluye). INMUTABLES: cambiar un precio es crear una versión
---   nueva. Una contratación apunta a una versión concreta, así que cambiar el
---   catálogo nunca altera lo ya contratado (docs/PLAN.md, Fase 2).
+-- · service_categories: tipos de servicio (desarrollo web, comercio
+--   electrónico, IA…). Se amplían con filas, sin tocar código ni cobros.
+-- · services: el servicio del catálogo, con su categoría. Es una PLANTILLA:
+--   R3ZON trabaja con presupuestos a medida, así que una contratación copia
+--   nombre, precio e IVA en sus propias líneas y los ajusta (módulo
+--   contrataciones). Cambiar el catálogo nunca altera lo contratado.
+-- · service_versions: precio e IVA por defecto y qué incluye. INMUTABLES:
+--   cambiar un precio es crear una versión nueva.
 --
 -- Quién: el catálogo lo gestiona `admin` (T-12); el staff lo lee. Que un
 -- cliente vea el servicio que ha contratado lo concede el módulo
 -- contrataciones, que es el que sabe qué ha contratado cada uno.
 --
--- Dinero: céntimos en `bigint` (nunca float). IVA en `numeric(5,2)`.
+-- Dinero: céntimos en `bigint` (nunca float). IVA en `numeric(5,2)`. Las
+-- modalidades de pago no son del catálogo: cada contratación lleva sus hitos.
 --
--- Depende de: plataforma.
+-- Depende de: plataforma, base (dinero).
 -- =============================================================================
-
-create type public.payment_plan as enum ('pago_unico', 'senal_entrega');
-
-comment on type public.payment_plan is
-  'Modalidad de pago: pago único, o señal al firmar + resto a la entrega (T-05).';
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 1. Tablas
 -- ─────────────────────────────────────────────────────────────────────────────
+create table public.service_categories (
+  id          uuid primary key default public.uuidv7(),
+  name        text not null check (char_length(btrim(name)) between 1 and 60),
+  position    integer not null default 0,
+  created_at  timestamptz not null default now(),
+  archived_at timestamptz
+);
+
+comment on table public.service_categories is
+  'Tipos de servicio. Se amplían añadiendo filas (admin); la lógica de cobros no depende de ellos. Se archivan, no se borran.';
+
+create unique index service_categories_name_unique on public.service_categories (lower(btrim(name)));
+
+-- Las de partida (decisión de R3ZON, 2026-10-23). Son datos de referencia, no
+-- de prueba: van en la migración para que existan en todos los entornos.
+insert into public.service_categories (name, position) values
+  ('Desarrollo web', 10),
+  ('Comercio electrónico', 20),
+  ('Aplicación a medida', 30),
+  ('Automatizaciones', 40),
+  ('Inteligencia artificial', 50),
+  ('Integraciones', 60),
+  ('Mantenimiento', 70),
+  ('Otros servicios personalizados', 1000);
+
 create table public.services (
   id          uuid primary key default public.uuidv7(),
   name        text not null,
   summary     text,
+  category_id uuid references public.service_categories (id) on delete restrict,
   created_by  uuid references auth.users (id) on delete set null,
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now(),
@@ -43,6 +68,7 @@ comment on table public.services is
 
 create unique index services_name_unique on public.services (lower(btrim(name)));
 create index services_created_by_idx on public.services (created_by);
+create index services_category_id_idx on public.services (category_id);
 
 create table public.service_versions (
   id              uuid primary key default public.uuidv7(),
@@ -52,8 +78,6 @@ create table public.service_versions (
   version         integer not null default 0,
   price_cents     bigint not null,
   vat_rate        numeric(5, 2) not null default 21.00,
-  payment_plans   public.payment_plan[] not null default array['pago_unico']::public.payment_plan[],
-  deposit_percent smallint,
   includes        text[] not null default '{}',
   created_by      uuid references auth.users (id) on delete set null,
   created_at      timestamptz not null default now(),
@@ -61,22 +85,11 @@ create table public.service_versions (
   constraint service_versions_unique unique (service_id, version),
   constraint service_versions_price check (price_cents >= 0 and price_cents <= 100000000000),
   constraint service_versions_vat check (vat_rate >= 0 and vat_rate <= 100),
-  constraint service_versions_plans check (cardinality(payment_plans) >= 1),
-  -- La señal existe si y solo si se ofrece «señal + entrega». Escrita para que
-  -- nunca valga NULL: un CHECK que evalúa a NULL se da por cumplido, y
-  -- `x and null between 1 and 99` es NULL (dejaba pasar una señal vacía).
-  constraint service_versions_deposit check (
-    case
-      when 'senal_entrega' = any (payment_plans)
-        then coalesce(deposit_percent between 1 and 99, false)
-      else deposit_percent is null
-    end
-  ),
   constraint service_versions_includes check (cardinality(includes) <= 50)
 );
 
 comment on table public.service_versions is
-  'Condiciones comerciales de un servicio. Inmutable: cambiar = versión nueva. Precio en céntimos sin IVA.';
+  'Precio por defecto (céntimos, sin IVA), IVA y qué incluye un servicio. Inmutable: cambiar = versión nueva.';
 
 create index service_versions_created_by_idx on public.service_versions (created_by);
 
@@ -184,9 +197,8 @@ create trigger service_versions_audit
 -- security_invoker: la vista aplica la RLS de quien consulta, no la de su dueño.
 create view public.services_current
 with (security_invoker = true) as
-  select s.id, s.name, s.summary, s.archived_at, s.created_at,
-         v.id as version_id, v.version, v.price_cents, v.vat_rate, v.payment_plans,
-         v.deposit_percent, v.includes
+  select s.id, s.name, s.summary, s.category_id, s.archived_at, s.created_at,
+         v.id as version_id, v.version, v.price_cents, v.vat_rate, v.includes
     from public.services s
     left join lateral (
       select * from public.service_versions sv
@@ -201,15 +213,38 @@ comment on view public.services_current is
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 4. Privilegios y RLS
 -- ─────────────────────────────────────────────────────────────────────────────
-revoke all on table public.services, public.service_versions, public.services_current from anon, authenticated;
+revoke all on table public.service_categories, public.services, public.service_versions, public.services_current
+  from anon, authenticated;
 
-grant select, insert (name, summary), update (name, summary, archived_at) on table public.services to authenticated;
-grant select, insert (service_id, price_cents, vat_rate, payment_plans, deposit_percent, includes)
+grant select, insert (name, position), update (name, position, archived_at)
+  on table public.service_categories to authenticated;
+grant select, insert (name, summary, category_id), update (name, summary, category_id, archived_at)
+  on table public.services to authenticated;
+grant select, insert (service_id, price_cents, vat_rate, includes)
   on table public.service_versions to authenticated;
 grant select on table public.services_current to authenticated;
 
+alter table public.service_categories enable row level security;
 alter table public.services enable row level security;
 alter table public.service_versions enable row level security;
+
+-- Categorías: datos de referencia sin nada personal; las ve cualquiera con
+-- sesión (el cliente ve la de cada línea de su contratación). Las amplía admin.
+create policy service_categories_select
+  on public.service_categories for select
+  to authenticated
+  using (true);
+
+create policy service_categories_insert_admin
+  on public.service_categories for insert
+  to authenticated
+  with check ((select public.is_admin()));
+
+create policy service_categories_update_admin
+  on public.service_categories for update
+  to authenticated
+  using ((select public.is_admin()))
+  with check ((select public.is_admin()));
 
 create policy services_select_staff
   on public.services for select

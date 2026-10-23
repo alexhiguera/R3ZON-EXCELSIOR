@@ -24,7 +24,16 @@
 -- Máquina de estados del contrato (docs/ARCHITECTURE.md §20):
 --   borrador ⇄ enviado ─► firmado ─► sustituido;  borrador | enviado ─► anulado
 --
--- Depende de: plataforma, organizaciones, servicios, contrataciones.
+-- Condiciones económicas: el contrato se compone con una REVISIÓN de las
+-- condiciones (módulo contrataciones) y, al firmarse, guarda cuál
+-- (`revision_id`): lo firmado no cambia aunque cambien las condiciones.
+--   · Primer contrato: la revisión vigente (aceptada al dar los datos).
+--   · Cambio de condiciones con un contrato ya firmado: R3ZON prepara un
+--     contrato NUEVO, que se compone con la revisión propuesta. Firmarlo
+--     acepta esa revisión y deja el anterior como «sustituido», en la misma
+--     transacción.
+--
+-- Depende de: base (dinero), plataforma, organizaciones, servicios, contrataciones.
 -- =============================================================================
 
 create type public.contract_status as enum ('borrador', 'enviado', 'firmado', 'anulado', 'sustituido');
@@ -117,9 +126,9 @@ as $$
   select array[
     'cliente.razon_social', 'cliente.nif', 'cliente.direccion', 'cliente.tipo', 'cliente.email_facturacion',
     'firmante.nombre', 'firmante.dni', 'firmante.cargo', 'firmante.email',
-    'servicio.nombre', 'servicio.resumen', 'servicio.incluye', 'servicio.version',
-    'precio.base', 'precio.iva_porcentaje', 'precio.iva', 'precio.total', 'precio.modalidad',
-    'contrato.condiciones', 'contrato.fecha', 'contrato.referencia',
+    'servicio.nombre', 'servicios.detalle',
+    'precio.base', 'precio.descuento', 'precio.iva_porcentaje', 'precio.iva', 'precio.total', 'pago.hitos',
+    'contrato.condiciones', 'contrato.fecha', 'contrato.referencia', 'contrato.revision',
     'r3zon.razon_social', 'r3zon.nif', 'r3zon.direccion', 'r3zon.email'
   ];
 $$;
@@ -137,19 +146,6 @@ as $$
    where not (m[1] = any (public.contract_placeholder_names()));
 $$;
 
--- 150000 → «1.500,00 €».
-create function public.format_eur(p_cents bigint)
-returns text
-language sql
-immutable
-security invoker
-set search_path = ''
-as $$
-  select case when p_cents < 0 then '-' else '' end
-      || regexp_replace((abs(p_cents) / 100)::text, '(\d)(?=(\d{3})+$)', '\1.', 'g')
-      || ',' || lpad((abs(p_cents) % 100)::text, 2, '0') || ' €';
-$$;
-
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 4. Contratos de cada contratación
 -- ─────────────────────────────────────────────────────────────────────────────
@@ -158,6 +154,8 @@ create table public.contracts (
   engagement_id       uuid not null references public.engagements (id) on delete restrict,
   organization_id     uuid not null references public.organizations (id) on delete restrict,
   template_version_id uuid not null references public.contract_template_versions (id) on delete restrict,
+  -- Revisión de condiciones que cubre. La fija sign_contract al firmar.
+  revision_id         uuid references public.engagement_revisions (id) on delete restrict,
   status              public.contract_status not null default 'borrador',
   delegated_email     text check (delegated_email is null or delegated_email ~ '^[^@\s]+@[^@\s]+$'),
   signed_text         text,
@@ -180,9 +178,13 @@ create index contracts_engagement_id_idx on public.contracts (engagement_id);
 create index contracts_organization_id_idx on public.contracts (organization_id);
 create index contracts_template_version_id_idx on public.contracts (template_version_id);
 create index contracts_created_by_idx on public.contracts (created_by);
--- Un solo contrato vivo por contratación.
-create unique index contracts_one_live_per_engagement on public.contracts (engagement_id)
-  where status in ('borrador', 'enviado', 'firmado');
+create index contracts_revision_id_idx on public.contracts (revision_id);
+-- Por contratación: un contrato en preparación o enviado, y uno firmado en
+-- vigor (el que sustituye a otro convive con él hasta que se firma).
+create unique index contracts_one_pending_per_engagement on public.contracts (engagement_id)
+  where status in ('borrador', 'enviado');
+create unique index contracts_one_signed_per_engagement on public.contracts (engagement_id)
+  where status = 'firmado';
 
 create table public.contract_clause_selections (
   contract_id       uuid not null references public.contracts (id) on delete restrict,
@@ -321,9 +323,16 @@ begin
     if not found then
       raise exception 'La contratación no existe' using errcode = 'P0001';
     end if;
-    if v_engagement.status not in ('borrador', 'invitada', 'datos_completos') then
-      raise exception 'Esta contratación ya no admite un contrato nuevo (estado %)', v_engagement.status
-        using errcode = 'P0001';
+    -- El primero, antes de firmar. Después, solo uno que sustituya al firmado
+    -- por un cambio de condiciones en curso.
+    if v_engagement.status not in ('borrador', 'invitada', 'datos_completos')
+       and not (v_engagement.status in ('firmada', 'activa')
+                and exists (select 1 from public.contracts f
+                             where f.engagement_id = new.engagement_id and f.status = 'firmado')
+                and exists (select 1 from public.engagement_revisions r
+                             where r.engagement_id = new.engagement_id and r.status in ('borrador', 'propuesta'))) then
+      raise exception 'Esta contratación ya no admite un contrato nuevo (estado %). Para cambiar condiciones, crea antes una revisión',
+        v_engagement.status using errcode = 'P0001';
     end if;
     if not v_engagement.requires_signature then
       raise exception 'Esta contratación no se firma en el portal (activa «firma en el portal» para prepararle un contrato)'
@@ -334,6 +343,7 @@ begin
     if new.status <> 'borrador' or new.signed_text is not null or new.text_sha256 is not null then
       raise exception 'Un contrato nace en borrador' using errcode = 'P0001';
     end if;
+    new.revision_id := null;
     return new;
   end if;
 
@@ -350,8 +360,8 @@ begin
       raise exception 'Transición no permitida: % → %', old.status, new.status using errcode = 'P0001';
     end if;
     -- Firmar solo desde sign_contract (que comprueba firmante, código y datos).
-    if new.status = 'firmado' and current_setting('excelsior.firmando', true) is distinct from 'on' then
-      raise exception 'Un contrato solo se firma con sign_contract' using errcode = 'P0001';
+    if new.status in ('firmado', 'sustituido') and current_setting('excelsior.firmando', true) is distinct from 'on' then
+      raise exception 'Un contrato solo se firma (o se sustituye) con sign_contract' using errcode = 'P0001';
     end if;
     if new.status = 'enviado' then
       new.sent_at := now();
@@ -360,12 +370,12 @@ begin
 
   -- Lo firmado no se toca (salvo pasar a sustituido).
   if old.status in ('firmado', 'sustituido')
-     and (new.signed_text, new.text_sha256, new.signed_at, new.delegated_email)
-         is distinct from (old.signed_text, old.text_sha256, old.signed_at, old.delegated_email) then
+     and (new.signed_text, new.text_sha256, new.signed_at, new.delegated_email, new.revision_id)
+         is distinct from (old.signed_text, old.text_sha256, old.signed_at, old.delegated_email, old.revision_id) then
     raise exception 'Un contrato firmado no se modifica' using errcode = 'P0001';
   end if;
   if old.status not in ('firmado', 'sustituido') and new.status not in ('firmado', 'sustituido')
-     and (new.signed_text is not null or new.text_sha256 is not null) then
+     and (new.signed_text is not null or new.text_sha256 is not null or new.revision_id is not null) then
     raise exception 'El texto firmado solo lo fija sign_contract' using errcode = 'P0001';
   end if;
   new.updated_at := now();
@@ -454,6 +464,37 @@ create trigger contract_annexes_check_placeholders
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 6. Composición del texto
 -- ─────────────────────────────────────────────────────────────────────────────
+-- Revisión de condiciones con la que se compone un contrato: la que fijó al
+-- firmarse; si no está firmado y sustituye a uno firmado, la propuesta; si
+-- no, la vigente. Invoker: la RLS decide qué revisiones ve cada uno.
+create function public.contract_revision_id(p_contract_id uuid)
+returns uuid
+language sql
+stable
+security invoker
+set search_path = ''
+as $$
+  select coalesce(
+           c.revision_id,
+           case when exists (select 1 from public.contracts f
+                              where f.engagement_id = c.engagement_id and f.status = 'firmado' and f.id <> c.id)
+                then (select r.id from public.engagement_revisions r
+                       where r.engagement_id = c.engagement_id and r.status = 'propuesta') end,
+           e.current_revision_id)
+    from public.contracts c join public.engagements e on e.id = c.engagement_id
+   where c.id = p_contract_id;
+$$;
+
+create function public.format_percent(p_rate numeric)
+returns text
+language sql
+immutable
+security invoker
+set search_path = ''
+as $$
+  select replace(to_char(p_rate, 'FM990.00'), '.', ',') || ' %';
+$$;
+
 -- Valores de los huecos para un contrato. SECURITY INVOKER: con la sesión del
 -- cliente, la RLS solo le deja componer contratos de su empresa.
 create function public.contract_variables(p_contract_id uuid, p_signer jsonb default '{}'::jsonb)
@@ -476,35 +517,43 @@ begin
     'firmante.dni', p_signer ->> 'dni',
     'firmante.cargo', p_signer ->> 'cargo',
     'firmante.email', p_signer ->> 'email',
-    'servicio.nombre', s.name,
-    'servicio.resumen', s.summary,
-    'servicio.incluye', case when cardinality(sv.includes) > 0
-                          then '- ' || array_to_string(sv.includes, E'\n- ') end,
-    'servicio.version', sv.version::text,
-    'precio.base', public.format_eur(e.price_cents),
-    'precio.iva_porcentaje', replace(to_char(sv.vat_rate, 'FM990.00'), '.', ',') || ' %',
-    'precio.iva', public.format_eur(round(e.price_cents * sv.vat_rate / 100)::bigint),
-    'precio.total', public.format_eur(e.price_cents + round(e.price_cents * sv.vat_rate / 100)::bigint),
-    'precio.modalidad', case e.payment_plan
-        when 'pago_unico' then 'pago único'
-        when 'senal_entrega' then format('señal del %s %% (%s) al inicio y el resto (%s) a la entrega',
-          sv.deposit_percent,
-          public.format_eur(round((e.price_cents + round(e.price_cents * sv.vat_rate / 100)) * sv.deposit_percent / 100.0)::bigint),
-          public.format_eur(e.price_cents + round(e.price_cents * sv.vat_rate / 100)::bigint
-            - round((e.price_cents + round(e.price_cents * sv.vat_rate / 100)) * sv.deposit_percent / 100.0)::bigint))
-      end,
-    'contrato.condiciones', coalesce(nullif(btrim(e.conditions), ''), 'Ninguna.'),
+    'servicio.nombre', (select string_agg(l.name, ', ' order by l.position)
+                          from public.engagement_lines l where l.revision_id = r.id),
+    'servicios.detalle', (
+        select string_agg(
+                 '- **' || l.name || '** (' || cat.name || ')' || coalesce(': ' || l.description, '')
+                 || E'\n  Precio: ' || public.format_eur(l.unit_price_cents)
+                 || case when l.discount_cents > 0
+                         then ' · descuento: ' || public.format_eur(l.discount_cents)
+                              || coalesce(' (' || public.format_percent(l.discount_percent) || ')', '')
+                         else '' end
+                 || ' · base: ' || public.format_eur(l.base_cents)
+                 || ' · IVA ' || public.format_percent(l.vat_rate),
+                 E'\n' order by l.position)
+          from public.engagement_lines l join public.service_categories cat on cat.id = l.category_id
+         where l.revision_id = r.id),
+    'precio.base', public.format_eur(r.base_cents),
+    'precio.descuento', public.format_eur(r.discount_cents),
+    'precio.iva_porcentaje', (select string_agg(public.format_percent((t ->> 'rate')::numeric), ' y '
+                                                order by (t ->> 'rate')::numeric desc)
+                                from jsonb_array_elements(r.taxes) t),
+    'precio.iva', public.format_eur(r.vat_cents),
+    'precio.total', public.format_eur(r.total_cents),
+    'pago.hitos', coalesce(
+        (select string_agg('- ' || m.label || ': ' || public.format_eur(m.amount_cents), E'\n' order by m.position)
+           from public.engagement_milestones m where m.revision_id = r.id),
+        'Un único pago de ' || public.format_eur(r.total_cents) || '.'),
+    'contrato.condiciones', coalesce(r.conditions, 'Ninguna.'),
     'contrato.fecha', to_char(now() at time zone 'Europe/Madrid', 'DD/MM/YYYY'),
     'contrato.referencia', upper(left(replace(c.id::text, '-', ''), 12)),
+    'contrato.revision', r.number::text,
     'r3zon.razon_social', nullif(pp.legal_name, ''),
     'r3zon.nif', nullif(pp.tax_id, ''),
     'r3zon.direccion', nullif(pp.address, ''),
     'r3zon.email', nullif(pp.email, '')
   ) into v
     from public.contracts c
-    join public.engagements e on e.id = c.engagement_id
-    join public.service_versions sv on sv.id = e.service_version_id
-    join public.services s on s.id = sv.service_id
+    join public.engagement_revisions r on r.id = public.contract_revision_id(c.id)
     left join public.organization_billing b on b.organization_id = c.organization_id
     left join public.provider_profile pp on true
    where c.id = p_contract_id;
@@ -566,11 +615,13 @@ comment on function public.contract_render(uuid, jsonb) is
   'Texto del contrato con los huecos rellenos. La vista previa y la firma usan esta misma función.';
 
 revoke execute on function public.contract_placeholder_names(), public.contract_unknown_placeholders(text),
-  public.format_eur(bigint), public.contract_transition_allowed(public.contract_status, public.contract_status),
+  public.contract_transition_allowed(public.contract_status, public.contract_status),
+  public.contract_revision_id(uuid), public.format_percent(numeric),
   public.contract_variables(uuid, jsonb), public.contract_render(uuid, jsonb)
   from public, anon;
 grant execute on function public.contract_placeholder_names(), public.contract_unknown_placeholders(text),
-  public.format_eur(bigint), public.contract_transition_allowed(public.contract_status, public.contract_status),
+  public.contract_transition_allowed(public.contract_status, public.contract_status),
+  public.contract_revision_id(uuid), public.format_percent(numeric),
   public.contract_variables(uuid, jsonb), public.contract_render(uuid, jsonb)
   to authenticated;
 
@@ -621,6 +672,8 @@ declare
   v_signer jsonb;
   v_text text;
   v_hash bytea;
+  v_replacement boolean;
+  v_revision uuid;
   v_headers jsonb := coalesce(nullif(current_setting('request.headers', true), '')::jsonb, '{}'::jsonb);
 begin
   if v_uid is null then
@@ -636,9 +689,21 @@ begin
   if v_contract.status <> 'enviado' then
     raise exception 'Este contrato no está pendiente de firma' using errcode = 'P0001';
   end if;
-  if not exists (select 1 from public.engagements e
-                  where e.id = v_contract.engagement_id and e.status = 'datos_completos') then
-    raise exception 'Primero hay que confirmar los datos de la empresa' using errcode = 'P0001';
+  -- ¿Sustituye a un contrato firmado (cambio de condiciones)?
+  v_replacement := exists (select 1 from public.contracts f
+                            where f.engagement_id = v_contract.engagement_id and f.status = 'firmado');
+  if v_replacement then
+    select r.id into v_revision from public.engagement_revisions r
+     where r.engagement_id = v_contract.engagement_id and r.status = 'propuesta';
+    if v_revision is null then
+      raise exception 'No hay un cambio de condiciones propuesto que firmar' using errcode = 'P0001';
+    end if;
+  else
+    if not exists (select 1 from public.engagements e
+                    where e.id = v_contract.engagement_id and e.status = 'datos_completos') then
+      raise exception 'Primero hay que confirmar los datos de la empresa' using errcode = 'P0001';
+    end if;
+    select e.current_revision_id into v_revision from public.engagements e where e.id = v_contract.engagement_id;
   end if;
   if p_accepted is not true then
     raise exception 'Hay que aceptar el contrato expresamente' using errcode = 'P0001';
@@ -675,8 +740,12 @@ begin
   v_hash := extensions.digest(v_text, 'sha256');
 
   perform set_config('excelsior.firmando', 'on', true);
+  if v_replacement then
+    update public.contracts set status = 'sustituido'
+     where engagement_id = v_contract.engagement_id and status = 'firmado';
+  end if;
   update public.contracts
-     set status = 'firmado', signed_text = v_text, text_sha256 = v_hash, signed_at = now()
+     set status = 'firmado', signed_text = v_text, text_sha256 = v_hash, signed_at = now(), revision_id = v_revision
    where id = p_contract_id;
   perform set_config('excelsior.firmando', 'off', true);
 
@@ -689,7 +758,14 @@ begin
     left(split_part(coalesce(v_headers ->> 'x-forwarded-for', v_headers ->> 'x-real-ip', ''), ',', 1), 64),
     left(v_headers ->> 'user-agent', 300));
 
-  update public.engagements set status = 'firmada' where id = v_contract.engagement_id;
+  if v_replacement then
+    -- Firmar el contrato nuevo es aceptar el cambio de condiciones.
+    perform set_config('excelsior.aceptando', 'on', true);
+    update public.engagement_revisions set status = 'aceptada' where id = v_revision;
+    perform set_config('excelsior.aceptando', 'off', true);
+  else
+    update public.engagements set status = 'firmada' where id = v_contract.engagement_id;
+  end if;
   return encode(v_hash, 'hex');
 end;
 $$;

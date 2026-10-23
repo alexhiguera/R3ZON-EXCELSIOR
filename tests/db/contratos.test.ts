@@ -2,15 +2,16 @@ import { afterAll, describe, expect, it } from "vitest";
 import { actAs, createAuthUser, db, inRollback } from "./_db";
 import {
   actAsConCodigo,
+  anadirLinea,
   comoPostgres,
   contratoEnviado,
   crearOrganizacion,
-  crearServicio,
   datosFiscales,
   FIRMA_PNG,
   fallo,
   hacerMiembro,
   hacerStaff,
+  revisionDe,
 } from "./_excelsior";
 
 /**
@@ -239,45 +240,146 @@ describe.skipIf(!db)("firma", () => {
   });
 });
 
-describe.skipIf(!db)("composición del texto: modalidad (T-31)", () => {
-  it("el contrato dice la modalidad elegida, con la señal y el resto en euros", async () => {
+describe.skipIf(!db)("composición del texto: condiciones económicas", () => {
+  it("detalla los servicios, descuentos, IVA por tipo e hitos de la revisión", async () => {
     await inRollback(async (c) => {
-      const { contrato, version } = await contratoEnviado(c);
-      const unico = await c.query("select public.contract_render($1) as t", [contrato]);
-      expect(unico.rows[0].t).not.toContain("{{precio.modalidad}}");
-
-      // Otra contratación con señal + entrega y la misma plantilla, con el hueco.
-      const org = await crearOrganizacion(c, "Señal S.L.");
+      const { version } = await contratoEnviado(c);
+      const org = await crearOrganizacion(c, "Varios S.L.");
       await datosFiscales(c, org);
-      const s = await crearServicio(c, `Señal ${Math.random()}`, {
-        precio: 100000,
-        planes: ["senal_entrega"],
-        senal: 30,
-      });
       const e = (
-        await c.query(
-          "insert into public.engagements (organization_id, service_version_id, price_cents) values ($1, $2, 100000) returning id",
-          [org, s.versionId],
-        )
+        await c.query("insert into public.engagements (organization_id) values ($1) returning id", [
+          org,
+        ])
       ).rows[0].id;
+      const rev = await revisionDe(c, e);
+      await anadirLinea(c, rev, { nombre: "Web", precio: 100000, descuentoPorcentaje: "10" });
+      await anadirLinea(c, rev, { nombre: "Formación", precio: 20000, iva: "10" });
+      await c.query(
+        "insert into public.engagement_milestones (revision_id, label, weight) values ($1, 'Al empezar', 1), ($1, 'A la entrega', 1)",
+        [rev],
+      );
+      await c.query(
+        "update public.engagement_revisions set conditions = 'Transferencia a 15 días.' where id = $1",
+        [rev],
+      );
       await c.query("update public.engagements set status = 'invitada' where id = $1", [e]);
       await c.query("update public.engagements set status = 'datos_completos' where id = $1", [e]);
       const plantilla = (
         await c.query(
-          "insert into public.contract_template_versions (template_id, body) select template_id, 'Pago: {{precio.modalidad}}.' from public.contract_template_versions where id = $1 returning id",
+          `insert into public.contract_template_versions (template_id, body)
+           select template_id, '{{servicios.detalle}}' || E'\n\n' || 'Base {{precio.base}}, descuento {{precio.descuento}}, IVA {{precio.iva}} ({{precio.iva_porcentaje}}), total {{precio.total}}.'
+                  || E'\n\n' || '{{pago.hitos}}' || E'\n\n' || '{{contrato.condiciones}} Revisión {{contrato.revision}}.'
+             from public.contract_template_versions where id = $1 returning id`,
           [version],
         )
       ).rows[0].id;
-      const otro = (
+      const contrato = (
         await c.query(
           "insert into public.contracts (engagement_id, template_version_id) values ($1, $2) returning id",
           [e, plantilla],
         )
       ).rows[0].id;
-      const { rows } = await c.query("select public.contract_render($1) as t", [otro]);
-      expect(rows[0].t).toContain(
-        "Pago: señal del 30 % (363,00 €) al inicio y el resto (847,00 €) a la entrega.",
+      const { rows } = await c.query("select public.contract_render($1) as t", [contrato]);
+      const t: string = rows[0].t;
+      expect(t).toContain(
+        "- **Web** (Desarrollo web)\n  Precio: 1.000,00 € · descuento: 100,00 € (10,00 %) · base: 900,00 € · IVA 21,00 %",
       );
+      expect(t).toContain(
+        "- **Formación** (Desarrollo web)\n  Precio: 200,00 € · base: 200,00 € · IVA 10,00 %",
+      );
+      // 21 % de 900 = 189; 10 % de 200 = 20.
+      expect(t).toContain(
+        "Base 1.100,00 €, descuento 100,00 €, IVA 209,00 € (21,00 % y 10,00 %), total 1.309,00 €.",
+      );
+      expect(t).toContain("- Al empezar: 654,50 €\n- A la entrega: 654,50 €");
+      expect(t).toContain("Transferencia a 15 días. Revisión 1.");
+    });
+  });
+});
+
+describe.skipIf(!db)("cambio de condiciones con el contrato ya firmado", () => {
+  it("se firma un contrato nuevo con la revisión propuesta, que sustituye al anterior", async () => {
+    await inRollback(async (c) => {
+      const { owner, contrato, engagement, version } = await contratoEnviado(c);
+      const staff = await createAuthUser(c, { email: "staff@r3zon.test" });
+      await hacerStaff(c, staff);
+      await actAsConCodigo(c, owner);
+      await c.query(SQL_FIRMA, firmar(contrato));
+
+      // Sin un cambio en curso, no hay contrato nuevo.
+      await comoPostgres(c);
+      await actAs(c, staff);
+      expect(
+        await fallo(
+          c,
+          "insert into public.contracts (engagement_id, template_version_id) values ($1, $2)",
+          [engagement, version],
+        ),
+      ).toMatch(/crea antes una revisión/);
+
+      const rev2 = (
+        await c.query(
+          "insert into public.engagement_revisions (engagement_id, reason) values ($1, 'Más páginas') returning id",
+          [engagement],
+        )
+      ).rows[0].id;
+      await c.query(
+        "update public.engagement_lines set unit_price_cents = 200000 where revision_id = $1",
+        [rev2],
+      );
+      await c.query("update public.engagement_revisions set status = 'propuesta' where id = $1", [
+        rev2,
+      ]);
+      const nuevo = (
+        await c.query(
+          "insert into public.contracts (engagement_id, template_version_id) values ($1, $2) returning id",
+          [engagement, version],
+        )
+      ).rows[0].id;
+      await c.query("update public.contracts set status = 'enviado' where id = $1", [nuevo]);
+
+      // Con contrato firmado, el cambio no se acepta con un clic: se firma.
+      await comoPostgres(c);
+      await actAs(c, owner);
+      expect(await fallo(c, "select public.accept_engagement_revision($1)", [rev2])).toMatch(
+        /firmando el contrato nuevo/,
+      );
+      const vista = await c.query("select public.contract_render($1) as t", [nuevo]);
+      expect(vista.rows[0].t).toContain("Precio: 2.000,00 € + IVA (21,00 %) = 2.420,00 €.");
+
+      await comoPostgres(c);
+      await actAsConCodigo(c, owner);
+      await c.query(SQL_FIRMA, firmar(nuevo));
+      await comoPostgres(c);
+      const k = await c.query(
+        `select c.status, c.signed_text like '%2.420,00 €%' as nuevo_precio, r.number, r.status as revision
+           from public.contracts c join public.engagement_revisions r on r.id = c.revision_id
+          where c.engagement_id = $1 order by c.created_at, c.id`,
+        [engagement],
+      );
+      expect(k.rows).toEqual([
+        { status: "sustituido", nuevo_precio: false, number: 1, revision: "sustituida" },
+        { status: "firmado", nuevo_precio: true, number: 2, revision: "aceptada" },
+      ]);
+      const e = await c.query(
+        "select e.status, e.current_revision_id = $2 as vigente from public.engagements e where e.id = $1",
+        [engagement, rev2],
+      );
+      expect(e.rows[0]).toEqual({ status: "firmada", vigente: true });
+    });
+  });
+
+  it("nadie marca un contrato como sustituido a mano", async () => {
+    await inRollback(async (c) => {
+      const { owner, contrato } = await contratoEnviado(c);
+      await actAsConCodigo(c, owner);
+      await c.query(SQL_FIRMA, firmar(contrato));
+      await comoPostgres(c);
+      expect(
+        await fallo(c, "update public.contracts set status = 'sustituido' where id = $1", [
+          contrato,
+        ]),
+      ).toMatch(/sign_contract/);
     });
   });
 });

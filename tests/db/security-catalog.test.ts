@@ -45,6 +45,9 @@ const DEFINER_FUNCTIONS_FOR_AUTHENTICATED: ReadonlySet<string> = new Set([
   // tablas solo deja escribir al staff; cada función comprueba dentro
   // pertenencia, rol, estado y (al firmar) el código verificado del email.
   "confirm_engagement_data",
+  // Aceptar un cambio de condiciones propuesto (propietario o facturación);
+  // con contrato firmado se acepta firmando, y la función lo rechaza.
+  "accept_engagement_revision",
   "sign_contract",
   "delegate_contract_signature",
   // Para policies: ¿es miembro y el contrato ya no es borrador? Definer para no

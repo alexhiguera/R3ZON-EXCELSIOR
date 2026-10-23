@@ -95,8 +95,8 @@ export default async function ClientePage({ params }: { params: Promise<{ id: st
             Nueva contratación (sin invitar todavía)
           </h2>
           <p className="mb-4 text-sm text-muted">
-            Para clientes que ya pagaron o firmaron fuera: créala, registra lo cobrado y después
-            invita desde su ficha.
+            Prepárala antes de invitar: en su página añades uno o varios servicios con su precio,
+            descuento e IVA, los pagos y lo ya cobrado; después invitas al cliente desde ahí.
           </p>
           <ModuloSeguro nombre="El formulario de contratación">
             <FormAccion
@@ -104,7 +104,11 @@ export default async function ClientePage({ params }: { params: Promise<{ id: st
               boton="Crear contratación"
               variante="secondary"
             >
-              <CamposInvitacion conEmail={false} conRol={false} servicioObligatorio />
+              <CamposInvitacion
+                conEmail={false}
+                conRol={false}
+                sinServicio="Ninguno todavía: lo añado en su página"
+              />
             </FormAccion>
           </ModuloSeguro>
         </Card>
@@ -219,10 +223,10 @@ async function Contrataciones({ organizationId }: { organizationId: string }) {
           data-testid="contratacion"
         >
           <Link href={`/admin/contrataciones/${e.id}`} className="font-medium hover:underline">
-            {e.servicio} <span className="text-xs text-muted">v{e.version}</span>
+            {e.titulo}
           </Link>
           <span className="flex flex-wrap items-center gap-3 text-sm text-muted">
-            {euros(e.price_cents)} + IVA
+            {euros(e.total_cents)} IVA incl.
             <Badge tone={ESTADOS[e.status].tono}>{ESTADOS[e.status].etiqueta}</Badge>
           </span>
         </li>

@@ -16,11 +16,14 @@ export type ResumenCobro = {
   engagement_id: string;
   requires_payment: boolean;
   payment_review: boolean;
-  payment_plan: "pago_unico" | "senal_entrega";
-  delivered_at: string | null;
+  /** Hitos de pago ya liberados (el primero, siempre). */
+  released_milestones: number;
+  /** Total con IVA de las condiciones vigentes. */
   total_cents: number;
-  /** Señal (con IVA), solo con señal + entrega. */
-  deposit_cents: number | null;
+  /** Número de hitos de pago (0: un único pago del total). */
+  milestones: number;
+  /** Suma de los hitos liberados (el total si no hay hitos). */
+  released_cents: number;
   paid_cents: number;
   pending_cents: number;
   balance_cents: number;
@@ -41,7 +44,7 @@ export async function resumenCobros(
     supabase
       .from("engagement_collections")
       .select(
-        "engagement_id, requires_payment, payment_review, payment_plan, delivered_at, total_cents, deposit_cents, paid_cents, pending_cents, balance_cents, status, due_now_cents",
+        "engagement_id, requires_payment, payment_review, released_milestones, total_cents, milestones, released_cents, paid_cents, pending_cents, balance_cents, status, due_now_cents",
       )
       .in("engagement_id", engagementIds),
   );

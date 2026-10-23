@@ -210,7 +210,38 @@ sin sacar al cliente a otra web en el momento crítico. Si un cliente exige firm
 avanzada, la generación del documento y las evidencias están separadas de «quién firma»,
 para poder enchufar un proveedor sin rehacer el flujo.
 
-## 18. Cobros: un libro inmutable, separado del contrato
+## 18. Dinero: céntimos enteros, una sola política de redondeo
+
+Decisión de R3ZON (2026-10-23, T-35). Vale para el portal, Stripe y ANTARES.
+
+- **Representación:** todo importe es un **entero en céntimos** (`bigint`), como Stripe
+  para EUR: 1 € = 100; 10,50 € = 1050; 1.500,00 € = 150000. Los porcentajes (IVA,
+  descuentos) son `numeric(5,2)` y viajan entre la app y la base como **texto exacto**
+  («21», «10.5»), nunca como un número de coma flotante.
+- **Quién calcula:** la **base**, y solo ella (`20261023000110_base_dinero.sql` y el
+  recálculo de las condiciones). La app no suma ni redondea: traduce texto ↔ céntimos
+  (`src/lib/dinero.ts`, con BigInt) y enseña lo que la base guardó.
+- **Cuándo hay redondeo:** sumar y restar céntimos es exacto. Solo redondea aplicar un
+  **porcentaje** o **repartir** un importe, porque el resultado puede caer entre dos
+  céntimos (21 % de 1050 = 220,5). Por eso la política es explícita y única:
+  - **Porcentajes** (`money_percent`): cálculo en decimal exacto y **un solo redondeo**
+    al céntimo, el medio céntimo hacia arriba.
+  - **Descuento** de una línea: en % (un redondeo) o en importe. Base = precio −
+    descuento; nunca negativa. Se aplica una vez, en la línea.
+  - **IVA**: **una vez por tipo**, sobre la suma de las bases de ese tipo (como el
+    desglose base/cuota de una factura TicketBAI), no línea a línea. Total = bases +
+    cuotas.
+  - **Hitos** (`money_split`): primero los importes fijos; lo que queda se reparte por
+    pesos con céntimos enteros y los céntimos sobrantes van, de uno en uno, a los
+    **últimos** hitos. La suma es siempre el total (1.000 € en 3 → 333,33 + 333,33 +
+    333,34).
+- **Lo aceptado se congela:** cada revisión de condiciones guarda sus importes
+  calculados; una vez aceptada no se recalcula aunque cambien tarifas, IVA o catálogo.
+  Un cambio es una revisión nueva (§20).
+- **Pendiente:** confirmar con ANTARES que redondea igual (IVA por tipo, medio céntimo
+  hacia arriba) antes de emitir la primera factura real.
+
+## 18 bis. Cobros: un libro inmutable, separado del contrato
 
 - **Dos estados, dos máquinas** (T-26). La contratación lleva el estado **contractual**
   (invitada, datos, firmada, activa…); el **económico** (`no_pagado`,
@@ -223,7 +254,9 @@ para poder enchufar un proveedor sin rehacer el flujo.
   fila de la contratación contra la carrera de dos registros), fecha no futura, cobros
   externos solo confirmados, cobros `stripe` solo desde el servidor.
 - **El importe a cobrar lo decide la base** (`amount_due_now`), nunca el cliente ni la
-  página: 0 si no paga en el portal, si está en revisión o con un cobro pendiente.
+  página: los hitos liberados de las condiciones vigentes menos lo cobrado; 0 si no paga
+  en el portal, si está en revisión o con un cobro pendiente. Es el único importe que
+  usará Stripe, en céntimos, sin conversiones.
 - **Stripe es la fuente de verdad de sus cobros**: la app nunca marca algo como pagado por
   una petición del cliente; solo el **webhook**, con la firma verificada y deduplicado
   (`provider_reference` única).
@@ -273,6 +306,7 @@ demás se escriben con su fase siguiendo esta tabla:
 | Contrato ✅ | `borrador ⇄ enviado → firmado` | `anulado` (antes de firmar), **`sustituido`** por otro contrato (anexo o nueva versión): el firmado no cambia, se enlaza el que lo sustituye |
 | Cobro ✅ | `pendiente → confirmado` (Stripe); los externos nacen `confirmado` | `fallido`, **`devuelto`** (adeudo SEPA rechazado, reembolso), `anulado` (corrección del equipo, con motivo). La rectificativa, en ANTARES. **Implementado** en `payments`; las transiciones de Stripe esperan al webhook |
 | Proyecto ✅ | `briefing → diseño → desarrollo ⇄ revisión → lanzado → mantenimiento` (y `briefing → mantenimiento` para servicios recurrentes) | `en_pausa` (p. ej. por impago; vuelve a cualquier estado activo), `cancelado` (final: congela el briefing). **Implementado**: `project_transition_allowed()` + trigger; la interfaz repite la tabla y un test comprueba que coinciden |
+| Condiciones económicas (revisión) ✅ | `borrador → aceptada → sustituida` | Cambio tras aceptar: revisión nueva `borrador ⇄ propuesta → aceptada` o `descartada`. La acepta el cliente (en el portal, o firmando un contrato nuevo si ya firmó). Aceptada = inmutable. Solo un cambio abierto a la vez |
 | Elemento del briefing ✅ | `pendiente → aportado → validado` | `más tarde`, `no aplica` (solo opcionales), `cambios` (R3ZON, con nota; el cliente vuelve a aportar). Validado: el cliente ya no lo toca |
 
 Reglas:

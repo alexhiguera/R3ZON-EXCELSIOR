@@ -66,15 +66,38 @@ describe.skipIf(!db)("servicios", () => {
     });
   });
 
-  it("la señal existe si y solo si se ofrece señal + entrega", async () => {
+  it("categorías: las de partida, ampliables por admin sin tocar código; staff y clientes solo leen", async () => {
     await inRollback(async (c) => {
-      const { serviceId } = await crearServicio(c, "Web");
-      const insertar =
-        "insert into public.service_versions (service_id, price_cents, payment_plans, deposit_percent) values ($1, 1000, $2::public.payment_plan[], $3)";
-      expect(await fallo(c, insertar, [serviceId, ["senal_entrega"], null])).toMatch(/deposit/);
-      expect(await fallo(c, insertar, [serviceId, ["pago_unico"], 50])).toMatch(/deposit/);
-      expect(await fallo(c, insertar, [serviceId, ["senal_entrega"], 100])).toMatch(/deposit/);
-      await c.query(insertar, [serviceId, ["pago_unico", "senal_entrega"], 50]);
+      const { rows } = await c.query(
+        "select name from public.service_categories order by position",
+      );
+      expect(rows.map((r) => r.name)).toEqual([
+        "Desarrollo web",
+        "Comercio electrónico",
+        "Aplicación a medida",
+        "Automatizaciones",
+        "Inteligencia artificial",
+        "Integraciones",
+        "Mantenimiento",
+        "Otros servicios personalizados",
+      ]);
+      const admin = await createAuthUser(c, { email: "admin@r3zon.test" });
+      const staff = await createAuthUser(c, { email: "staff@r3zon.test" });
+      const ana = await createAuthUser(c, { email: "ana@acme.test" });
+      await hacerStaff(c, admin, "admin");
+      await hacerStaff(c, staff);
+      const insertar = "insert into public.service_categories (name, position) values ($1, 80)";
+
+      await actAs(c, staff);
+      expect(await fallo(c, insertar, ["Ciberseguridad"])).toMatch(/row-level security/);
+      await comoPostgres(c);
+      await actAs(c, ana);
+      expect((await c.query("select 1 from public.service_categories")).rowCount).toBe(8);
+      expect(await fallo(c, insertar, ["Ciberseguridad"])).toMatch(/row-level security/);
+      await comoPostgres(c);
+      await actAs(c, admin);
+      await c.query(insertar, ["Ciberseguridad"]);
+      expect(await fallo(c, insertar, [" ciberseguridad "])).toMatch(/duplicate key/);
     });
   });
 

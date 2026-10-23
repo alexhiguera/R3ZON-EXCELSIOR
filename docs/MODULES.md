@@ -49,7 +49,7 @@ productos se propondrá después para la plantilla.
 | `roles-permissions` | 1 | Nivel de plataforma (staff / cliente) × rol en la empresa ([ROLES.md](ROLES.md)) |
 | `email-resend` | 1 | Emails de Auth y transaccionales con la marca de R3ZON |
 | `audit-log` | 1 | Logins, invitaciones, firmas, cambios de rol, «ver como cliente» |
-| `billing-stripe` | 4 | Pagos únicos, señal + entrega, transferencia/SEPA/tarjeta, facturas y (Fase 6) suscripciones |
+| `billing-stripe` | 4 | Cobro del importe exigible (hitos), transferencia/SEPA/tarjeta y (Fase 6) suscripciones; las facturas, en ANTARES |
 | `file-storage` | 5 | Contratos firmados, materiales del briefing, zona de documentos |
 | `legal-consent` | MVP | Páginas legales del portal y consentimiento si hay analítica |
 | `backups` | MVP | Base **y Storage** (contratos firmados) |
@@ -64,12 +64,12 @@ Secciones propias de Excelsior. Detalle de cada una en [PLAN.md](PLAN.md).
 | Organizaciones y usuarios | 1 | 🚧 | Base hecha (empresas, miembros, niveles, audit log); falta «Mi cuenta» y el selector de empresa |
 | Invitaciones | 1–2 | 🚧 | Alta y aceptación hechas; falta el envío por email y el servicio preseleccionado (Fase 2) |
 | Panel de administración | 2 | ✅ | `/admin`: clientes (alta, alta con invitación, ficha, archivo, ver como cliente), servicios, contrataciones, contratos |
-| Catálogo de servicios | 2 | ✅ | `src/modulos/servicios`: versiones inmutables, precio, IVA, modalidades, señal. Las plantillas de contrato y briefing llegan en las fases 3 y 5 |
-| Contrataciones | 2–4 | 🚧 | `src/modulos/contrataciones`: máquina de estados completa, invitación con servicio, embudo y cierres manuales. Los pasos del cliente (datos, firma, pago), en las fases 3 y 4 |
+| Catálogo de servicios | 2 | ✅ | `src/modulos/servicios`: tipos de servicio ampliables y catálogo como plantilla (precio e IVA por defecto, versiones inmutables). Plantilla de briefing por servicio |
+| Contrataciones | 2–4 | 🚧 | `src/modulos/contrataciones`: máquina de estados, invitación, embudo, cierres manuales y **condiciones económicas** (varios servicios, descuentos, IVA por tipo, hitos, revisiones) |
 | RGPD | MVP | ⬜ | Exportación, importación, bloqueo legal y supresión ([RGPD.md](RGPD.md)) |
 | Asistente de onboarding | 3–4 | ✅ | `/bienvenida/[id]`: bienvenida, datos fiscales, [contrato y firma], [pago], listo; los pasos dependen de los interruptores (T-27) |
 | Contratos y firma | 3 | ✅ | `src/modulos/contratos`: plantillas, cláusulas, anexos, firma con código y evidencias, PDF ([ARCHITECTURE.md](ARCHITECTURE.md) §17) |
-| Cobros | 4 | 🚧 | `src/modulos/cobros`: libro de cobros, cobros externos, estado económico, revisión, modalidad y señal + entrega. Falta Stripe (embebido, T-30); la factura, en ANTARES (T-29) |
+| Cobros | 4 | 🚧 | `src/modulos/cobros`: libro de cobros, cobros externos, estado económico, revisión e hitos liberados. Falta Stripe (embebido, T-30); la factura, en ANTARES (T-29) |
 | Proyectos y briefing | 5 | 🚧 | `src/modulos/proyectos`: proyecto al completar el alta, plantilla de briefing por servicio, briefing con texto, color, tipografía y enlace, revisión de R3ZON. Falta el tipo «fichero» (T-33) y los recordatorios |
 | Documentos | 5 | ⬜ | Zona tipo Drive por proyecto |
 | Propuestas y presupuestos | 6 | ⬜ | Aceptar → firmar → pagar |

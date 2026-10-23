@@ -1,4 +1,4 @@
-import { Check, FileDown } from "lucide-react";
+import { FileDown } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -13,12 +13,15 @@ import { euros, fecha } from "@/lib/formato";
 import { ESTADOS_COBRO, ETIQUETA_METODO } from "@/modulos/cobros";
 import { importeExigible, pagos, resumenCobro } from "@/modulos/cobros/servidor";
 import { type PasoAlta, pasosAlta } from "@/modulos/contrataciones";
-import { contratacion, type DetalleContratacion } from "@/modulos/contrataciones/servidor";
+import {
+  contratacion,
+  type DetalleContratacion,
+  ResumenCondiciones,
+} from "@/modulos/contrataciones/servidor";
 import { FirmaDibujada, TextoContrato } from "@/modulos/contratos";
 import { contratoDe, textoContrato } from "@/modulos/contratos/servidor";
 import { datosFiscales, type RolEmpresa, rolEnEmpresa } from "@/modulos/organizaciones/servidor";
 import { proyectoDeContratacion } from "@/modulos/proyectos/servidor";
-import { ETIQUETA_PLAN } from "@/modulos/servicios";
 import { accionDelegar, accionEnviarCodigo, accionFirmar, accionGuardarDatos } from "./actions";
 
 export const metadata: Metadata = { title: "Tu alta" };
@@ -76,7 +79,7 @@ export default async function BienvenidaPage({
       <header className="flex flex-col gap-3">
         <p className="text-xs tracking-[0.2em] text-lavender uppercase">{e.organizacion}</p>
         <h1 className="text-3xl font-semibold sm:text-4xl">
-          {paso === "listo" ? "¡Enhorabuena!" : e.servicio}
+          {paso === "listo" ? "¡Enhorabuena!" : e.titulo}
         </h1>
         <Stepper steps={steps} current={actual} />
       </header>
@@ -97,44 +100,13 @@ function Bienvenida({ e }: { e: DetalleContratacion }) {
         Gracias por <span className="text-gradient">elegir R3ZON</span>
       </h2>
       <p className="text-muted">
-        {e.servicio_resumen ??
-          "Estamos encantados de empezar a trabajar contigo. En unos minutos dejamos todo listo."}
+        Estamos encantados de empezar a trabajar contigo. Esto es lo que hemos acordado; en unos
+        minutos dejamos todo listo.
       </p>
-      {e.incluye.length > 0 && (
-        <div>
-          <h3 className="mb-2 text-sm font-medium">Qué incluye</h3>
-          <ul className="flex flex-col gap-1.5 text-sm">
-            {e.incluye.map((linea) => (
-              <li key={linea} className="flex gap-2">
-                <Check aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-brand" />
-                {linea}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-      <dl className="grid gap-3 rounded-xl border border-border p-4 text-sm sm:grid-cols-2">
-        <div>
-          <dt className="text-xs text-muted">Precio</dt>
-          <dd className="font-medium">
-            {euros(e.price_cents)} + {e.vat_rate} % IVA
-          </dd>
-        </div>
-        <div>
-          <dt className="text-xs text-muted">Modalidad de pago</dt>
-          <dd>
-            {e.payment_plan === "senal_entrega" && e.deposit_percent
-              ? `${ETIQUETA_PLAN.senal_entrega}: ${e.deposit_percent} % al inicio y el resto a la entrega`
-              : ETIQUETA_PLAN[e.payment_plan]}
-          </dd>
-        </div>
-        {e.conditions && (
-          <div className="sm:col-span-2">
-            <dt className="text-xs text-muted">Condiciones acordadas</dt>
-            <dd>{e.conditions}</dd>
-          </div>
-        )}
-      </dl>
+      <div>
+        <h3 className="mb-3 text-sm font-medium">Tus servicios y condiciones</h3>
+        <ResumenCondiciones r={e.vigente} />
+      </div>
       <div>
         <h3 className="mb-2 text-sm font-medium">Qué viene ahora</h3>
         <ol className="list-inside list-decimal text-sm text-muted">
@@ -178,6 +150,16 @@ async function Datos({ e, rol }: { e: DetalleContratacion; rol: RolEmpresa | nul
           Los justos para el contrato y la factura. Podrás cambiarlos más adelante.
         </p>
       </div>
+      {e.status === "invitada" && (
+        <p
+          className="rounded-xl border border-border bg-white/[0.03] p-3 text-sm"
+          data-testid="aceptacion-condiciones"
+        >
+          Al continuar aceptas los servicios y las condiciones económicas de la bienvenida (
+          {euros(e.vigente.total_cents)} IVA incluido). Si algo no cuadra, díselo a R3ZON antes de
+          continuar.
+        </p>
+      )}
       <FormAccion
         accion={accionGuardarDatos.bind(null, e.id, e.organization_id)}
         boton="Guardar y continuar"
@@ -446,9 +428,10 @@ async function Listo({ e }: { e: DetalleContratacion }) {
 }
 
 /**
- * Pago (T-26). Enseña el total, lo ya pagado (también lo cobrado fuera) y lo
- * pendiente, y NUNCA pide lo ya cobrado: el importe lo calcula la base. En
- * revisión no pide nada. El pago online (Stripe) llega con la Fase 4.
+ * Pago (T-26). Enseña el total, los hitos, lo ya pagado (también lo cobrado
+ * fuera) y lo pendiente, y NUNCA pide lo ya cobrado: el importe exigible lo
+ * calcula la base (amount_due_now), en céntimos. En revisión no pide nada. El
+ * pago online (Stripe) usará exactamente ese importe.
  */
 async function PasoPago({ e }: { e: DetalleContratacion }) {
   const [resumen, historial] = await Promise.all([resumenCobro(e.id), pagos(e.id)]);
@@ -456,7 +439,7 @@ async function PasoPago({ e }: { e: DetalleContratacion }) {
     return <BloqueNoDisponible nombre="Tu pago" />;
   }
   const c = resumen.datos;
-  const enSenal = c.payment_plan === "senal_entrega" && !c.delivered_at;
+  const hitos = e.vigente.hitos;
   const cobrados = historial.datos.filter((p) => p.status === "confirmado");
 
   return (
@@ -478,6 +461,25 @@ async function PasoPago({ e }: { e: DetalleContratacion }) {
           </dd>
         </div>
       </dl>
+
+      {hitos.length > 1 && (
+        <div>
+          <h3 className="mb-2 text-sm font-medium">Tus pagos</h3>
+          <ol className="flex flex-col gap-1 text-sm" data-testid="hitos-cliente">
+            {hitos.map((h, i) => (
+              <li key={h.id} className="flex justify-between gap-3">
+                <span>
+                  {h.label}
+                  {i >= c.released_milestones && (
+                    <span className="text-xs text-muted"> · más adelante</span>
+                  )}
+                </span>
+                <span>{euros(h.amount_cents)}</span>
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
 
       {cobrados.length > 0 && (
         <div>
@@ -502,21 +504,18 @@ async function PasoPago({ e }: { e: DetalleContratacion }) {
           te avisaremos.
         </p>
       )}
-      {c.payment_plan === "senal_entrega" && c.deposit_cents !== null && (
-        <p className="text-sm text-muted" data-testid="modalidad-cliente">
-          Pagas en dos partes: una señal de {euros(c.deposit_cents)} al inicio y el resto (
-          {euros(c.total_cents - c.deposit_cents)}) a la entrega.
-          {enSenal ? "" : " Ya hemos hecho la entrega."}
-        </p>
-      )}
       {c.due_now_cents > 0 && (
         <p
           className="rounded-xl border border-border bg-white/[0.03] p-4 text-sm"
           data-testid="exigible-cliente"
         >
-          {enSenal ? "Ahora toca la señal: " : "Te queda por pagar "}
-          <strong>{euros(c.due_now_cents)}</strong>. Muy pronto podrás hacerlo aquí mismo con
-          tarjeta o SEPA; mientras tanto, el equipo de R3ZON te indicará cómo.
+          Ahora te toca pagar <strong>{euros(c.due_now_cents)}</strong>. Muy pronto podrás hacerlo
+          aquí mismo con tarjeta o SEPA; mientras tanto, el equipo de R3ZON te indicará cómo.
+        </p>
+      )}
+      {c.due_now_cents === 0 && c.status !== "pagado" && c.status !== "pendiente_revision" && (
+        <p className="text-sm text-muted">
+          Ahora no tienes nada que pagar: te avisaremos cuando toque el siguiente pago.
         </p>
       )}
       <Link

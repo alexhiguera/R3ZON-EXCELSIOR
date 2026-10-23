@@ -11,10 +11,21 @@ import {
   registrarPagoExterno,
 } from "@/modulos/cobros/servidor";
 import {
+  anadirHito,
+  anadirLinea,
+  anadirLineaCatalogo,
   cambiarEstado,
+  cambiarEstadoRevision,
   cambiarInterruptores,
+  crearRevision,
+  type DatosLinea,
+  dividirEnPagos,
+  editarLinea,
+  guardarCondicionesTexto,
   invitarContratacion,
-  marcarEntrega,
+  liberarHito,
+  quitarHito,
+  quitarLinea,
 } from "@/modulos/contrataciones/servidor";
 import {
   anadirAnexo,
@@ -145,17 +156,164 @@ export async function accionActivar(
   return { error: null, ok: "Contratación activa: el proyecto está en marcha." };
 }
 
-/* ───────────────────────────── Cobros ───────────────────────────── */
+/* ───────────────────────────── Condiciones económicas ───────────────────────────── */
 
-export async function accionEntrega(
+/*
+ * Solo se traduce el formulario: los importes los calcula la base, y quién
+ * puede tocar qué (staff, revisión en borrador) lo deciden RLS y triggers.
+ */
+
+function leerLinea(datos: FormData): DatosLinea {
+  const campo = (k: string) => String(datos.get(k) ?? "");
+  return {
+    categoria: campo("categoria"),
+    nombre: campo("nombre"),
+    descripcion: campo("descripcion"),
+    precio: campo("precio"),
+    iva: campo("iva"),
+    descuentoTipo: (campo("descuento_tipo") || "ninguno") as DatosLinea["descuentoTipo"],
+    descuento: campo("descuento"),
+  };
+}
+
+function hecho(engagementId: string, mensaje: string): EstadoForm {
+  revalidatePath(ruta(engagementId));
+  return { error: null, ok: mensaje };
+}
+
+export async function accionAnadirLinea(
   engagementId: string,
+  revisionId: string,
+  _: EstadoForm,
+  datos: FormData,
+): Promise<EstadoForm> {
+  const r = await anadirLinea(revisionId, leerLinea(datos));
+  return r.ok ? hecho(engagementId, "Servicio añadido.") : { error: r.error };
+}
+
+export async function accionAnadirLineaCatalogo(
+  engagementId: string,
+  revisionId: string,
+  _: EstadoForm,
+  datos: FormData,
+): Promise<EstadoForm> {
+  const r = await anadirLineaCatalogo(revisionId, {
+    versionId: String(datos.get("servicio") ?? ""),
+    precio: String(datos.get("precio") ?? ""),
+  });
+  return r.ok ? hecho(engagementId, "Servicio añadido.") : { error: r.error };
+}
+
+export async function accionEditarLinea(
+  engagementId: string,
+  lineaId: string,
+  _: EstadoForm,
+  datos: FormData,
+): Promise<EstadoForm> {
+  const r = await editarLinea(lineaId, leerLinea(datos));
+  return r.ok ? hecho(engagementId, "Servicio guardado.") : { error: r.error };
+}
+
+export async function accionQuitarLinea(
+  engagementId: string,
+  lineaId: string,
   _: EstadoForm,
   _datos: FormData,
 ): Promise<EstadoForm> {
-  const r = await marcarEntrega(engagementId);
-  if (!r.ok) return { error: r.error };
-  revalidatePath(ruta(engagementId));
-  return { error: null, ok: "Entrega marcada: el portal ya pide el resto." };
+  const r = await quitarLinea(lineaId);
+  return r.ok ? hecho(engagementId, "Servicio quitado.") : { error: r.error };
+}
+
+export async function accionAnadirHito(
+  engagementId: string,
+  revisionId: string,
+  _: EstadoForm,
+  datos: FormData,
+): Promise<EstadoForm> {
+  const r = await anadirHito(revisionId, {
+    etiqueta: String(datos.get("etiqueta") ?? ""),
+    tipo: (String(datos.get("tipo") ?? "") || "reparto") as "reparto" | "fijo",
+    valor: String(datos.get("valor") ?? ""),
+  });
+  return r.ok ? hecho(engagementId, "Pago añadido.") : { error: r.error };
+}
+
+export async function accionQuitarHito(
+  engagementId: string,
+  hitoId: string,
+  _: EstadoForm,
+  _datos: FormData,
+): Promise<EstadoForm> {
+  const r = await quitarHito(hitoId);
+  return r.ok ? hecho(engagementId, "Pago quitado.") : { error: r.error };
+}
+
+export async function accionDividirPagos(
+  engagementId: string,
+  revisionId: string,
+  _: EstadoForm,
+  datos: FormData,
+): Promise<EstadoForm> {
+  const texto = String(datos.get("partes") ?? "").trim();
+  const partes = /^\d{1,2}$/.test(texto) ? Number.parseInt(texto, 10) : 0;
+  const r = await dividirEnPagos(revisionId, partes);
+  return r.ok
+    ? hecho(
+        engagementId,
+        partes === 1 ? "Un único pago del total." : `Dividido en ${partes} pagos.`,
+      )
+    : { error: r.error };
+}
+
+export async function accionCondicionesTexto(
+  engagementId: string,
+  revisionId: string,
+  _: EstadoForm,
+  datos: FormData,
+): Promise<EstadoForm> {
+  const r = await guardarCondicionesTexto(revisionId, String(datos.get("condiciones") ?? ""));
+  return r.ok ? hecho(engagementId, "Condiciones guardadas.") : { error: r.error };
+}
+
+export async function accionCrearRevision(
+  engagementId: string,
+  _: EstadoForm,
+  datos: FormData,
+): Promise<EstadoForm> {
+  const r = await crearRevision(engagementId, String(datos.get("motivo") ?? ""));
+  return r.ok
+    ? hecho(engagementId, "Cambio en preparación: edítalo y propónselo al cliente.")
+    : { error: r.error };
+}
+
+export async function accionEstadoRevision(
+  engagementId: string,
+  revisionId: string,
+  estado: "propuesta" | "borrador" | "descartada",
+  _: EstadoForm,
+  _datos: FormData,
+): Promise<EstadoForm> {
+  const r = await cambiarEstadoRevision(revisionId, estado);
+  const mensajes = {
+    propuesta: "Cambio propuesto: el cliente lo verá en su área.",
+    borrador: "Propuesta retirada: puedes editarla de nuevo.",
+    descartada: "Cambio descartado.",
+  };
+  return r.ok ? hecho(engagementId, mensajes[estado]) : { error: r.error };
+}
+
+/* ───────────────────────────── Cobros ───────────────────────────── */
+
+export async function accionLiberarHito(
+  engagementId: string,
+  actual: number,
+  _: EstadoForm,
+  _datos: FormData,
+): Promise<EstadoForm> {
+  const r = await liberarHito(engagementId, actual);
+  return r.ok
+    ? hecho(engagementId, "Pago liberado: el portal ya se lo pide al cliente.")
+    : { error: r.error };
 }
 
 export async function accionRegistrarCobro(

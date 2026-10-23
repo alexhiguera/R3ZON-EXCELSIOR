@@ -9,7 +9,8 @@
 --     directa u otro método documentado) antes o después de invitar. Nunca
 --     efectivo, y estos métodos no los elige el cliente.
 --   · Los cobros por Stripe (Fase 4) entran en el MISMO libro, solo desde el
---     servidor (webhook), con su id de operación como clave única.
+--     servidor (webhook), con su id de operación como clave única. El importe
+--     que se le pide al cliente sale SOLO de amount_due_now (céntimos).
 --   · El portal no factura: lo hace Antares con TicketBAI. Aquí solo se guarda
 --     si un cobro ya está facturado y con qué referencia, para no duplicar.
 --
@@ -23,7 +24,12 @@
 --   parcialmente_pagado si hay algo cobrado;
 --   no_pagado           si no.
 --
--- Depende de: plataforma, organizaciones, servicios, contrataciones.
+-- Total: el de la revisión de condiciones vigente (calculado y congelado en
+-- el módulo contrataciones). Exigible: los hitos LIBERADOS (el primero desde
+-- el principio; los siguientes los libera R3ZON) menos lo cobrado. Sin hitos,
+-- el total.
+--
+-- Depende de: base (dinero), plataforma, organizaciones, servicios, contrataciones.
 -- =============================================================================
 
 create type public.payment_method as enum ('transferencia', 'otro', 'stripe');
@@ -41,12 +47,13 @@ alter table public.engagements
 
 grant update (payment_review, payment_review_note) on table public.engagements to authenticated;
 
--- Señal + entrega (T-31): hasta que R3ZON marca la entrega solo se pide la
--- señal; después, el resto. La fecha la pone la base y no se desmarca.
+-- Hitos liberados: cuántos hitos de pago se le pueden pedir ya al cliente.
+-- El primero, desde el principio; los siguientes los libera R3ZON (p. ej. al
+-- entregar). Solo sube, de uno en uno.
 alter table public.engagements
-  add column delivered_at timestamptz;
+  add column released_milestones smallint not null default 1 check (released_milestones >= 1);
 
-grant update (delivered_at) on table public.engagements to authenticated;
+grant update (released_milestones) on table public.engagements to authenticated;
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 1. Libro de cobros
@@ -101,33 +108,31 @@ with (security_invoker = true) as
     e.organization_id,
     e.requires_payment,
     e.payment_review,
-    e.payment_plan,
-    e.delivered_at,
-    t.total_cents,
-    t.deposit_cents,
+    e.released_milestones,
+    r.id as revision_id,
+    r.total_cents,
+    coalesce(h.milestones, 0) as milestones,
+    coalesce(h.released_cents, r.total_cents) as released_cents,
     coalesce(p.paid_cents, 0) as paid_cents,
     coalesce(p.pending_cents, 0) as pending_cents,
-    greatest(t.total_cents - coalesce(p.paid_cents, 0), 0) as balance_cents,
+    greatest(r.total_cents - coalesce(p.paid_cents, 0), 0) as balance_cents,
     s.status,
     -- Lo que se le puede pedir ahora: nada si no paga en el portal, si está en
-    -- revisión o pagado; la señal hasta la entrega; después, el saldo.
+    -- revisión o pagado; si no, lo liberado menos lo cobrado.
     case
-      when e.requires_payment and s.status in ('no_pagado', 'parcialmente_pagado') then
-        greatest(
-          case when e.payment_plan = 'senal_entrega' and e.delivered_at is null
-               then t.deposit_cents else t.total_cents end
-          - coalesce(p.paid_cents, 0),
-          0)
+      when e.requires_payment and s.status in ('no_pagado', 'parcialmente_pagado')
+        then greatest(coalesce(h.released_cents, r.total_cents) - coalesce(p.paid_cents, 0), 0)
       else 0
     end as due_now_cents
   from public.engagements e
-  join public.service_versions sv on sv.id = e.service_version_id
-  cross join lateral (
-    select x.total_cents,
-           case when e.payment_plan = 'senal_entrega'
-                then round(x.total_cents * sv.deposit_percent / 100.0)::bigint end as deposit_cents
-      from (select e.price_cents + round(e.price_cents * sv.vat_rate / 100)::bigint as total_cents) x
-  ) t
+  join public.engagement_revisions r on r.id = e.current_revision_id
+  left join lateral (
+    select count(*) as milestones,
+           coalesce(sum(x.amount_cents) filter (where x.k <= e.released_milestones), 0) as released_cents
+      from (select m.amount_cents, row_number() over (order by m.position) as k
+              from public.engagement_milestones m where m.revision_id = r.id) x
+    having count(*) > 0
+  ) h on true
   left join lateral (
     select sum(amount_cents) filter (where status = 'confirmado') as paid_cents,
            sum(amount_cents) filter (where status = 'pendiente') as pending_cents
@@ -135,21 +140,21 @@ with (security_invoker = true) as
   ) p on true
   cross join lateral (
     select case
-      when e.payment_review or coalesce(p.pending_cents, 0) > 0 or coalesce(p.paid_cents, 0) > t.total_cents
+      when e.payment_review or coalesce(p.pending_cents, 0) > 0 or coalesce(p.paid_cents, 0) > r.total_cents
         then 'pendiente_revision'
-      when coalesce(p.paid_cents, 0) >= t.total_cents then 'pagado'
+      when coalesce(p.paid_cents, 0) >= r.total_cents then 'pagado'
       when coalesce(p.paid_cents, 0) > 0 then 'parcialmente_pagado'
       else 'no_pagado'
     end::public.collection_status as status
   ) s;
 
 comment on view public.engagement_collections is
-  'Estado económico de cada contratación: total con IVA, señal, cobrado, en curso, saldo, estado e importe exigible ahora. Derivado del libro de cobros.';
+  'Estado económico de cada contratación: total con IVA (revisión vigente), hitos liberados, cobrado, en curso, saldo, estado e importe exigible ahora. Derivado.';
 
 -- Importe que se le puede pedir AHORA al cliente en el portal. Cero si la
 -- contratación no se paga en el portal, si está en revisión o si ya está
--- pagada; con señal + entrega, la señal hasta que R3ZON marque la entrega. Lo
--- calcula la base: el navegador nunca dice cuánto se cobra.
+-- pagada; si no, los hitos liberados menos lo cobrado. Lo calcula la base: el
+-- navegador nunca dice cuánto se cobra. Es el ÚNICO importe que usará Stripe.
 create function public.amount_due_now(p_engagement_id uuid)
 returns bigint
 language sql
@@ -163,7 +168,7 @@ as $$
 $$;
 
 comment on function public.amount_due_now(uuid) is
-  'Importe exigible ahora en el portal (0 si no se paga en el portal, si está en revisión o pagado; la señal hasta la entrega).';
+  'Importe exigible ahora en el portal, en céntimos (0 si no se paga en el portal, si está en revisión o pagado; si no, hitos liberados menos lo cobrado).';
 revoke execute on function public.amount_due_now(uuid) from public, anon;
 grant execute on function public.amount_due_now(uuid) to authenticated;
 
@@ -351,55 +356,55 @@ create trigger payments_audit
   after insert or update on public.payments
   for each row execute function public.payments_audit();
 
--- Entrega (señal + entrega): solo con esa modalidad, con la contratación en
--- marcha (datos dados, firmada o activa), una vez y con la hora de la base.
-create function public.engagements_before_delivery()
+-- Liberar hitos: de uno en uno, sin pasar del número de hitos de las
+-- condiciones vigentes, con la contratación en marcha. Queda registrado.
+create function public.engagements_before_release()
 returns trigger
 language plpgsql
 security invoker
 set search_path = ''
 as $$
+declare
+  v_hitos integer;
 begin
-  if old.delivered_at is not null then
-    raise exception 'La entrega ya está marcada' using errcode = 'P0001';
-  end if;
-  if new.delivered_at is null then
-    return new;
-  end if;
-  if new.payment_plan <> 'senal_entrega' then
-    raise exception 'Solo se marca la entrega con la modalidad señal + entrega' using errcode = 'P0001';
+  if new.released_milestones <> old.released_milestones + 1 then
+    raise exception 'Los hitos se liberan de uno en uno y no se vuelven a bloquear' using errcode = 'P0001';
   end if;
   if new.status not in ('datos_completos', 'firmada', 'activa') then
-    raise exception 'No se puede marcar la entrega en estado %', new.status using errcode = 'P0001';
+    raise exception 'No se puede liberar un hito en estado %', new.status using errcode = 'P0001';
   end if;
-  new.delivered_at := now();
+  select count(*) into v_hitos from public.engagement_milestones m where m.revision_id = new.current_revision_id;
+  if new.released_milestones > v_hitos then
+    raise exception 'No quedan hitos por liberar' using errcode = 'P0001';
+  end if;
   return new;
 end;
 $$;
-revoke execute on function public.engagements_before_delivery() from public, anon, authenticated;
+revoke execute on function public.engagements_before_release() from public, anon, authenticated;
 
-create trigger engagements_before_delivery
-  before update of delivered_at on public.engagements
-  for each row when (old.delivered_at is distinct from new.delivered_at)
-  execute function public.engagements_before_delivery();
+create trigger engagements_before_release
+  before update of released_milestones on public.engagements
+  for each row when (old.released_milestones is distinct from new.released_milestones)
+  execute function public.engagements_before_release();
 
-create function public.engagements_audit_delivery()
+create function public.engagements_audit_release()
 returns trigger
 language plpgsql
 security definer
 set search_path = ''
 as $$
 begin
-  perform public.write_audit('engagement.delivered', new.organization_id, jsonb_build_object('engagement_id', new.id));
+  perform public.write_audit('collection.milestone_released', new.organization_id,
+    jsonb_build_object('engagement_id', new.id, 'released', new.released_milestones));
   return null;
 end;
 $$;
-revoke execute on function public.engagements_audit_delivery() from public, anon, authenticated;
+revoke execute on function public.engagements_audit_release() from public, anon, authenticated;
 
-create trigger engagements_audit_delivery
-  after update of delivered_at on public.engagements
-  for each row when (old.delivered_at is null and new.delivered_at is not null)
-  execute function public.engagements_audit_delivery();
+create trigger engagements_audit_release
+  after update of released_milestones on public.engagements
+  for each row when (old.released_milestones is distinct from new.released_milestones)
+  execute function public.engagements_audit_release();
 
 -- Marcar o desmarcar «pendiente de revisión» queda registrado.
 create function public.engagements_audit_review()

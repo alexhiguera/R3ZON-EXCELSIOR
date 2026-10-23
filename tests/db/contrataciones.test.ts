@@ -9,6 +9,7 @@ import {
   fallo,
   hacerMiembro,
   hacerStaff,
+  revisionDe,
 } from "./_excelsior";
 
 /**
@@ -34,17 +35,24 @@ describe.skipIf(!db)("contrataciones", () => {
       );
       expect(rows[0].token).toMatch(/^[0-9a-f]{64}$/);
       const e = await c.query(
-        `select e.status, e.price_cents, e.conditions, i.email
-           from public.engagements e join public.invitations i on i.id = e.invitation_id
+        `select e.status, r.conditions, r.total_cents, i.email, l.name, l.unit_price_cents, l.vat_rate
+           from public.engagements e
+           join public.invitations i on i.id = e.invitation_id
+           join public.engagement_revisions r on r.id = e.current_revision_id
+           join public.engagement_lines l on l.revision_id = r.id
           where e.organization_id = $1`,
         [acme],
       );
+      // Una línea copiada del catálogo con el precio pactado; total con 21 % de IVA.
       expect(e.rows).toEqual([
         {
           status: "invitada",
-          price_cents: "120000",
           conditions: "Descuento del 20 por ciento",
+          total_cents: "145200",
           email: "ana@acme.test",
+          name: "Web",
+          unit_price_cents: "120000",
+          vat_rate: "21.00",
         },
       ]);
       const h = await c.query(
@@ -100,21 +108,52 @@ describe.skipIf(!db)("contrataciones", () => {
       expect(
         await fallo(
           c,
-          "insert into public.engagements (organization_id, service_version_id, price_cents, status) values ($1, $2, 1, 'activa')",
-          [acme, versionId],
+          "insert into public.engagements (organization_id, status) values ($1, 'activa')",
+          [acme],
         ),
       ).toMatch(/nace en borrador/);
       const id = await crearContratacion(c, acme, versionId);
-      await c.query("update public.engagements set price_cents = 99000 where id = $1", [id]);
+      const rev = await revisionDe(c, id);
+      await c.query(
+        "update public.engagement_lines set unit_price_cents = 99000 where revision_id = $1",
+        [rev],
+      );
       await c.query("update public.engagements set status = 'invitada' where id = $1", [id]);
       await c.query("update public.engagements set status = 'datos_completos' where id = $1", [id]);
+      const r = await c.query(
+        "select status, total_cents from public.engagement_revisions where id = $1",
+        [rev],
+      );
+      expect(r.rows[0]).toEqual({ status: "aceptada", total_cents: "119790" });
       expect(
-        await fallo(c, "update public.engagements set price_cents = 1 where id = $1", [id]),
-      ).toMatch(/ya no se pueden cambiar/);
+        await fallo(
+          c,
+          "update public.engagement_lines set unit_price_cents = 1 where revision_id = $1",
+          [rev],
+        ),
+      ).toMatch(/ya están propuestas o aceptadas/);
+      expect(
+        await fallo(c, "delete from public.engagement_lines where revision_id = $1", [rev]),
+      ).toMatch(/ya están propuestas o aceptadas/);
     });
   });
 
-  it("cada cliente ve SOLO sus contrataciones y el servicio que contrató", async () => {
+  it("sin condiciones válidas no se invita ni se dan los datos", async () => {
+    await inRollback(async (c) => {
+      const acme = await crearOrganizacion(c, "Acme");
+      const { rows } = await c.query(
+        "insert into public.engagements (organization_id) values ($1) returning id",
+        [acme],
+      );
+      expect(
+        await fallo(c, "update public.engagements set status = 'invitada' where id = $1", [
+          rows[0].id,
+        ]),
+      ).toMatch(/Faltan las condiciones económicas/);
+    });
+  });
+
+  it("cada cliente ve SOLO sus contrataciones y sus líneas, no el catálogo", async () => {
     await inRollback(async (c) => {
       const ana = await createAuthUser(c, { email: "ana@acme.test" });
       const acme = await crearOrganizacion(c, "Acme");
@@ -130,14 +169,20 @@ describe.skipIf(!db)("contrataciones", () => {
         [acme, otra],
       ]);
       expect(e.rows).toEqual([{ id: mia }]);
-      const s = await c.query("select name from public.services where id = any($1) order by name", [
+      // Las condiciones van copiadas en sus líneas: el catálogo no le hace falta.
+      const l = await c.query(
+        "select l.name from public.engagement_lines l join public.engagement_revisions r on r.id = l.revision_id where r.engagement_id = any($1)",
+        [[mia, ajena]],
+      );
+      expect(l.rows).toEqual([{ name: "Web" }]);
+      const s = await c.query("select 1 from public.services where id = any($1)", [
         [web.serviceId, tienda.serviceId],
       ]);
-      expect(s.rows).toEqual([{ name: "Web" }]);
-      const v = await c.query("select id from public.service_versions where id = any($1)", [
+      expect(s.rowCount).toBe(0);
+      const v = await c.query("select 1 from public.service_versions where id = any($1)", [
         [web.versionId, tienda.versionId],
       ]);
-      expect(v.rows).toEqual([{ id: web.versionId }]);
+      expect(v.rowCount).toBe(0);
       const h = await c.query(
         "select distinct engagement_id from public.engagement_status_history where engagement_id = any($1)",
         [[mia, ajena]],
@@ -153,19 +198,24 @@ describe.skipIf(!db)("contrataciones", () => {
       await hacerMiembro(c, acme, ana, "owner");
       const { versionId } = await crearServicio(c, "Web");
       const id = await crearContratacion(c, acme, versionId);
+      const rev = await revisionDe(c, id);
 
       await actAs(c, ana);
-      const r = await c.query(
-        "update public.engagements set price_cents = 0, status = 'invitada' where id = $1",
-        [id],
-      );
+      const r = await c.query("update public.engagements set status = 'invitada' where id = $1", [
+        id,
+      ]);
       expect(r.rowCount).toBe(0);
+      const l = await c.query(
+        "update public.engagement_lines set unit_price_cents = 0, discount_percent = 100 where revision_id = $1",
+        [rev],
+      );
+      expect(l.rowCount).toBe(0);
       await comoPostgres(c);
       const { rows } = await c.query(
-        "select status, price_cents from public.engagements where id = $1",
+        "select e.status, r.total_cents from public.engagements e join public.engagement_revisions r on r.id = e.current_revision_id where e.id = $1",
         [id],
       );
-      expect(rows).toEqual([{ status: "borrador", price_cents: "150000" }]);
+      expect(rows).toEqual([{ status: "borrador", total_cents: "181500" }]);
     });
   });
 
@@ -251,70 +301,6 @@ describe.skipIf(!db)("directorio de miembros", () => {
       expect(await fallo(c, "select * from public.organization_directory($1)", [acme])).toMatch(
         /Solo el equipo/,
       );
-    });
-  });
-});
-
-describe.skipIf(!db)("contrataciones: modalidad de pago (T-31)", () => {
-  it("por defecto la primera del servicio; una que el servicio no admite se rechaza", async () => {
-    await inRollback(async (c) => {
-      const org = await crearOrganizacion(c, "Acme");
-      const unico = await crearServicio(c, `Único ${Math.random()}`);
-      const e = await crearContratacion(c, org, unico.versionId);
-      const { rows } = await c.query("select payment_plan from public.engagements where id = $1", [
-        e,
-      ]);
-      expect(rows[0].payment_plan).toBe("pago_unico");
-      expect(
-        await fallo(
-          c,
-          "update public.engagements set payment_plan = 'senal_entrega' where id = $1",
-          [e],
-        ),
-      ).toMatch(/no admite la modalidad/);
-    });
-  });
-
-  it("se puede cambiar en borrador o invitada, no después (va al contrato)", async () => {
-    await inRollback(async (c) => {
-      const org = await crearOrganizacion(c, "Acme");
-      const ambos = await crearServicio(c, `Ambos ${Math.random()}`, {
-        planes: ["pago_unico", "senal_entrega"],
-        senal: 30,
-      });
-      const e = await crearContratacion(c, org, ambos.versionId);
-      await c.query("update public.engagements set payment_plan = 'senal_entrega' where id = $1", [
-        e,
-      ]);
-      await c.query("update public.engagements set status = 'invitada' where id = $1", [e]);
-      await c.query("update public.engagements set status = 'datos_completos' where id = $1", [e]);
-      expect(
-        await fallo(c, "update public.engagements set payment_plan = 'pago_unico' where id = $1", [
-          e,
-        ]),
-      ).toMatch(/ya no se pueden cambiar/);
-    });
-  });
-
-  it("invite_to_service acepta la modalidad y la valida", async () => {
-    await inRollback(async (c) => {
-      const staff = await createAuthUser(c, { email: `staff-${Math.random()}@r3zon.test` });
-      await hacerStaff(c, staff);
-      const org = await crearOrganizacion(c, "Acme");
-      const ambos = await crearServicio(c, `Ambos ${Math.random()}`, {
-        planes: ["pago_unico", "senal_entrega"],
-        senal: 30,
-      });
-      await actAs(c, staff);
-      await c.query(
-        "select public.invite_to_service($1, 'ana@acme.test', $2, null, null, true, true, 'senal_entrega')",
-        [org, ambos.versionId],
-      );
-      const { rows } = await c.query(
-        "select payment_plan from public.engagements where organization_id = $1",
-        [org],
-      );
-      expect(rows[0].payment_plan).toBe("senal_entrega");
     });
   });
 });

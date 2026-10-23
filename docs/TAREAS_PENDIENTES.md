@@ -14,13 +14,13 @@ en curso (y lo que surja); cuando arranca una fase, sus entregables bajan aquí.
 | Comprobación | Resultado |
 |---|---|
 | `npm run lint` · `typecheck` | ✅ |
-| `npm run test:run` (con el stack levantado) | ✅ 315 tests en 37 ficheros (129 contra Postgres) |
-| `npm run test:e2e` | ✅ 40 tests (20 en escritorio + 20 en móvil): alta con firma, cliente ya pagado sin firma, y briefing completo |
+| `npm run test:run` (con el stack levantado) | ✅ 364 tests en 38 ficheros (146 contra Postgres) |
+| `npm run test:e2e` | ✅ 42 tests (21 en escritorio + 21 en móvil): alta con firma, cliente ya pagado sin firma, condiciones a medida con hitos y cambio, y briefing |
 | `npm run build` | ✅ |
 | `npm run db:drift` · `db:types:check` | ✅ |
 | `npm run docs:validar` · `docs:enlaces` | ✅ |
 | `npm audit` | ✅ 0 vulnerabilidades |
-| Migraciones | 10: core + 9 módulos (línea base, T-18), solo en local |
+| Migraciones | 11: core + 10 módulos (línea base, T-18), solo en local |
 | Entorno | **Solo local** (T-17) |
 | Fase en curso | **Fases 4 y 5** — cobros (sin Stripe, que espera a una cuenta de pruebas) y proyecto con briefing (sin ficheros, T-33). De la Fase 3 faltan las validaciones de la asesoría |
 
@@ -30,6 +30,12 @@ en curso (y lo que surja); cuando arranca una fase, sus entregables bajan aquí.
   [PLAN.md](PLAN.md) → Fase 4, 8 y 10).
 - [ ] 🟠 Contrato con ANTARES (D-06): quién escucha a Stripe y cómo vuelve la referencia
   de la factura, también para los cobros externos.
+- [ ] 🟠 Confirmar con ANTARES la política de redondeo (IVA por tipo sobre la suma de
+  bases, medio céntimo hacia arriba; ARCHITECTURE §18) antes de la primera factura real.
+- [ ] 🟡 Condiciones: reordenar servicios y editar un hito (hoy: añadir, editar servicios
+  y quitar); archivar tipos de servicio desde el panel.
+- [ ] 🟡 Mostrar al cliente, en un cambio de condiciones, la comparación línea a línea con
+  las vigentes (hoy: total anterior y nuevo, y el detalle nuevo).
 - [ ] 🟡 Pago delegado a un usuario `billing` (resto de T-25).
 - [ ] 🟡 Requisitos del informe que no llegaron (Apple Pay, Google Pay, Link, descuentos,
   financiación externa): pedírselos a R3ZON antes de la parte de Stripe.

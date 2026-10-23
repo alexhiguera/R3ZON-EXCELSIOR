@@ -342,7 +342,6 @@ set search_path = ''
 as $$
 declare
   v_project uuid;
-  v_service uuid;
   v_nombre text;
 begin
   if not (new.status in ('firmada', 'activa') or (new.status = 'datos_completos' and not new.requires_signature)) then
@@ -352,19 +351,25 @@ begin
     return null;
   end if;
 
-  select s.id, s.name into v_service, v_nombre
-    from public.service_versions v join public.services s on s.id = v.service_id
-   where v.id = new.service_version_id;
+  -- Nombre: los servicios de las condiciones vigentes, en su orden.
+  select left(string_agg(l.name, ', ' order by l.position), 200) into v_nombre
+    from public.engagement_lines l where l.revision_id = new.current_revision_id;
 
   insert into public.projects (organization_id, engagement_id, name)
-  values (new.organization_id, new.id, v_nombre)
+  values (new.organization_id, new.id, coalesce(v_nombre, 'Proyecto'))
   returning id into v_project;
 
+  -- Briefing: las plantillas de los servicios del catálogo de los que salió
+  -- alguna línea (cada servicio una vez), en el orden de las líneas.
   insert into public.project_briefing_items
     (project_id, organization_id, position, section, kind, label, help, required)
-  select v_project, new.organization_id, t.position, t.section, t.kind, t.label, t.help, t.required
-    from public.service_briefing_items t
-   where t.service_id = v_service;
+  select v_project, new.organization_id,
+         row_number() over (order by sv.primera, t.position), t.section, t.kind, t.label, t.help, t.required
+    from (select v.service_id, min(l.position) as primera
+            from public.engagement_lines l join public.service_versions v on v.id = l.service_version_id
+           where l.revision_id = new.current_revision_id
+           group by v.service_id) sv
+    join public.service_briefing_items t on t.service_id = sv.service_id;
   return null;
 end;
 $$;

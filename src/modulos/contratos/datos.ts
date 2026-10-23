@@ -213,6 +213,8 @@ export async function contratoDe(engagementId: string): Promise<Resultado<Contra
       )
       .eq("engagement_id", engagementId)
       .order("created_at", { ascending: false })
+      // Desempate: dos contratos de una misma transacción comparten created_at; el id (UUIDv7) no.
+      .order("id", { ascending: false })
       .limit(1),
   );
   if (!r.ok) return r;

@@ -15,11 +15,14 @@ export async function CamposInvitacion({
   conRol = true,
   conEmail = true,
   servicioObligatorio = false,
+  sinServicio = "Sin servicio (solo acceso)",
 }: {
   conRol?: boolean;
   /** Sin email: para crear una contratación en borrador e invitar después. */
   conEmail?: boolean;
   servicioObligatorio?: boolean;
+  /** Texto de la opción «sin servicio» del catálogo. */
+  sinServicio?: string;
 }) {
   const servicios = await listarServicios();
   const disponibles = servicios.ok ? servicios.datos.filter((s) => s.version_id) : [];
@@ -40,7 +43,7 @@ export async function CamposInvitacion({
         }
       >
         <Select name="servicio" defaultValue="">
-          {!servicioObligatorio && <option value="">Sin servicio (solo acceso)</option>}
+          {!servicioObligatorio && <option value="">{sinServicio}</option>}
           {disponibles.map((s) => (
             <option key={s.id} value={s.version_id ?? ""}>
               {s.name} · {euros(s.price_cents ?? 0)} + IVA

@@ -284,11 +284,12 @@ Antares con TicketBAI.
    dedupe por id de evento, sin retrocesos por eventos fuera de orden) es lo único que
    escribe cobros `stripe` (la base ya lo impone: `provider_reference` única y solo
    `service_role`). Pagos asíncronos → cobro `pendiente` hasta el webhook.
-9. ✅ **Modalidades** (T-31): la fija R3ZON por contratación entre las del servicio
-   (`engagements.payment_plan`; va al contrato, hueco `precio.modalidad`). Con **señal +
-   entrega**, `amount_due_now` pide la señal (sobre el total con IVA) hasta que R3ZON pulsa
-   **Marcar entrega** (`delivered_at`, una vez, con la hora de la base) y después el
-   resto.
+9. ✅ **Condiciones económicas antes de invitar** (T-34 a T-38): uno o varios servicios
+   por contratación (catálogo o a medida) con categoría, descripción, precio, descuento e
+   IVA propios; **hitos libres** (fijos o por reparto; señal + entrega es un caso de dos
+   hitos) que R3ZON libera uno a uno; revisión del total antes de invitar; el cliente las
+   ve en su bienvenida y las acepta al dar sus datos; cambios posteriores por revisión.
+   Importes en céntimos, calculados por la base (ARCHITECTURE §18).
 10. ⬜ **Devoluciones, disputas y reembolsos** desde los webhooks (cobro `devuelto` o
     `fallido`); la rectificativa la emite Antares.
 11. ⬜ **Factura** (T-29): Antares la genera con TicketBAI al confirmarse el cobro; el
@@ -519,6 +520,11 @@ candidatas, con lo que desbloquea cada una, están en [mejoras.md](mejoras.md).
 | T-30 | **Pago embebido** en el portal (Payment Element, estética propia), no Stripe Checkout. La integración espera a una cuenta de Stripe en modo test | 2026-10-23 | Decisión de R3ZON (era D-04) |
 | T-31 | **La modalidad de pago la fija R3ZON** al crear o invitar, entre las que permite el servicio (antes la elegía el cliente, T-05). Con señal + entrega, la señal se pide hasta que R3ZON marca la entrega | 2026-10-23 | Decisión de R3ZON: encaja con los interruptores (T-27) y con los clientes que ya pagaron fuera |
 | T-32 | **El proyecto nace al completar el alta** (datos y, si se firma en el portal, la firma; el pago no bloquea), sin esperar a la activación | 2026-10-23 | Decisión de R3ZON: el cliente puede empezar el briefing en cuanto termina |
+| T-34 | **Tipos de servicio ampliables** (`service_categories`): 8 de partida, se añaden sin tocar código ni cobros. El catálogo es una **plantilla**: cada contratación copia nombre, precio e IVA en sus líneas y los ajusta; no hacen falta precios fijos en Stripe | 2026-10-23 | Requisito de R3ZON: presupuestos a medida |
+| T-35 | **Dinero en céntimos enteros y una sola política de redondeo**: IVA por tipo sobre la suma de bases, medio céntimo hacia arriba, hitos con el resto en los últimos (ARCHITECTURE §18). Pendiente de confirmar con ANTARES | 2026-10-23 | Decisión de R3ZON («como Stripe») |
+| T-36 | **Descuentos por línea**, en % o en importe; uno por línea, antes del IVA | 2026-10-23 | Decisión de R3ZON |
+| T-37 | **Revisiones de condiciones**: editables hasta que el cliente las acepta (al dar sus datos); después, cada cambio es una revisión que el cliente acepta (firmando un contrato nuevo si ya firmó). Lo aceptado no se recalcula | 2026-10-23 | Decisión de R3ZON |
+| T-38 | **Hitos de pago libres** por contratación (sustituye a pago único / señal + entrega de T-31); el primero se pide desde el alta, los demás cuando R3ZON los libera | 2026-10-23 | Decisión de R3ZON |
 | T-33 | **Subida de ficheros aplazada**: primero proyecto y briefing sin ficheros; los ficheros llegan con la cuarentena y el antivirus | 2026-10-23 | Decisión de R3ZON (frente a ClamAV en local o aprobación manual) |
 | T-17 | **Solo en local** por ahora: sin Supabase Cloud, Vercel, Stripe ni Resend reales | 2026-10-23 | Decisión de R3ZON. Lo que depende de servicios externos (emails, Google real, CI) se aplaza sin bloquear el resto |
 

@@ -163,14 +163,14 @@ isOneToOne: false
                   ]
                 },"contracts": {
                   Row: {
-                    "created_at": string,"created_by": string | null,"delegated_email": string | null,"engagement_id": string,"id": string,"organization_id": string,"sent_at": string | null,"signed_at": string | null,"signed_text": string | null,"status": Database["public"]['Enums']["contract_status"],"template_version_id": string,"text_sha256": string | null,"updated_at": string
+                    "created_at": string,"created_by": string | null,"delegated_email": string | null,"engagement_id": string,"id": string,"organization_id": string,"revision_id": string | null,"sent_at": string | null,"signed_at": string | null,"signed_text": string | null,"status": Database["public"]['Enums']["contract_status"],"template_version_id": string,"text_sha256": string | null,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"created_by"?: string | null,"delegated_email"?: string | null,"engagement_id": string,"id"?: string,"organization_id": string,"sent_at"?: string | null,"signed_at"?: string | null,"signed_text"?: string | null,"status"?: Database["public"]['Enums']["contract_status"],"template_version_id": string,"text_sha256"?: string | null,"updated_at"?: string
+                    "created_at"?: string,"created_by"?: string | null,"delegated_email"?: string | null,"engagement_id": string,"id"?: string,"organization_id": string,"revision_id"?: string | null,"sent_at"?: string | null,"signed_at"?: string | null,"signed_text"?: string | null,"status"?: Database["public"]['Enums']["contract_status"],"template_version_id": string,"text_sha256"?: string | null,"updated_at"?: string
                   }
                   Update: {
-                    "created_at"?: string,"created_by"?: string | null,"delegated_email"?: string | null,"engagement_id"?: string,"id"?: string,"organization_id"?: string,"sent_at"?: string | null,"signed_at"?: string | null,"signed_text"?: string | null,"status"?: Database["public"]['Enums']["contract_status"],"template_version_id"?: string,"text_sha256"?: string | null,"updated_at"?: string
+                    "created_at"?: string,"created_by"?: string | null,"delegated_email"?: string | null,"engagement_id"?: string,"id"?: string,"organization_id"?: string,"revision_id"?: string | null,"sent_at"?: string | null,"signed_at"?: string | null,"signed_text"?: string | null,"status"?: Database["public"]['Enums']["contract_status"],"template_version_id"?: string,"text_sha256"?: string | null,"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -192,10 +192,136 @@ isOneToOne: false
       referencedRelation: "organizations"
       referencedColumns: ["id"]
     },{
+      foreignKeyName: "contracts_revision_id_fkey"
+      columns: ["revision_id"]
+isOneToOne: false
+      referencedRelation: "engagement_collections"
+      referencedColumns: ["revision_id"]
+    },{
+      foreignKeyName: "contracts_revision_id_fkey"
+      columns: ["revision_id"]
+isOneToOne: false
+      referencedRelation: "engagement_revisions"
+      referencedColumns: ["id"]
+    },{
       foreignKeyName: "contracts_template_version_id_fkey"
       columns: ["template_version_id"]
 isOneToOne: false
       referencedRelation: "contract_template_versions"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"engagement_lines": {
+                  Row: {
+                    "base_cents": number,"category_id": string,"created_at": string,"description": string | null,"discount_amount_cents": number | null,"discount_cents": number,"discount_percent": number | null,"id": string,"name": string,"organization_id": string,"position": number,"revision_id": string,"service_version_id": string | null,"unit_price_cents": number,"vat_rate": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "base_cents"?: number,"category_id": string,"created_at"?: string,"description"?: string | null,"discount_amount_cents"?: number | null,"discount_cents"?: number,"discount_percent"?: number | null,"id"?: string,"name": string,"organization_id": string,"position": number,"revision_id": string,"service_version_id"?: string | null,"unit_price_cents": number,"vat_rate": number
+                  }
+                  Update: {
+                    "base_cents"?: number,"category_id"?: string,"created_at"?: string,"description"?: string | null,"discount_amount_cents"?: number | null,"discount_cents"?: number,"discount_percent"?: number | null,"id"?: string,"name"?: string,"organization_id"?: string,"position"?: number,"revision_id"?: string,"service_version_id"?: string | null,"unit_price_cents"?: number,"vat_rate"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "engagement_lines_category_id_fkey"
+      columns: ["category_id"]
+isOneToOne: false
+      referencedRelation: "service_categories"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "engagement_lines_organization_id_fkey"
+      columns: ["organization_id"]
+isOneToOne: false
+      referencedRelation: "organizations"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "engagement_lines_revision_id_fkey"
+      columns: ["revision_id"]
+isOneToOne: false
+      referencedRelation: "engagement_collections"
+      referencedColumns: ["revision_id"]
+    },{
+      foreignKeyName: "engagement_lines_revision_id_fkey"
+      columns: ["revision_id"]
+isOneToOne: false
+      referencedRelation: "engagement_revisions"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "engagement_lines_service_version_id_fkey"
+      columns: ["service_version_id"]
+isOneToOne: false
+      referencedRelation: "service_versions"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "engagement_lines_service_version_id_fkey"
+      columns: ["service_version_id"]
+isOneToOne: false
+      referencedRelation: "services_current"
+      referencedColumns: ["version_id"]
+    }
+                  ]
+                },"engagement_milestones": {
+                  Row: {
+                    "amount_cents": number,"created_at": string,"fixed_cents": number | null,"id": string,"label": string,"organization_id": string,"position": number,"revision_id": string,"weight": number | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "amount_cents"?: number,"created_at"?: string,"fixed_cents"?: number | null,"id"?: string,"label": string,"organization_id": string,"position": number,"revision_id": string,"weight"?: number | null
+                  }
+                  Update: {
+                    "amount_cents"?: number,"created_at"?: string,"fixed_cents"?: number | null,"id"?: string,"label"?: string,"organization_id"?: string,"position"?: number,"revision_id"?: string,"weight"?: number | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "engagement_milestones_organization_id_fkey"
+      columns: ["organization_id"]
+isOneToOne: false
+      referencedRelation: "organizations"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "engagement_milestones_revision_id_fkey"
+      columns: ["revision_id"]
+isOneToOne: false
+      referencedRelation: "engagement_collections"
+      referencedColumns: ["revision_id"]
+    },{
+      foreignKeyName: "engagement_milestones_revision_id_fkey"
+      columns: ["revision_id"]
+isOneToOne: false
+      referencedRelation: "engagement_revisions"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"engagement_revisions": {
+                  Row: {
+                    "accepted_at": string | null,"accepted_by": string | null,"base_cents": number,"closed_at": string | null,"conditions": string | null,"created_at": string,"created_by": string | null,"discount_cents": number,"engagement_id": string,"id": string,"milestones_valid": boolean,"number": number,"organization_id": string,"proposed_at": string | null,"reason": string | null,"status": Database["public"]['Enums']["revision_status"],"subtotal_cents": number,"taxes": NonNullable<Json>,"total_cents": number,"updated_at": string,"vat_cents": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "accepted_at"?: string | null,"accepted_by"?: string | null,"base_cents"?: number,"closed_at"?: string | null,"conditions"?: string | null,"created_at"?: string,"created_by"?: string | null,"discount_cents"?: number,"engagement_id": string,"id"?: string,"milestones_valid"?: boolean,"number": number,"organization_id": string,"proposed_at"?: string | null,"reason"?: string | null,"status"?: Database["public"]['Enums']["revision_status"],"subtotal_cents"?: number,"taxes"?: NonNullable<Json>,"total_cents"?: number,"updated_at"?: string,"vat_cents"?: number
+                  }
+                  Update: {
+                    "accepted_at"?: string | null,"accepted_by"?: string | null,"base_cents"?: number,"closed_at"?: string | null,"conditions"?: string | null,"created_at"?: string,"created_by"?: string | null,"discount_cents"?: number,"engagement_id"?: string,"id"?: string,"milestones_valid"?: boolean,"number"?: number,"organization_id"?: string,"proposed_at"?: string | null,"reason"?: string | null,"status"?: Database["public"]['Enums']["revision_status"],"subtotal_cents"?: number,"taxes"?: NonNullable<Json>,"total_cents"?: number,"updated_at"?: string,"vat_cents"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "engagement_revisions_engagement_id_fkey"
+      columns: ["engagement_id"]
+isOneToOne: false
+      referencedRelation: "engagement_collections"
+      referencedColumns: ["engagement_id"]
+    },{
+      foreignKeyName: "engagement_revisions_engagement_id_fkey"
+      columns: ["engagement_id"]
+isOneToOne: false
+      referencedRelation: "engagements"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "engagement_revisions_organization_id_fkey"
+      columns: ["organization_id"]
+isOneToOne: false
+      referencedRelation: "organizations"
       referencedColumns: ["id"]
     }
                   ]
@@ -227,17 +353,29 @@ isOneToOne: false
                   ]
                 },"engagements": {
                   Row: {
-                    "conditions": string | null,"created_at": string,"created_by": string | null,"delivered_at": string | null,"id": string,"invitation_id": string | null,"organization_id": string,"payment_plan": Database["public"]['Enums']["payment_plan"],"payment_review": boolean,"payment_review_note": string | null,"price_cents": number,"requires_payment": boolean,"requires_signature": boolean,"service_version_id": string,"status": Database["public"]['Enums']["engagement_status"],"status_changed_at": string,"updated_at": string
+                    "created_at": string,"created_by": string | null,"current_revision_id": string | null,"id": string,"invitation_id": string | null,"organization_id": string,"payment_review": boolean,"payment_review_note": string | null,"released_milestones": number,"requires_payment": boolean,"requires_signature": boolean,"status": Database["public"]['Enums']["engagement_status"],"status_changed_at": string,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "conditions"?: string | null,"created_at"?: string,"created_by"?: string | null,"delivered_at"?: string | null,"id"?: string,"invitation_id"?: string | null,"organization_id": string,"payment_plan": Database["public"]['Enums']["payment_plan"],"payment_review"?: boolean,"payment_review_note"?: string | null,"price_cents": number,"requires_payment"?: boolean,"requires_signature"?: boolean,"service_version_id": string,"status"?: Database["public"]['Enums']["engagement_status"],"status_changed_at"?: string,"updated_at"?: string
+                    "created_at"?: string,"created_by"?: string | null,"current_revision_id"?: string | null,"id"?: string,"invitation_id"?: string | null,"organization_id": string,"payment_review"?: boolean,"payment_review_note"?: string | null,"released_milestones"?: number,"requires_payment"?: boolean,"requires_signature"?: boolean,"status"?: Database["public"]['Enums']["engagement_status"],"status_changed_at"?: string,"updated_at"?: string
                   }
                   Update: {
-                    "conditions"?: string | null,"created_at"?: string,"created_by"?: string | null,"delivered_at"?: string | null,"id"?: string,"invitation_id"?: string | null,"organization_id"?: string,"payment_plan"?: Database["public"]['Enums']["payment_plan"],"payment_review"?: boolean,"payment_review_note"?: string | null,"price_cents"?: number,"requires_payment"?: boolean,"requires_signature"?: boolean,"service_version_id"?: string,"status"?: Database["public"]['Enums']["engagement_status"],"status_changed_at"?: string,"updated_at"?: string
+                    "created_at"?: string,"created_by"?: string | null,"current_revision_id"?: string | null,"id"?: string,"invitation_id"?: string | null,"organization_id"?: string,"payment_review"?: boolean,"payment_review_note"?: string | null,"released_milestones"?: number,"requires_payment"?: boolean,"requires_signature"?: boolean,"status"?: Database["public"]['Enums']["engagement_status"],"status_changed_at"?: string,"updated_at"?: string
                   }
                   Relationships: [
                     {
+      foreignKeyName: "engagements_current_revision_fk"
+      columns: ["current_revision_id"]
+isOneToOne: false
+      referencedRelation: "engagement_collections"
+      referencedColumns: ["revision_id"]
+    },{
+      foreignKeyName: "engagements_current_revision_fk"
+      columns: ["current_revision_id"]
+isOneToOne: false
+      referencedRelation: "engagement_revisions"
+      referencedColumns: ["id"]
+    },{
       foreignKeyName: "engagements_invitation_id_fkey"
       columns: ["invitation_id"]
 isOneToOne: false
@@ -249,18 +387,6 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "organizations"
       referencedColumns: ["id"]
-    },{
-      foreignKeyName: "engagements_service_version_id_fkey"
-      columns: ["service_version_id"]
-isOneToOne: false
-      referencedRelation: "service_versions"
-      referencedColumns: ["id"]
-    },{
-      foreignKeyName: "engagements_service_version_id_fkey"
-      columns: ["service_version_id"]
-isOneToOne: false
-      referencedRelation: "services_current"
-      referencedColumns: ["version_id"]
     }
                   ]
                 },"invitations": {
@@ -487,16 +613,30 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
-                },"service_versions": {
+                },"service_categories": {
                   Row: {
-                    "created_at": string,"created_by": string | null,"deposit_percent": number | null,"id": string,"includes": (string)[],"payment_plans": (Database["public"]['Enums']["payment_plan"])[],"price_cents": number,"service_id": string,"vat_rate": number,"version": number
+                    "archived_at": string | null,"created_at": string,"id": string,"name": string,"position": number
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"created_by"?: string | null,"deposit_percent"?: number | null,"id"?: string,"includes"?: (string)[],"payment_plans"?: (Database["public"]['Enums']["payment_plan"])[],"price_cents": number,"service_id": string,"vat_rate"?: number,"version"?: number
+                    "archived_at"?: string | null,"created_at"?: string,"id"?: string,"name": string,"position"?: number
                   }
                   Update: {
-                    "created_at"?: string,"created_by"?: string | null,"deposit_percent"?: number | null,"id"?: string,"includes"?: (string)[],"payment_plans"?: (Database["public"]['Enums']["payment_plan"])[],"price_cents"?: number,"service_id"?: string,"vat_rate"?: number,"version"?: number
+                    "archived_at"?: string | null,"created_at"?: string,"id"?: string,"name"?: string,"position"?: number
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"service_versions": {
+                  Row: {
+                    "created_at": string,"created_by": string | null,"id": string,"includes": (string)[],"price_cents": number,"service_id": string,"vat_rate": number,"version": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"created_by"?: string | null,"id"?: string,"includes"?: (string)[],"price_cents": number,"service_id": string,"vat_rate"?: number,"version"?: number
+                  }
+                  Update: {
+                    "created_at"?: string,"created_by"?: string | null,"id"?: string,"includes"?: (string)[],"price_cents"?: number,"service_id"?: string,"vat_rate"?: number,"version"?: number
                   }
                   Relationships: [
                     {
@@ -515,24 +655,30 @@ isOneToOne: false
                   ]
                 },"services": {
                   Row: {
-                    "archived_at": string | null,"created_at": string,"created_by": string | null,"id": string,"name": string,"summary": string | null,"updated_at": string
+                    "archived_at": string | null,"category_id": string | null,"created_at": string,"created_by": string | null,"id": string,"name": string,"summary": string | null,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "archived_at"?: string | null,"created_at"?: string,"created_by"?: string | null,"id"?: string,"name": string,"summary"?: string | null,"updated_at"?: string
+                    "archived_at"?: string | null,"category_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"id"?: string,"name": string,"summary"?: string | null,"updated_at"?: string
                   }
                   Update: {
-                    "archived_at"?: string | null,"created_at"?: string,"created_by"?: string | null,"id"?: string,"name"?: string,"summary"?: string | null,"updated_at"?: string
+                    "archived_at"?: string | null,"category_id"?: string | null,"created_at"?: string,"created_by"?: string | null,"id"?: string,"name"?: string,"summary"?: string | null,"updated_at"?: string
                   }
                   Relationships: [
-                    
+                    {
+      foreignKeyName: "services_category_id_fkey"
+      columns: ["category_id"]
+isOneToOne: false
+      referencedRelation: "service_categories"
+      referencedColumns: ["id"]
+    }
                   ]
                 }
           }
           Views: {
             "engagement_collections": {
                   Row: {
-                    "balance_cents": number | null,"delivered_at": string | null,"deposit_cents": number | null,"due_now_cents": number | null,"engagement_id": string | null,"organization_id": string | null,"paid_cents": number | null,"payment_plan": Database["public"]['Enums']["payment_plan"] | null,"payment_review": boolean | null,"pending_cents": number | null,"requires_payment": boolean | null,"status": Database["public"]['Enums']["collection_status"] | null,"total_cents": number | null
+                    "balance_cents": number | null,"due_now_cents": number | null,"engagement_id": string | null,"milestones": number | null,"organization_id": string | null,"paid_cents": number | null,"payment_review": boolean | null,"pending_cents": number | null,"released_cents": number | null,"released_milestones": number | null,"requires_payment": boolean | null,"revision_id": string | null,"status": Database["public"]['Enums']["collection_status"] | null,"total_cents": number | null
                   }
                   ComputedFields: never
                   Relationships: [
@@ -560,21 +706,63 @@ isOneToOne: false
                   ]
                 },"services_current": {
                   Row: {
-                    "archived_at": string | null,"created_at": string | null,"deposit_percent": number | null,"id": string | null,"includes": (string)[] | null,"name": string | null,"payment_plans": (Database["public"]['Enums']["payment_plan"])[] | null,"price_cents": number | null,"summary": string | null,"vat_rate": number | null,"version": number | null,"version_id": string | null
+                    "archived_at": string | null,"category_id": string | null,"created_at": string | null,"id": string | null,"includes": (string)[] | null,"name": string | null,"price_cents": number | null,"summary": string | null,"vat_rate": number | null,"version": number | null,"version_id": string | null
                   }
                   ComputedFields: never
                   Relationships: [
-                    
+                    {
+      foreignKeyName: "services_category_id_fkey"
+      columns: ["category_id"]
+isOneToOne: false
+      referencedRelation: "service_categories"
+      referencedColumns: ["id"]
+    }
                   ]
                 }
           }
           Functions: {
-            "accept_invitation":
+            "accept_engagement_revision":
+{ Args: { "p_revision_id": string }; Returns: undefined
+                           },
+"accept_invitation":
 { Args: { "p_token": string }; Returns: string
+                           },
+"add_catalog_line":
+{ Args: { "p_price_cents"?: number,"p_revision_id": string,"p_service_version_id": string }; Returns: string
                            },
 "amount_due_now":
 { Args: { "p_engagement_id": string }; Returns: number
                            },
+"assert_revision_editable":
+{ Args: { "p_revision_id": string }; Returns: {
+              "accepted_at": string | null,
+"accepted_by": string | null,
+"base_cents": number,
+"closed_at": string | null,
+"conditions": string | null,
+"created_at": string,
+"created_by": string | null,
+"discount_cents": number,
+"engagement_id": string,
+"id": string,
+"milestones_valid": boolean,
+"number": number,
+"organization_id": string,
+"proposed_at": string | null,
+"reason": string | null,
+"status": Database["public"]['Enums']["revision_status"],
+"subtotal_cents": number,
+"taxes": NonNullable<Json>,
+"total_cents": number,
+"updated_at": string,
+"vat_cents": number
+            }
+                          SetofOptions: {
+        from: "*"
+        to: "engagement_revisions"
+        isOneToOne: true
+        isSetofReturn: false
+      } },
 "audit_log_purge":
 { Args: { "p_before": string }; Returns: number
                            },
@@ -596,6 +784,9 @@ isOneToOne: false
 "contract_render":
 { Args: { "p_contract_id": string,"p_signer"?: Json }; Returns: string
                            },
+"contract_revision_id":
+{ Args: { "p_contract_id": string }; Returns: string
+                           },
 "contract_transition_allowed":
 { Args: { "p_from": Database["public"]['Enums']["contract_status"],"p_to": Database["public"]['Enums']["contract_status"] }; Returns: boolean
                            },
@@ -609,7 +800,7 @@ isOneToOne: false
 { Args: { "p_contract_id": string }; Returns: boolean
                            },
 "create_client_with_invitation":
-{ Args: { "p_conditions"?: string,"p_email": string,"p_name": string,"p_payment_plan"?: Database["public"]['Enums']["payment_plan"],"p_price_cents"?: number,"p_requires_payment"?: boolean,"p_requires_signature"?: boolean,"p_service_version_id"?: string }; Returns: {
+{ Args: { "p_conditions"?: string,"p_email": string,"p_name": string,"p_price_cents"?: number,"p_requires_payment"?: boolean,"p_requires_signature"?: boolean,"p_service_version_id"?: string }; Returns: {
               "organization_id": string,"token": string
             }[]
                            },
@@ -619,11 +810,17 @@ isOneToOne: false
 "delegate_contract_signature":
 { Args: { "p_contract_id": string,"p_email": string }; Returns: string
                            },
+"engagement_revision_recalculate":
+{ Args: { "p_revision_id": string }; Returns: undefined
+                           },
 "engagement_transition_allowed":
 { Args: { "p_from": Database["public"]['Enums']["engagement_status"],"p_to": Database["public"]['Enums']["engagement_status"] }; Returns: boolean
                            },
 "format_eur":
 { Args: { "p_cents": number }; Returns: string
+                           },
+"format_percent":
+{ Args: { "p_rate": number }; Returns: string
                            },
 "hook_before_user_created":
 { Args: { "event": Json }; Returns: Json
@@ -635,7 +832,7 @@ isOneToOne: false
 { Args: { "p_email": string,"p_engagement_id": string }; Returns: string
                            },
 "invite_to_service":
-{ Args: { "p_conditions"?: string,"p_email": string,"p_organization_id": string,"p_payment_plan"?: Database["public"]['Enums']["payment_plan"],"p_price_cents"?: number,"p_requires_payment"?: boolean,"p_requires_signature"?: boolean,"p_service_version_id": string }; Returns: string
+{ Args: { "p_conditions"?: string,"p_email": string,"p_organization_id": string,"p_price_cents"?: number,"p_requires_payment"?: boolean,"p_requires_signature"?: boolean,"p_service_version_id": string }; Returns: string
                            },
 "is_admin":
 { Args: Record<PropertyKey, never>; Returns: boolean
@@ -649,6 +846,12 @@ isOneToOne: false
 "log_client_view":
 { Args: { "p_organization_id": string }; Returns: undefined
                            },
+"money_percent":
+{ Args: { "p_cents": number,"p_rate": number }; Returns: number
+                           },
+"money_split":
+{ Args: { "p_total": number,"p_weights": (number)[] }; Returns: (number)[]
+                           },
 "org_role_of":
 { Args: { "p_organization_id": string }; Returns: Database["public"]['Enums']["org_role"]
                            },
@@ -659,6 +862,9 @@ isOneToOne: false
                            },
 "project_transition_allowed":
 { Args: { "p_from": Database["public"]['Enums']["project_status"],"p_to": Database["public"]['Enums']["project_status"] }; Returns: boolean
+                           },
+"revision_ready":
+{ Args: { "p_revision_id": string }; Returns: boolean
                            },
 "session_otp_verified_at":
 { Args: { "p_seconds"?: number }; Returns: string
@@ -674,7 +880,7 @@ isOneToOne: false
                            }
           }
           Enums: {
-            "briefing_kind": "texto"|"color"|"tipografia"|"enlace","briefing_status": "pendiente"|"mas_tarde"|"no_aplica"|"aportado"|"cambios"|"validado","collection_status": "no_pagado"|"parcialmente_pagado"|"pagado"|"pendiente_revision","contract_status": "borrador"|"enviado"|"firmado"|"anulado"|"sustituido","engagement_status": "borrador"|"invitada"|"datos_completos"|"firmada"|"activa"|"finalizada"|"cancelada"|"rescindida","org_role": "owner"|"member"|"billing","payment_method": "transferencia"|"otro"|"stripe","payment_plan": "pago_unico"|"senal_entrega","payment_status": "pendiente"|"confirmado"|"fallido"|"devuelto"|"anulado","platform_role": "client"|"staff"|"admin","project_status": "briefing"|"diseno"|"desarrollo"|"revision"|"lanzado"|"mantenimiento"|"en_pausa"|"cancelado"
+            "briefing_kind": "texto"|"color"|"tipografia"|"enlace","briefing_status": "pendiente"|"mas_tarde"|"no_aplica"|"aportado"|"cambios"|"validado","collection_status": "no_pagado"|"parcialmente_pagado"|"pagado"|"pendiente_revision","contract_status": "borrador"|"enviado"|"firmado"|"anulado"|"sustituido","engagement_status": "borrador"|"invitada"|"datos_completos"|"firmada"|"activa"|"finalizada"|"cancelada"|"rescindida","org_role": "owner"|"member"|"billing","payment_method": "transferencia"|"otro"|"stripe","payment_status": "pendiente"|"confirmado"|"fallido"|"devuelto"|"anulado","platform_role": "client"|"staff"|"admin","project_status": "briefing"|"diseno"|"desarrollo"|"revision"|"lanzado"|"mantenimiento"|"en_pausa"|"cancelado","revision_status": "borrador"|"propuesta"|"aceptada"|"sustituida"|"descartada"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -790,7 +996,7 @@ export type CompositeTypes<
 export const Constants = {
   "public": {
           Enums: {
-            "briefing_kind": ["texto", "color", "tipografia", "enlace"],"briefing_status": ["pendiente", "mas_tarde", "no_aplica", "aportado", "cambios", "validado"],"collection_status": ["no_pagado", "parcialmente_pagado", "pagado", "pendiente_revision"],"contract_status": ["borrador", "enviado", "firmado", "anulado", "sustituido"],"engagement_status": ["borrador", "invitada", "datos_completos", "firmada", "activa", "finalizada", "cancelada", "rescindida"],"org_role": ["owner", "member", "billing"],"payment_method": ["transferencia", "otro", "stripe"],"payment_plan": ["pago_unico", "senal_entrega"],"payment_status": ["pendiente", "confirmado", "fallido", "devuelto", "anulado"],"platform_role": ["client", "staff", "admin"],"project_status": ["briefing", "diseno", "desarrollo", "revision", "lanzado", "mantenimiento", "en_pausa", "cancelado"]
+            "briefing_kind": ["texto", "color", "tipografia", "enlace"],"briefing_status": ["pendiente", "mas_tarde", "no_aplica", "aportado", "cambios", "validado"],"collection_status": ["no_pagado", "parcialmente_pagado", "pagado", "pendiente_revision"],"contract_status": ["borrador", "enviado", "firmado", "anulado", "sustituido"],"engagement_status": ["borrador", "invitada", "datos_completos", "firmada", "activa", "finalizada", "cancelada", "rescindida"],"org_role": ["owner", "member", "billing"],"payment_method": ["transferencia", "otro", "stripe"],"payment_status": ["pendiente", "confirmado", "fallido", "devuelto", "anulado"],"platform_role": ["client", "staff", "admin"],"project_status": ["briefing", "diseno", "desarrollo", "revision", "lanzado", "mantenimiento", "en_pausa", "cancelado"],"revision_status": ["borrador", "propuesta", "aceptada", "sustituida", "descartada"]
           }
         }
 } as const

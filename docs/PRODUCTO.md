@@ -103,8 +103,8 @@ R3ZON (panel)                         Cliente
                                           qué incluye su servicio y qué pasará ahora
                                        7. Datos para contrato y factura
                                           (razón social, NIF, dirección, firmante)
-                                       8. Modalidad de pago (la fija R3ZON, T-31): pago único
-                                          o señal + entrega, por transferencia/SEPA o tarjeta
+                                       8. Ve los servicios, precios y pagos que fijó R3ZON
+                                          (T-34–T-38) y los acepta al dar sus datos
                                        9. Previsualiza el contrato → lo firma
                                       10. Paga (Stripe)
                                       11. Enhorabuena: copia del contrato y factura
@@ -124,8 +124,8 @@ Detalles que el diseño tiene que resolver (ver [PLAN.md](PLAN.md) → Fase 3 y 
 - **El pago por transferencia o SEPA no es inmediato** (días). El paso 11 tiene dos
   variantes: «pago recibido» y «pago en curso: te avisaremos». El proyecto puede
   arrancar con el contrato firmado y el pago en curso si R3ZON lo decide.
-- **Señal + entrega**: se cobra la señal en el onboarding; el resto se cobra cuando R3ZON
-  marque la entrega (el cliente recibe aviso y paga desde el portal).
+- **Pagos por hitos** (T-38): el primero se pide en el onboarding; los siguientes, cuando
+  R3ZON los libera (p. ej. a la entrega). Señal + entrega es un caso de dos hitos.
 - **Abandonar a mitad**: el onboarding se retoma donde se dejó, y R3ZON ve en qué paso
   está cada cliente.
 

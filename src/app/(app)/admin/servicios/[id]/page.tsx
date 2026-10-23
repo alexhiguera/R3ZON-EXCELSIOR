@@ -7,8 +7,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
 import { FormAccion } from "@/components/ui/FormAccion";
 import { nivelActual } from "@/lib/auth/nivel";
-import { euros, fecha } from "@/lib/formato";
-import { ETIQUETA_PLAN } from "@/modulos/servicios";
+import { euros, fecha, porcentaje } from "@/lib/formato";
 import { servicio } from "@/modulos/servicios/servidor";
 import { accionArchivarServicio, accionNuevaVersion } from "../actions";
 import { CamposCondiciones } from "../CamposCondiciones";
@@ -61,19 +60,9 @@ export default async function ServicioPage({ params }: { params: Promise<{ id: s
                   <strong>v{v.version}</strong>
                   {i === 0 && <Badge tone="success">Vigente</Badge>}
                   <span className="text-sm">
-                    {euros(v.price_cents)} + {v.vat_rate} % IVA
+                    {euros(v.price_cents)} + {porcentaje(v.vat_rate)} IVA
                   </span>
                   <span className="text-xs text-muted">desde el {fecha(v.created_at)}</span>
-                </span>
-                <span className="flex flex-wrap gap-1">
-                  {v.payment_plans.map((p) => (
-                    <Badge key={p} tone="brand">
-                      {ETIQUETA_PLAN[p]}
-                      {p === "senal_entrega" && v.deposit_percent
-                        ? ` (${v.deposit_percent} %)`
-                        : ""}
-                    </Badge>
-                  ))}
                 </span>
                 {v.includes.length > 0 && (
                   <ul className="list-inside list-disc text-sm text-muted">

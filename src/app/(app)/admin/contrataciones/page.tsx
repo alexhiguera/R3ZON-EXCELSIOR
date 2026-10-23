@@ -129,7 +129,7 @@ function FilaContratacion({ c, cobro }: { c: Contratacion; cobro: ResumenCobro |
             href={`/admin/contrataciones/${c.id}`}
             className="text-sm text-muted hover:underline"
           >
-            {c.servicio} · {euros(c.price_cents)} + IVA
+            {c.titulo} · {euros(c.total_cents)} IVA incl.
           </Link>
         </span>
         <span className="flex flex-wrap items-center gap-2 text-xs text-muted">

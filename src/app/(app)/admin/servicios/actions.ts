@@ -4,7 +4,12 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { EstadoForm } from "@/components/ui/FormAccion";
 import { leerCondiciones } from "@/modulos/servicios";
-import { archivarServicio, crearServicio, nuevaVersion } from "@/modulos/servicios/servidor";
+import {
+  archivarServicio,
+  crearCategoria,
+  crearServicio,
+  nuevaVersion,
+} from "@/modulos/servicios/servidor";
 
 /* Solo admin: lo aplica la RLS (services_insert_admin…), no este fichero. */
 
@@ -12,7 +17,11 @@ export async function accionCrearServicio(_: EstadoForm, datos: FormData): Promi
   const condiciones = leerCondiciones(datos);
   if (!condiciones.ok) return { error: condiciones.error };
   const r = await crearServicio(
-    { nombre: String(datos.get("nombre") ?? ""), resumen: String(datos.get("resumen") ?? "") },
+    {
+      nombre: String(datos.get("nombre") ?? ""),
+      resumen: String(datos.get("resumen") ?? ""),
+      categoria: String(datos.get("categoria") ?? ""),
+    },
     condiciones.datos,
   );
   if (!r.ok) return { error: r.error };
@@ -45,4 +54,11 @@ export async function accionArchivarServicio(
   revalidatePath(`/admin/servicios/${id}`);
   revalidatePath("/admin/servicios");
   return { error: null, ok: archivar ? "Servicio archivado." : "Servicio reactivado." };
+}
+
+export async function accionCrearCategoria(_: EstadoForm, datos: FormData): Promise<EstadoForm> {
+  const r = await crearCategoria(String(datos.get("nombre") ?? ""));
+  if (!r.ok) return { error: r.error };
+  revalidatePath("/admin/servicios");
+  return { error: null, ok: "Categoría añadida." };
 }

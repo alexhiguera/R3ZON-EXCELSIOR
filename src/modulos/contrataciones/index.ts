@@ -2,7 +2,9 @@
 export {
   CIERRES_MANUALES,
   ESTADOS,
+  ESTADOS_REVISION,
   type Estado,
+  type EstadoRevision,
   ETAPAS,
   type Etapa,
   etapaEmbudo,

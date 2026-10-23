@@ -85,36 +85,92 @@ export function eventoAlta(email: string, provider: "email" | "google", metadata
   });
 }
 
+/** Id de una categoría de servicio por su nombre (las crea la migración). */
+export async function categoria(c: Client, nombre = "Desarrollo web"): Promise<string> {
+  const { rows } = await c.query<{ id: string }>(
+    "select id from public.service_categories where name = $1",
+    [nombre],
+  );
+  return rows[0]!.id;
+}
+
 /** Crea un servicio con su primera versión (como postgres). Devuelve los ids. */
 export async function crearServicio(
   c: Client,
   nombre: string,
-  opciones: { precio?: number; planes?: string[]; senal?: number | null } = {},
+  opciones: { precio?: number; iva?: string } = {},
 ): Promise<{ serviceId: string; versionId: string }> {
   const s = await c.query<{ id: string }>(
-    "insert into public.services (name) values ($1) returning id",
-    [nombre],
+    "insert into public.services (name, category_id) values ($1, $2) returning id",
+    [nombre, await categoria(c)],
   );
   const serviceId = s.rows[0]!.id;
   const v = await c.query<{ id: string }>(
-    `insert into public.service_versions (service_id, price_cents, payment_plans, deposit_percent)
-     values ($1, $2, $3::public.payment_plan[], $4) returning id`,
-    [
-      serviceId,
-      opciones.precio ?? 150000,
-      opciones.planes ?? ["pago_unico"],
-      opciones.senal ?? null,
-    ],
+    `insert into public.service_versions (service_id, price_cents, vat_rate)
+     values ($1, $2, $3) returning id`,
+    [serviceId, opciones.precio ?? 150000, opciones.iva ?? "21"],
   );
   return { serviceId, versionId: v.rows[0]!.id };
 }
 
-/** Crea una contratación en borrador (como postgres). */
-export async function crearContratacion(c: Client, organizationId: string, versionId: string) {
+/** Revisión de condiciones vigente de una contratación. */
+export async function revisionDe(c: Client, engagementId: string): Promise<string> {
   const { rows } = await c.query<{ id: string }>(
-    `insert into public.engagements (organization_id, service_version_id, price_cents)
-     values ($1, $2, 150000) returning id`,
-    [organizationId, versionId],
+    "select current_revision_id as id from public.engagements where id = $1",
+    [engagementId],
+  );
+  return rows[0]!.id;
+}
+
+/**
+ * Crea una contratación en borrador (como postgres) con UNA línea copiada del
+ * servicio (`precio` en céntimos, sin IVA; 150000 si no se dice).
+ */
+export async function crearContratacion(
+  c: Client,
+  organizationId: string,
+  versionId: string,
+  precio = 150000,
+) {
+  const { rows } = await c.query<{ id: string }>(
+    "insert into public.engagements (organization_id) values ($1) returning id",
+    [organizationId],
+  );
+  const id = rows[0]!.id;
+  await c.query("select public.add_catalog_line($1, $2, $3)", [
+    await revisionDe(c, id),
+    versionId,
+    precio,
+  ]);
+  return id;
+}
+
+/** Añade una línea a medida a una revisión (como quien esté actuando). */
+export async function anadirLinea(
+  c: Client,
+  revisionId: string,
+  linea: {
+    nombre?: string;
+    precio: number;
+    iva?: string;
+    descuentoPorcentaje?: string | null;
+    descuentoImporte?: number | null;
+    categoriaId?: string;
+  },
+): Promise<string> {
+  const { rows } = await c.query<{ id: string }>(
+    `insert into public.engagement_lines
+       (revision_id, category_id, name, unit_price_cents, vat_rate, discount_percent, discount_amount_cents)
+     values ($1, $2, $3, $4, $5, $6, $7) returning id`,
+    [
+      revisionId,
+      linea.categoriaId ?? (await categoria(c)),
+      linea.nombre ?? "Servicio a medida",
+      linea.precio,
+      linea.iva ?? "21",
+      linea.descuentoPorcentaje ?? null,
+      linea.descuentoImporte ?? null,
+    ],
   );
   return rows[0]!.id;
 }

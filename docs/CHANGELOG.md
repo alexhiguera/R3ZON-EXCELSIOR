@@ -7,6 +7,62 @@ nunca se renumeran.
 
 ---
 
+### Iteración 9 — *2026-10-23* — Condiciones económicas antes de invitar, en céntimos exactos
+
+Requisito de R3ZON: antes de invitar, el equipo fija qué servicios contrata el cliente
+(uno o varios, del catálogo o a medida, con categoría ampliable), su precio, descuento e
+IVA, el total y cómo se paga; el cliente ve esas cifras, no puede cambiarlas y solo paga
+lo que la base autoriza. Decisiones de R3ZON (T-34 a T-38): IVA por tipo sobre la suma
+de bases, descuentos por línea (% o importe), revisiones que acepta el cliente (firmando
+un contrato nuevo si ya firmó) e hitos de pago libres.
+
+- **Céntimos y una sola política de redondeo** (ARCHITECTURE §18). Ya se guardaba todo en
+  céntimos, pero el redondeo estaba repartido (cada consulta hacía su `round`). Ahora vive
+  en un módulo base (`money_percent`, `money_split`, `format_eur`): un redondeo por
+  porcentaje, medio céntimo hacia arriba; IVA una vez por tipo; reparto de hitos con los
+  céntimos sobrantes en los últimos (1.000 € en 3 = 333,33 + 333,33 + 333,34). Le
+  expliqué a R3ZON que trabajar en céntimos no elimina el redondeo de un porcentaje (21 %
+  de 10,50 € = 220,5 céntimos): lo que se garantiza es que ocurra una vez y con una regla.
+- **Condiciones por revisiones** (línea base reescrita, T-18): la contratación pierde
+  precio, condiciones y modalidad; las condiciones van en `engagement_revisions` con sus
+  líneas (`engagement_lines`) e hitos (`engagement_milestones`). Un trigger recalcula y
+  **guarda** bases, desglose de IVA, total e importes de los hitos; nadie más puede
+  escribir esas columnas. Al dar sus datos, el cliente acepta la revisión 1 y queda
+  inmutable. Descartado calcular los totales en una vista: un cambio futuro de la
+  fórmula recalcularía en silencio lo ya aceptado.
+- **Cambios**: revisión nueva (copia), que el equipo edita y propone; el cliente la
+  acepta en el portal o, con contrato firmado, firmando el contrato nuevo, que se compone
+  con la revisión propuesta y deja el anterior como «sustituido». El contrato firmado
+  guarda la revisión que cubre (`contracts.revision_id`). Aceptar solo pasa dentro de las
+  funciones del cliente: el equipo no puede aceptar por él (lo comprueba un test).
+- **Hitos libres** sustituyen a pago único / señal + entrega (T-31): importe fijo o peso;
+  R3ZON los libera de uno en uno (`released_milestones`, con control de concurrencia por
+  el valor visto, para que un doble clic no libere dos). `amount_due_now` = hitos
+  liberados − cobrado: es el único importe que usará Stripe.
+- **Catálogo como plantilla**: categorías en tabla (8 de partida; admin añade más), sin
+  modalidades ni señal; el IVA viaja como texto exacto. El cliente ya no lee el catálogo:
+  todo lo que ve está copiado en sus líneas.
+- Contrato: huecos nuevos `servicios.detalle`, `precio.descuento`, `pago.hitos`,
+  `contrato.revision`; quitados los que dependían de un único servicio.
+- App: `src/lib/dinero.ts` (texto ↔ céntimos con BigInt; antes `euros()` dividía entre
+  100 en coma flotante para formatear); sección «Condiciones económicas» en la
+  contratación (servicios, descuentos, pagos, revisión del total y cambios); la
+  invitación enseña lo que verá el cliente; bienvenida y pago del cliente con el desglose;
+  página para aceptar un cambio. La «Nueva contratación» ya no obliga a elegir un servicio
+  del catálogo: lo cazó el E2E, que creaba la contratación con el primero de la lista.
+- Tests: `tests/unit/dinero.test.ts` (conversión exacta, también casos que en coma
+  flotante pierden un céntimo: 0,29 y 1,13), `tests/db/contrataciones-condiciones.test.ts`
+  (redondeo, IVA por tipo, descuentos, hitos, pagos parciales, importes elevados,
+  manipulación por el cliente y por el equipo, revisiones), sustitución de contrato
+  firmado, categorías, y E2E `condiciones.spec.ts` de punta a punta.
+- Errores del camino: un `sed` de un script anterior se llevó medio paso de pago; el
+  mensaje de un precio negativo decía «el descuento supera el precio» (ahora lo dice
+  claro); un test ordenaba dos contratos por `created_at` dentro de la misma transacción
+  (mismo instante): fallaba una de cada dos veces. Desempate por `id` (UUIDv7) en el test
+  y en `contratoDe`. En un borrador llegué a convertir céntimos a euros con `/ 100` para
+  reenviarlos: corregido antes de ejecutarlo, ahora viajan en céntimos.
+- Pendiente: confirmar con ANTARES que redondea igual (TAREAS).
+
 ### Iteración 8 — *2026-10-23* — Modalidad de pago, señal + entrega y Fase 5: proyecto y briefing
 
 R3ZON decide (2026-10-23): pago **embebido** con Stripe, aparcado hasta tener cuenta de

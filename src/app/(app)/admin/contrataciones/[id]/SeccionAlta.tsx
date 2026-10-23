@@ -2,6 +2,7 @@ import { Card } from "@/components/ui/Card";
 import { Field } from "@/components/ui/Field";
 import { FormAccion } from "@/components/ui/FormAccion";
 import { Input } from "@/components/ui/Input";
+import { euros } from "@/lib/formato";
 import { ESTADOS_COBRO } from "@/modulos/cobros";
 import { resumenCobro } from "@/modulos/cobros/servidor";
 import { puedeActivarse } from "@/modulos/contrataciones";
@@ -40,6 +41,21 @@ export async function SeccionAlta({ e }: { e: DetalleContratacion }) {
                 : "Hay una invitación enviada. Reenviar crea un enlace nuevo y anula el anterior."}
             </p>
           )}
+          {e.vigente.lineas.length > 0 && e.vigente.milestones_valid ? (
+            <p className="text-sm" data-testid="resumen-invitacion">
+              El cliente verá: {e.titulo} · <strong>{euros(e.vigente.total_cents)}</strong> IVA
+              incluido
+              {e.vigente.hitos.length > 1 ? ` en ${e.vigente.hitos.length} pagos` : ""}.
+            </p>
+          ) : (
+            <p
+              role="note"
+              className="rounded-xl border border-warning/40 bg-warning/10 p-3 text-sm"
+            >
+              Antes de invitar, completa las condiciones económicas: algún servicio y pagos que
+              sumen el total.
+            </p>
+          )}
           <FormAccion
             accion={accionInvitarContratacion.bind(null, e.id)}
             boton={e.invitada ? "Reenviar invitación" : "Crear invitación"}
@@ -63,9 +79,6 @@ export async function SeccionAlta({ e }: { e: DetalleContratacion }) {
             firma={e.requires_signature}
             pago={e.requires_payment}
             firmaBloqueada={!["borrador", "invitada", "datos_completos"].includes(e.status)}
-            modalidad={e.payment_plan}
-            planes={e.payment_plans}
-            modalidadBloqueada={!invitable}
           />
         </FormAccion>
       )}

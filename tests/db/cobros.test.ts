@@ -33,8 +33,7 @@ async function escenario(c: C) {
   await hacerStaff(c, staff);
   const org = await crearOrganizacion(c, "Acme");
   const { versionId } = await crearServicio(c, `Web ${Math.random()}`, { precio: 100000 });
-  const e = await crearContratacion(c, org, versionId);
-  await c.query("update public.engagements set price_cents = 100000 where id = $1", [e]);
+  const e = await crearContratacion(c, org, versionId, 100000);
   return { staff, org, e };
 }
 
@@ -354,11 +353,14 @@ describe.skipIf(!db)("cobros: concurrencia", () => {
       )
     ).rows[0].id;
     const e = (
-      await db!.query(
-        "insert into public.engagements (organization_id, service_version_id, price_cents) values ($1, $2, 100000) returning id",
-        [org, v],
-      )
+      await db!.query("insert into public.engagements (organization_id) values ($1) returning id", [
+        org,
+      ])
     ).rows[0].id;
+    await db!.query(
+      "select public.add_catalog_line((select current_revision_id from public.engagements where id = $1), $2)",
+      [e, v],
+    );
 
     const otra = new Client({ connectionString: urlBaseLocal() });
     await otra.connect();
@@ -382,130 +384,5 @@ describe.skipIf(!db)("cobros: concurrencia", () => {
       await db!.query("rollback").catch(() => undefined);
       await otra.end();
     }
-  });
-});
-
-describe.skipIf(!db)("cobros: señal + entrega (T-31)", () => {
-  async function conSenal(c: C) {
-    const staff = await createAuthUser(c, { email: `staff-${Math.random()}@r3zon.test` });
-    await hacerStaff(c, staff);
-    const org = await crearOrganizacion(c, "Acme");
-    const { versionId } = await crearServicio(c, `Web ${Math.random()}`, {
-      precio: 100000,
-      planes: ["senal_entrega", "pago_unico"],
-      senal: 30,
-    });
-    const e = await crearContratacion(c, org, versionId);
-    await c.query(
-      "update public.engagements set price_cents = 100000, status = 'invitada' where id = $1",
-      [e],
-    );
-    await c.query("update public.engagements set status = 'datos_completos' where id = $1", [e]);
-    return { staff, org, e };
-  }
-
-  const exigible = async (c: C, e: string) =>
-    (await c.query("select public.amount_due_now($1)::int as x", [e])).rows[0].x;
-
-  it("pide solo la señal hasta la entrega y el resto después", async () => {
-    await inRollback(async (c) => {
-      const { staff, e } = await conSenal(c);
-      const fila = await c.query(
-        "select payment_plan, deposit_cents::int as senal from public.engagement_collections where engagement_id = $1",
-        [e],
-      );
-      // La primera modalidad del servicio, y la señal sobre el total con IVA: 30 % de 1.210 €.
-      expect(fila.rows[0]).toEqual({ payment_plan: "senal_entrega", senal: 36300 });
-      expect(await exigible(c, e)).toBe(36300);
-
-      await actAs(c, staff);
-      await cobroExterno(c, e, 36300);
-      expect(await estado(c, e)).toMatchObject({ status: "parcialmente_pagado", exigible: 0 });
-
-      await c.query("update public.engagements set delivered_at = now() where id = $1", [e]);
-      expect(await exigible(c, e)).toBe(84700);
-    });
-  });
-
-  it("una señal pagada de más no se vuelve a pedir: solo el saldo tras la entrega", async () => {
-    await inRollback(async (c) => {
-      const { staff, e } = await conSenal(c);
-      await actAs(c, staff);
-      await cobroExterno(c, e, 50000);
-      expect(await exigible(c, e)).toBe(0);
-      await c.query("update public.engagements set delivered_at = now() where id = $1", [e]);
-      expect(await exigible(c, e)).toBe(71000);
-    });
-  });
-
-  it("la entrega se marca una vez, con la hora de la base, y no se desmarca", async () => {
-    await inRollback(async (c) => {
-      const { staff, e } = await conSenal(c);
-      await actAs(c, staff);
-      await c.query("update public.engagements set delivered_at = '2000-01-01' where id = $1", [e]);
-      const { rows } = await c.query(
-        "select delivered_at > now() - interval '1 minute' as ahora from public.engagements where id = $1",
-        [e],
-      );
-      expect(rows[0].ahora).toBe(true);
-      expect(
-        await fallo(c, "update public.engagements set delivered_at = null where id = $1", [e]),
-      ).toMatch(/ya está marcada/);
-      expect(
-        await fallo(
-          c,
-          "update public.engagements set delivered_at = now() + interval '1 day' where id = $1",
-          [e],
-        ),
-      ).toMatch(/ya está marcada/);
-    });
-  });
-
-  it("no hay entrega con pago único, ni antes de que el cliente dé sus datos", async () => {
-    await inRollback(async (c) => {
-      const { staff, e } = await escenario(c);
-      await actAs(c, staff);
-      expect(
-        await fallo(c, "update public.engagements set delivered_at = now() where id = $1", [e]),
-      ).toMatch(/señal \+ entrega/);
-
-      await comoPostgres(c);
-      const org = await crearOrganizacion(c, "Temprana");
-      const { versionId } = await crearServicio(c, `Señal ${Math.random()}`, {
-        planes: ["senal_entrega"],
-        senal: 40,
-      });
-      const temprana = await crearContratacion(c, org, versionId);
-      await actAs(c, staff);
-      expect(
-        await fallo(c, "update public.engagements set delivered_at = now() where id = $1", [
-          temprana,
-        ]),
-      ).toMatch(/No se puede marcar la entrega en estado borrador/);
-    });
-  });
-
-  it("el cliente no marca la entrega: solo el equipo, y queda en el registro", async () => {
-    await inRollback(async (c) => {
-      const { staff, org, e } = await conSenal(c);
-      const cliente = await createAuthUser(c, { email: `cli-${Math.random()}@acme.test` });
-      await hacerMiembro(c, org, cliente, "owner");
-
-      await actAs(c, cliente);
-      const r = await c.query(
-        "update public.engagements set delivered_at = now() where id = $1 returning id",
-        [e],
-      );
-      expect(r.rowCount).toBe(0); // la RLS no le deja escribir la contratación
-
-      await actAs(c, staff);
-      await c.query("update public.engagements set delivered_at = now() where id = $1", [e]);
-      await comoPostgres(c);
-      const log = await c.query(
-        "select 1 from public.audit_log where action = 'engagement.delivered' and organization_id = $1",
-        [org],
-      );
-      expect(log.rowCount).toBe(1);
-    });
   });
 });

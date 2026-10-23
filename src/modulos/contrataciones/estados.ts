@@ -32,6 +32,17 @@ export const TRANSICIONES: Record<Estado, readonly Estado[]> = {
   rescindida: [],
 };
 
+/** Estado de unas condiciones económicas (revisión). Aceptada = inmutable. */
+export type EstadoRevision = Database["public"]["Enums"]["revision_status"];
+
+export const ESTADOS_REVISION: Record<EstadoRevision, { etiqueta: string; tono: Tono }> = {
+  borrador: { etiqueta: "En preparación", tono: "neutral" },
+  propuesta: { etiqueta: "Propuesta al cliente", tono: "warning" },
+  aceptada: { etiqueta: "Aceptada", tono: "success" },
+  sustituida: { etiqueta: "Sustituida", tono: "neutral" },
+  descartada: { etiqueta: "Descartada", tono: "neutral" },
+};
+
 /**
  * Cierres que el equipo puede hacer a mano desde el panel. Activar va aparte
  * (botón propio, con aviso del estado de cobro): lo decide R3ZON (T-26).

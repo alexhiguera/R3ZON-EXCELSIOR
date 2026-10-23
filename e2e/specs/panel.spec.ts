@@ -35,12 +35,13 @@ test.describe("panel de R3ZON", () => {
 
     await entrar(page, ADMIN_E2E);
 
-    // 1. Catálogo: servicio con señal + entrega.
+    // 1. Catálogo: servicio con su tipo y precio por defecto.
     await page.goto("/admin/servicios");
     await page.getByLabel("Nombre", { exact: true }).fill(servicio);
+    await page
+      .getByLabel("Tipo de servicio", { exact: true })
+      .selectOption({ label: "Desarrollo web" });
     await page.getByLabel("Precio (€, sin IVA)").fill("1.500");
-    await page.getByLabel("Señal + entrega").check();
-    await page.getByLabel("Señal (%)").fill("40");
     await page.getByLabel("Qué incluye").fill("Diseño a medida\nSEO básico");
     await page.getByRole("button", { name: "Crear servicio" }).click();
     await expect(page.getByRole("heading", { level: 1 })).toContainText(servicio);
@@ -65,7 +66,8 @@ test.describe("panel de R3ZON", () => {
     expect(enlace).toMatch(/\/invitacion\/[0-9a-f]{64}$/);
     await page.reload();
     await expect(page.getByTestId("invitacion")).toHaveText(email);
-    await expect(page.getByTestId("contratacion")).toContainText("1200,00");
+    // Precio pactado 1.200 € + 21 % de IVA: la ficha enseña el total.
+    await expect(page.getByTestId("contratacion")).toContainText("1.452,00");
     await expect(page.getByTestId("contratacion")).toContainText("Invitada");
 
     // 4. El invitado crea su cuenta desde el enlace (otro navegador, sin sesión).

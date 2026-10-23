@@ -67,36 +67,26 @@ describe("leerCondiciones", () => {
       form({
         precio: "1.500,50",
         iva: "21",
-        planes: ["pago_unico", "senal_entrega"],
-        senal: "40",
         incluye: " Diseño \nSEO\n\nDiseño",
       }),
     );
     expect(r).toEqual({
       ok: true,
-      datos: {
-        price_cents: 150050,
-        vat_rate: 21,
-        payment_plans: ["pago_unico", "senal_entrega"],
-        deposit_percent: 40,
-        includes: ["Diseño", "SEO"],
-      },
+      // El IVA va como texto exacto a la base; nada de coma flotante.
+      datos: { price_cents: 150050, vat_rate: "21", includes: ["Diseño", "SEO"] },
     });
   });
 
-  it("sin señal + entrega, la señal se ignora", () => {
-    const r = leerCondiciones(
-      form({ precio: "100", iva: "21", planes: "pago_unico", senal: "50", incluye: "" }),
-    );
-    expect(r.ok && r.datos.deposit_percent).toBeNull();
+  it("acepta IVA con decimales sin convertirlo a número", () => {
+    const r = leerCondiciones(form({ precio: "100", iva: "10,5", incluye: "" }));
+    expect(r.ok && r.datos.vat_rate).toBe("10.5");
   });
 
   it.each([
-    [{ precio: "abc", iva: "21", planes: "pago_unico", incluye: "" }, /precio/],
-    [{ precio: "100", iva: "21", incluye: "" }, /modalidad/],
-    [{ precio: "100", iva: "21", planes: "senal_entrega", senal: "", incluye: "" }, /señal/],
-    [{ precio: "100", iva: "21", planes: "senal_entrega", senal: "100", incluye: "" }, /señal/],
-    [{ precio: "100", iva: "150", planes: "pago_unico", incluye: "" }, /./],
+    [{ precio: "abc", iva: "21", incluye: "" }, /precio/],
+    [{ precio: "-100", iva: "21", incluye: "" }, /precio/],
+    [{ precio: "100", iva: "150", incluye: "" }, /IVA/],
+    [{ precio: "100", iva: "21,555", incluye: "" }, /IVA/],
   ])("rechaza %j", (campos, mensaje) => {
     const r = leerCondiciones(form(campos));
     expect(r.ok).toBe(false);

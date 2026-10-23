@@ -160,9 +160,10 @@ model contract_templates {
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model contracts {
   id                         String                       @id @default(dbgenerated("uuidv7()")) @db.Uuid
-  engagement_id              String                       @unique(map: "contracts_one_live_per_engagement", where: raw("(status = ANY (ARRAY['borrador'::contract_status, 'enviado'::contract_status, 'firmado'::contract_status]))")) @db.Uuid
+  engagement_id              String                       @unique(map: "contracts_one_pending_per_engagement", where: raw("(status = ANY (ARRAY['borrador'::contract_status, 'enviado'::contract_status]))")) @db.Uuid
   organization_id            String                       @db.Uuid
   template_version_id        String                       @db.Uuid
+  revision_id                String?                      @db.Uuid
   status                     contract_status              @default(borrador)
   delegated_email            String?
   signed_text                String?
@@ -177,12 +178,101 @@ model contracts {
   contract_signatures        contract_signatures?
   engagements                engagements                  @relation(fields: [engagement_id], references: [id], onUpdate: NoAction)
   organizations              organizations                @relation(fields: [organization_id], references: [id], onUpdate: NoAction)
+  engagement_revisions       engagement_revisions?        @relation(fields: [revision_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
   contract_template_versions contract_template_versions   @relation(fields: [template_version_id], references: [id], onUpdate: NoAction)
 
   @@index([created_by])
   @@index([engagement_id])
   @@index([organization_id])
+  @@index([revision_id])
   @@index([template_version_id])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model engagement_lines {
+  id                    String               @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  revision_id           String               @db.Uuid
+  organization_id       String               @db.Uuid
+  position              Int
+  category_id           String               @db.Uuid
+  service_version_id    String?              @db.Uuid
+  name                  String
+  description           String?
+  unit_price_cents      BigInt
+  discount_percent      Decimal?             @db.Decimal(5, 2)
+  discount_amount_cents BigInt?
+  vat_rate              Decimal              @db.Decimal(5, 2)
+  discount_cents        BigInt               @default(0)
+  base_cents            BigInt               @default(0)
+  created_at            DateTime             @default(now()) @db.Timestamptz(6)
+  service_categories    service_categories   @relation(fields: [category_id], references: [id], onUpdate: NoAction)
+  organizations         organizations        @relation(fields: [organization_id], references: [id], onUpdate: NoAction)
+  engagement_revisions  engagement_revisions @relation(fields: [revision_id], references: [id], onUpdate: NoAction)
+  service_versions      service_versions?    @relation(fields: [service_version_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+
+  @@unique([revision_id, position], map: "engagement_lines_position")
+  @@index([category_id])
+  @@index([organization_id])
+  @@index([service_version_id])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model engagement_milestones {
+  id                   String               @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  revision_id          String               @db.Uuid
+  organization_id      String               @db.Uuid
+  position             Int
+  label                String
+  fixed_cents          BigInt?
+  weight               Int?
+  amount_cents         BigInt               @default(0)
+  created_at           DateTime             @default(now()) @db.Timestamptz(6)
+  organizations        organizations        @relation(fields: [organization_id], references: [id], onUpdate: NoAction)
+  engagement_revisions engagement_revisions @relation(fields: [revision_id], references: [id], onUpdate: NoAction)
+
+  @@unique([revision_id, position], map: "engagement_milestones_position")
+  @@index([organization_id])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model engagement_revisions {
+  id                                                                String                  @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  engagement_id                                                     String                  @unique(map: "engagement_revisions_one_open", where: raw("(status = ANY (ARRAY['borrador'::revision_status, 'propuesta'::revision_status]))")) @db.Uuid
+  organization_id                                                   String                  @db.Uuid
+  number                                                            Int
+  status                                                            revision_status         @default(borrador)
+  conditions                                                        String?
+  reason                                                            String?
+  subtotal_cents                                                    BigInt                  @default(0)
+  discount_cents                                                    BigInt                  @default(0)
+  base_cents                                                        BigInt                  @default(0)
+  vat_cents                                                         BigInt                  @default(0)
+  total_cents                                                       BigInt                  @default(0)
+  taxes                                                             Json                    @default("[]")
+  milestones_valid                                                  Boolean                 @default(true)
+  created_by                                                        String?                 @db.Uuid
+  created_at                                                        DateTime                @default(now()) @db.Timestamptz(6)
+  updated_at                                                        DateTime                @default(now()) @db.Timestamptz(6)
+  proposed_at                                                       DateTime?               @db.Timestamptz(6)
+  accepted_at                                                       DateTime?               @db.Timestamptz(6)
+  accepted_by                                                       String?                 @db.Uuid
+  closed_at                                                         DateTime?               @db.Timestamptz(6)
+  contracts                                                         contracts[]
+  engagement_lines                                                  engagement_lines[]
+  engagement_milestones                                             engagement_milestones[]
+  engagements_engagement_revisions_engagement_idToengagements       engagements             @relation("engagement_revisions_engagement_idToengagements", fields: [engagement_id], references: [id], onUpdate: NoAction)
+  organizations                                                     organizations           @relation(fields: [organization_id], references: [id], onUpdate: NoAction)
+  engagements_engagements_current_revision_idToengagement_revisions engagements[]           @relation("engagements_current_revision_idToengagement_revisions")
+
+  @@unique([engagement_id, number], map: "engagement_revisions_number")
+  @@index([created_by])
+  @@index([organization_id])
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -205,35 +295,33 @@ model engagement_status_history {
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model engagements {
-  id                        String                      @id @default(dbgenerated("uuidv7()")) @db.Uuid
-  organization_id           String                      @db.Uuid
-  service_version_id        String                      @db.Uuid
-  invitation_id             String?                     @db.Uuid
-  status                    engagement_status           @default(borrador)
-  price_cents               BigInt
-  conditions                String?
-  requires_signature        Boolean                     @default(true)
-  requires_payment          Boolean                     @default(true)
-  payment_plan              payment_plan
-  created_by                String?                     @db.Uuid
-  created_at                DateTime                    @default(now()) @db.Timestamptz(6)
-  updated_at                DateTime                    @default(now()) @db.Timestamptz(6)
-  status_changed_at         DateTime                    @default(now()) @db.Timestamptz(6)
-  payment_review            Boolean                     @default(false)
-  payment_review_note       String?
-  delivered_at              DateTime?                   @db.Timestamptz(6)
-  contracts                 contracts?
-  engagement_status_history engagement_status_history[]
-  invitations               invitations?                @relation(fields: [invitation_id], references: [id], onUpdate: NoAction)
-  organizations             organizations               @relation(fields: [organization_id], references: [id], onUpdate: NoAction)
-  service_versions          service_versions            @relation(fields: [service_version_id], references: [id], onUpdate: NoAction)
-  payments                  payments[]
-  projects                  projects?
+  id                                                                         String                      @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  organization_id                                                            String                      @db.Uuid
+  invitation_id                                                              String?                     @db.Uuid
+  status                                                                     engagement_status           @default(borrador)
+  requires_signature                                                         Boolean                     @default(true)
+  requires_payment                                                           Boolean                     @default(true)
+  current_revision_id                                                        String?                     @db.Uuid
+  created_by                                                                 String?                     @db.Uuid
+  created_at                                                                 DateTime                    @default(now()) @db.Timestamptz(6)
+  updated_at                                                                 DateTime                    @default(now()) @db.Timestamptz(6)
+  status_changed_at                                                          DateTime                    @default(now()) @db.Timestamptz(6)
+  payment_review                                                             Boolean                     @default(false)
+  payment_review_note                                                        String?
+  released_milestones                                                        Int                         @default(1) @db.SmallInt
+  contracts                                                                  contracts?
+  engagement_revisions_engagement_revisions_engagement_idToengagements       engagement_revisions?       @relation("engagement_revisions_engagement_idToengagements")
+  engagement_status_history                                                  engagement_status_history[]
+  engagement_revisions_engagements_current_revision_idToengagement_revisions engagement_revisions?       @relation("engagements_current_revision_idToengagement_revisions", fields: [current_revision_id], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "engagements_current_revision_fk")
+  invitations                                                                invitations?                @relation(fields: [invitation_id], references: [id], onUpdate: NoAction)
+  organizations                                                              organizations               @relation(fields: [organization_id], references: [id], onUpdate: NoAction)
+  payments                                                                   payments[]
+  projects                                                                   projects?
 
   @@index([created_by])
+  @@index([current_revision_id])
   @@index([invitation_id])
   @@index([organization_id, created_at(sort: Desc)], map: "engagements_organization_id_idx")
-  @@index([service_version_id])
   @@index([status])
 }
 
@@ -309,6 +397,9 @@ model organizations {
   archived_at            DateTime?                @db.Timestamptz(6)
   contract_signatures    contract_signatures[]
   contracts              contracts[]
+  engagement_lines       engagement_lines[]
+  engagement_milestones  engagement_milestones[]
+  engagement_revisions   engagement_revisions[]
   engagements            engagements[]
   invitations            invitations[]
   organization_billing   organization_billing?
@@ -440,19 +531,31 @@ model service_briefing_items {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
+model service_categories {
+  id               String             @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  name             String
+  position         Int                @default(0)
+  created_at       DateTime           @default(now()) @db.Timestamptz(6)
+  archived_at      DateTime?          @db.Timestamptz(6)
+  engagement_lines engagement_lines[]
+  services         services[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model service_versions {
-  id              String         @id @default(dbgenerated("uuidv7()")) @db.Uuid
-  service_id      String         @db.Uuid
-  version         Int            @default(0)
-  price_cents     BigInt
-  vat_rate        Decimal        @default(21.00) @db.Decimal(5, 2)
-  payment_plans   payment_plan[] @default([pago_unico])
-  deposit_percent Int?           @db.SmallInt
-  includes        String[]       @default([])
-  created_by      String?        @db.Uuid
-  created_at      DateTime       @default(now()) @db.Timestamptz(6)
-  engagements     engagements[]
-  services        services       @relation(fields: [service_id], references: [id], onUpdate: NoAction)
+  id               String             @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  service_id       String             @db.Uuid
+  version          Int                @default(0)
+  price_cents      BigInt
+  vat_rate         Decimal            @default(21.00) @db.Decimal(5, 2)
+  includes         String[]           @default([])
+  created_by       String?            @db.Uuid
+  created_at       DateTime           @default(now()) @db.Timestamptz(6)
+  engagement_lines engagement_lines[]
+  services         services           @relation(fields: [service_id], references: [id], onUpdate: NoAction)
 
   @@unique([service_id, version], map: "service_versions_unique")
   @@index([created_by])
@@ -466,13 +569,16 @@ model services {
   id                     String                   @id @default(dbgenerated("uuidv7()")) @db.Uuid
   name                   String
   summary                String?
+  category_id            String?                  @db.Uuid
   created_by             String?                  @db.Uuid
   created_at             DateTime                 @default(now()) @db.Timestamptz(6)
   updated_at             DateTime                 @default(now()) @db.Timestamptz(6)
   archived_at            DateTime?                @db.Timestamptz(6)
   service_briefing_items service_briefing_items[]
   service_versions       service_versions[]
+  service_categories     service_categories?      @relation(fields: [category_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
 
+  @@index([category_id])
   @@index([created_by])
 }
 
@@ -534,12 +640,6 @@ enum payment_method {
   stripe
 }
 
-/// This enum is commented in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-enum payment_plan {
-  pago_unico
-  senal_entrega
-}
-
 enum payment_status {
   pendiente
   confirmado
@@ -564,4 +664,13 @@ enum project_status {
   mantenimiento
   en_pausa
   cancelado
+}
+
+/// This enum is commented in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+enum revision_status {
+  borrador
+  propuesta
+  aceptada
+  sustituida
+  descartada
 }

@@ -121,10 +121,12 @@ describe.skipIf(!db)("alta de cliente con invitación", () => {
       );
       expect(con.rows[0].token).toMatch(/^[0-9a-f]{64}$/);
       const e = await c.query(
-        "select status, price_cents from public.engagements where organization_id = $1",
+        `select e.status, l.unit_price_cents from public.engagements e
+           join public.engagement_lines l on l.revision_id = e.current_revision_id
+          where e.organization_id = $1`,
         [con.rows[0].organization_id],
       );
-      expect(e.rows).toEqual([{ status: "invitada", price_cents: "99000" }]);
+      expect(e.rows).toEqual([{ status: "invitada", unit_price_cents: "99000" }]);
       const i = await c.query("select role from public.invitations where organization_id = $1", [
         sin.rows[0].organization_id,
       ]);

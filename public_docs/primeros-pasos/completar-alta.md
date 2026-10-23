@@ -17,8 +17,8 @@ r3zon:
   origen: src/app/(app)/bienvenida/[id]/page.tsx
 ---
 
-**Respuesta corta.** En tu inicio, pulsa **Continuar** en tu servicio. Revisa lo que
-incluye y escribe los datos de tu empresa. Si R3ZON te pide firmar en el portal, lee el
+**Respuesta corta.** En tu inicio, pulsa **Continuar** en tu servicio. Revisa los
+servicios y precios que hemos acordado y escribe los datos de tu empresa. Si R3ZON te pide firmar en el portal, lee el
 contrato, pide el código a tu email y pulsa **Firmar contrato**. Si te pide pagar en el
 portal, verás lo que has pagado y lo pendiente. Si ya firmaste o pagaste con R3ZON por
 otra vía, esos pasos no aparecen.
@@ -33,9 +33,11 @@ otra vía, esos pasos no aparecen.
 ## Cómo completar tu alta, paso a paso
 
 1. En **Inicio**, pulsa **Continuar** en el servicio que has contratado.
-2. Lee la bienvenida (qué incluye tu servicio, el precio y las condiciones) y pulsa
-   **Empezar**.
-3. Escribe los datos de tu empresa y pulsa **Guardar y continuar**.
+2. Lee la bienvenida: cada servicio con su precio y su descuento, el IVA, el **total**,
+   cómo se paga (en uno o varios pagos) y las condiciones acordadas. Pulsa **Empezar**.
+3. Escribe los datos de tu empresa y pulsa **Guardar y continuar**. Al continuar aceptas
+   los servicios y las condiciones de la bienvenida: si algo no cuadra, díselo a R3ZON
+   antes.
 4. Si tienes el paso **Contrato**: cuando R3ZON tenga listo tu contrato, lo verás ahí.
    Léelo entero.
 5. Pulsa **Enviarme el código**: te llega a tu email un código de 6 cifras.
@@ -44,8 +46,9 @@ otra vía, esos pasos no aparecen.
 7. Escribe el código del email, marca que has leído y aceptas el contrato, y pulsa
    **Firmar contrato**.
 8. Si tienes el paso **Pago**, verás el total con IVA, lo que ya has pagado y lo
-   pendiente. Si pagas en dos partes (señal + entrega), ahora solo se te pide la señal. Por ahora el pago no se hace en el portal: el equipo de R3ZON te indica
-   cómo hacerlo. Pulsa **Continuar**.
+   pendiente. Si pagas en varios pagos, verás **Tus pagos** y solo se te pide el que toca
+   («Ahora te toca pagar…»); los siguientes, cuando R3ZON te avise. Por ahora el pago no
+   se hace en el portal: el equipo de R3ZON te indica cómo hacerlo. Pulsa **Continuar**.
 9. Verás **¡Enhorabuena!** y, si has firmado, podrás **descargar el contrato (PDF)**.
    Pulsa **Empezar el briefing** para contarnos lo que necesitamos para tu proyecto.
 
@@ -65,6 +68,13 @@ otra vía, esos pasos no aparecen.
   borrar lo que ya has escrito.
 
 ## Lo que no es evidente
+
+Los precios y las condiciones los fija R3ZON contigo antes de invitarte y no se pueden
+cambiar desde el portal. Si más adelante hay que cambiarlos, en tu inicio verás **R3ZON
+te propone un cambio en las condiciones**: pulsa **Revisar el cambio**, compáralo y pulsa
+**Aceptar el cambio** (lo acepta el propietario de la empresa o la persona de
+facturación). Si ya habías firmado un contrato, el cambio se acepta firmando el contrato
+nuevo: pulsa **Revisar y firmar el contrato nuevo**. Lo que ya hayas pagado se descuenta.
 
 Si tú no eres quien firma (por ejemplo, rellenas los datos pero firma el administrador de
 la empresa), abre **¿No eres quien firma? Envía el contrato a otra persona**, escribe su

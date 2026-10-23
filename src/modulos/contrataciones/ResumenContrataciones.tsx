@@ -47,7 +47,7 @@ export async function ResumenContrataciones({
           <li key={c.id}>
             <Card className="flex flex-col gap-3 p-4 sm:p-5" data-testid="servicio-cliente">
               <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                <span className="font-medium">{c.servicio}</span>
+                <span className="font-medium">{c.titulo}</span>
                 <span className="flex flex-wrap items-center gap-2 text-sm text-muted">
                   <Badge tone={ESTADOS[c.status].tono}>{ESTADOS[c.status].etiqueta}</Badge>
                   {cobro && (
@@ -64,6 +64,23 @@ export async function ResumenContrataciones({
                     ? ` · pendiente ${euros(cobro.balance_cents)}`
                     : ""}
                 </p>
+              )}
+              {c.cambio_propuesto && (
+                <div
+                  role="note"
+                  className="flex flex-col gap-2 rounded-xl border border-warning/40 bg-warning/10 p-3 text-sm"
+                  data-testid="aviso-cambio"
+                >
+                  R3ZON te propone un cambio en las condiciones.
+                  {!soloLectura && (
+                    <Link
+                      href={`/bienvenida/${c.id}/cambio`}
+                      className="w-fit text-brand underline-offset-4 hover:underline"
+                    >
+                      Revisar el cambio
+                    </Link>
+                  )}
+                </div>
               )}
               {paso && <p className="text-sm">{paso.texto}</p>}
               {paso?.accion && !soloLectura && (
