@@ -34,7 +34,8 @@ La revisión técnica de seguridad está en [auditoria.md](auditoria.md).
 | Contrato firmado (texto y huella) | `contracts.signed_text`, `text_sha256` | Contrato + obligación legal | 6 años | ✅ inmutable |
 | Evidencias de la firma: nombre, DNI/NIE, cargo, email, firma dibujada, IP, agente, momento de verificación del código | `contract_signatures` | Contrato + interés legítimo (prueba de la firma) | 6 años | ✅ inmutable, sin FK al usuario |
 | Cobros: importe, método, fecha, referencia y justificante que escribe el equipo, referencia de factura | `payments` | Contrato + obligación legal (contabilidad) | 6 años | ✅ inmutable, sin `DELETE`; el registro de actividad no copia las referencias |
-| Materiales, tickets | Fases 5–7 | Contrato | 6 años | ⬜ |
+| Respuestas del briefing (textos de la empresa, colores, enlaces) y notas de R3ZON | `project_briefing_items` | Contrato | 6 años | ✅ sin `DELETE`; el registro de actividad guarda solo el cambio de estado, no el contenido. El briefing no admite contraseñas (T-07) |
+| Ficheros, tickets | Fases 5–7 | Contrato | 6 años | ⬜ |
 
 **Sobre la firma dibujada:** es una imagen estática, no una firma biométrica (no se
 captan presión, velocidad ni trazo para identificar a la persona), así que no es una

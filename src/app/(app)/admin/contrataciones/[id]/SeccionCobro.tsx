@@ -10,6 +10,7 @@ import { pagos, resumenCobro } from "@/modulos/cobros/servidor";
 import type { DetalleContratacion } from "@/modulos/contrataciones/servidor";
 import {
   accionAnularCobro,
+  accionEntrega,
   accionFacturado,
   accionRegistrarCobro,
   accionRevision,
@@ -57,6 +58,31 @@ export async function SeccionCobro({ e }: { e: DetalleContratacion }) {
           </dd>
         </div>
       </dl>
+      {c.payment_plan === "senal_entrega" && (
+        <section
+          aria-labelledby="senal-entrega"
+          className="flex flex-col gap-3 rounded-xl border border-border p-4 text-sm"
+          data-testid="senal-entrega"
+        >
+          <h3 id="senal-entrega" className="font-medium">
+            Señal + entrega
+          </h3>
+          <p className="text-muted">
+            Señal: {euros(c.deposit_cents ?? 0)} · resto:{" "}
+            {euros(c.total_cents - (c.deposit_cents ?? 0))}.{" "}
+            {c.delivered_at
+              ? `Entrega marcada el ${fecha(c.delivered_at)}: el portal pide el resto.`
+              : "Hasta que marques la entrega, el portal solo pide la señal."}
+          </p>
+          {!c.delivered_at && ["datos_completos", "firmada", "activa"].includes(e.status) && (
+            <FormAccion
+              accion={accionEntrega.bind(null, e.id)}
+              boton="Marcar entrega"
+              variante="secondary"
+            />
+          )}
+        </section>
+      )}
       {e.payment_review && (
         <p role="note" className="rounded-xl border border-danger/40 bg-danger/10 p-3 text-sm">
           En revisión: no se le pedirá ningún pago al cliente hasta cerrarla.

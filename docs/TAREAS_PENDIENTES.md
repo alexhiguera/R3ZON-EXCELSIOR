@@ -14,29 +14,38 @@ en curso (y lo que surja); cuando arranca una fase, sus entregables bajan aquí.
 | Comprobación | Resultado |
 |---|---|
 | `npm run lint` · `typecheck` | ✅ |
-| `npm run test:run` (con el stack levantado) | ✅ 287 tests en 35 ficheros (105 contra Postgres) |
-| `npm run test:e2e` | ✅ 38 tests (19 en escritorio + 19 en móvil): alta completa con firma, y cliente ya pagado sin firma |
+| `npm run test:run` (con el stack levantado) | ✅ 315 tests en 37 ficheros (129 contra Postgres) |
+| `npm run test:e2e` | ✅ 40 tests (20 en escritorio + 20 en móvil): alta con firma, cliente ya pagado sin firma, y briefing completo |
 | `npm run build` | ✅ |
 | `npm run db:drift` · `db:types:check` | ✅ |
 | `npm run docs:validar` · `docs:enlaces` | ✅ |
 | `npm audit` | ✅ 0 vulnerabilidades |
-| Migraciones | 9: core + 8 módulos (línea base, T-18), solo en local |
+| Migraciones | 10: core + 9 módulos (línea base, T-18), solo en local |
 | Entorno | **Solo local** (T-17) |
-| Fase en curso | **Fase 4** — cobros externos, estado económico y alta condicional hechos; Stripe espera a D-04 y a una cuenta de pruebas. De la Fase 3 faltan las validaciones de la asesoría |
+| Fase en curso | **Fases 4 y 5** — cobros (sin Stripe, que espera a una cuenta de pruebas) y proyecto con briefing (sin ficheros, T-33). De la Fase 3 faltan las validaciones de la asesoría |
 
 ## Fase 4 — Cobros
 
-- [ ] 🔴 Decidir D-04 (pago embebido o Stripe Checkout) y crear una cuenta de Stripe en
-  modo test: bloquea toda la integración con Stripe ([PLAN.md](PLAN.md) → Fase 4, 8–10).
+- [ ] 🔴 Cuenta de Stripe en modo test: bloquea la integración (pago embebido, T-30;
+  [PLAN.md](PLAN.md) → Fase 4, 8 y 10).
 - [ ] 🟠 Contrato con ANTARES (D-06): quién escucha a Stripe y cómo vuelve la referencia
   de la factura, también para los cobros externos.
-- [ ] 🟠 Señal + entrega: `amount_due_now` devuelve hoy el saldo entero; con la señal,
-  hasta que R3ZON marque la entrega.
 - [ ] 🟡 Pago delegado a un usuario `billing` (resto de T-25).
 - [ ] 🟡 Requisitos del informe que no llegaron (Apple Pay, Google Pay, Link, descuentos,
   financiación externa): pedírselos a R3ZON antes de la parte de Stripe.
 - [ ] 🟢 Justificante de un cobro externo como fichero (hoy es una referencia de texto):
   con el almacenamiento seguro de la Fase 5.
+
+## Fase 5 — Proyecto y briefing
+
+- [ ] 🟠 Ficheros (T-33): decidir el antivirus y la cuarentena, y con ello el tipo
+  «fichero» del briefing (logo, imágenes), la zona de documentos y el ZIP del panel.
+- [ ] 🟡 Plantillas de briefing reales por servicio (hoy cada servicio nace sin ella),
+  incluidos los datos para textos legales (entregable 4).
+- [ ] 🟡 Recordatorio por email del briefing incompleto (aplazado con los emails, T-17).
+- [ ] 🟢 Reordenar y editar elementos de la plantilla (hoy: añadir al final y quitar).
+- [ ] 🟢 Proponer para la plantilla el `aria-label` propio de la barra inferior
+  (`AppShell`, core).
 
 ## Fase 3 — Onboarding y contrato
 

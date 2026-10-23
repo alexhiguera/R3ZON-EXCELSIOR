@@ -272,7 +272,8 @@ demás se escriben con su fase siguiendo esta tabla:
 | Contratación ✅ | `borrador → invitada → datos_completos → [firmada] → activa → finalizada` | `cancelada` (antes de firmar), `rescindida` (después). Sin firma en el portal (T-27) se salta `firmada`; `activa` la pone el equipo a mano. **Sin estados de pago** (T-26). **Implementada**: `engagement_transition_allowed()` + trigger, historial inmutable con motivo; la interfaz repite la tabla y un test comprueba que coinciden |
 | Contrato ✅ | `borrador ⇄ enviado → firmado` | `anulado` (antes de firmar), **`sustituido`** por otro contrato (anexo o nueva versión): el firmado no cambia, se enlaza el que lo sustituye |
 | Cobro ✅ | `pendiente → confirmado` (Stripe); los externos nacen `confirmado` | `fallido`, **`devuelto`** (adeudo SEPA rechazado, reembolso), `anulado` (corrección del equipo, con motivo). La rectificativa, en ANTARES. **Implementado** en `payments`; las transiciones de Stripe esperan al webhook |
-| Proyecto | `briefing → diseño → desarrollo → revisión → lanzado → mantenimiento` | `en_pausa` (p. ej. por impago), `cancelado` |
+| Proyecto ✅ | `briefing → diseño → desarrollo ⇄ revisión → lanzado → mantenimiento` (y `briefing → mantenimiento` para servicios recurrentes) | `en_pausa` (p. ej. por impago; vuelve a cualquier estado activo), `cancelado` (final: congela el briefing). **Implementado**: `project_transition_allowed()` + trigger; la interfaz repite la tabla y un test comprueba que coinciden |
+| Elemento del briefing ✅ | `pendiente → aportado → validado` | `más tarde`, `no aplica` (solo opcionales), `cambios` (R3ZON, con nota; el cliente vuelve a aportar). Validado: el cliente ya no lo toca |
 
 Reglas:
 
@@ -294,7 +295,8 @@ romper otro. Las defensas, todas vigentes:
 **En la base**
 
 - **Un fichero de migración por módulo**, en orden de dependencia (base → plataforma →
-  organizaciones → invitaciones → servicios → contrataciones). Un módulo solo depende de
+  organizaciones → invitaciones → servicios → contrataciones → contratos → cobros →
+  proyectos). Un módulo solo depende de
   los anteriores; si concede acceso a datos de otro (p. ej. que el cliente vea el
   servicio que contrató), la policy la añade el módulo que sabe por qué.
 - **Cada módulo trae sus tests** (`tests/db/<modulo>.test.ts`) y el **catálogo** vigila

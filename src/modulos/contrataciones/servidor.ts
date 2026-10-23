@@ -13,5 +13,6 @@ export {
   invitarAServicio,
   invitarContratacion,
   listarContrataciones,
+  marcarEntrega,
 } from "./datos";
 export { ResumenContrataciones } from "./ResumenContrataciones";

@@ -5,6 +5,8 @@ import {
   comoPostgres,
   contratoEnviado,
   crearOrganizacion,
+  crearServicio,
+  datosFiscales,
   FIRMA_PNG,
   fallo,
   hacerMiembro,
@@ -233,6 +235,49 @@ describe.skipIf(!db)("firma", () => {
         [org],
       );
       expect(inv.rows).toEqual([{ role: "owner", created_by: fact }]);
+    });
+  });
+});
+
+describe.skipIf(!db)("composición del texto: modalidad (T-31)", () => {
+  it("el contrato dice la modalidad elegida, con la señal y el resto en euros", async () => {
+    await inRollback(async (c) => {
+      const { contrato, version } = await contratoEnviado(c);
+      const unico = await c.query("select public.contract_render($1) as t", [contrato]);
+      expect(unico.rows[0].t).not.toContain("{{precio.modalidad}}");
+
+      // Otra contratación con señal + entrega y la misma plantilla, con el hueco.
+      const org = await crearOrganizacion(c, "Señal S.L.");
+      await datosFiscales(c, org);
+      const s = await crearServicio(c, `Señal ${Math.random()}`, {
+        precio: 100000,
+        planes: ["senal_entrega"],
+        senal: 30,
+      });
+      const e = (
+        await c.query(
+          "insert into public.engagements (organization_id, service_version_id, price_cents) values ($1, $2, 100000) returning id",
+          [org, s.versionId],
+        )
+      ).rows[0].id;
+      await c.query("update public.engagements set status = 'invitada' where id = $1", [e]);
+      await c.query("update public.engagements set status = 'datos_completos' where id = $1", [e]);
+      const plantilla = (
+        await c.query(
+          "insert into public.contract_template_versions (template_id, body) select template_id, 'Pago: {{precio.modalidad}}.' from public.contract_template_versions where id = $1 returning id",
+          [version],
+        )
+      ).rows[0].id;
+      const otro = (
+        await c.query(
+          "insert into public.contracts (engagement_id, template_version_id) values ($1, $2) returning id",
+          [e, plantilla],
+        )
+      ).rows[0].id;
+      const { rows } = await c.query("select public.contract_render($1) as t", [otro]);
+      expect(rows[0].t).toContain(
+        "Pago: señal del 30 % (363,00 €) al inicio y el resto (847,00 €) a la entrega.",
+      );
     });
   });
 });

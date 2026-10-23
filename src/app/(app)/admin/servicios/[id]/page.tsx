@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { z } from "zod";
 import { Encabezado } from "@/components/app-shell/Encabezado";
-import { BloqueNoDisponible } from "@/components/app-shell/ModuloSeguro";
+import { BloqueNoDisponible, ModuloSeguro } from "@/components/app-shell/ModuloSeguro";
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
 import { FormAccion } from "@/components/ui/FormAccion";
@@ -12,6 +12,7 @@ import { ETIQUETA_PLAN } from "@/modulos/servicios";
 import { servicio } from "@/modulos/servicios/servidor";
 import { accionArchivarServicio, accionNuevaVersion } from "../actions";
 import { CamposCondiciones } from "../CamposCondiciones";
+import { PlantillaBriefing } from "./PlantillaBriefing";
 
 export const metadata: Metadata = { title: "Servicio" };
 
@@ -86,6 +87,10 @@ export default async function ServicioPage({ params }: { params: Promise<{ id: s
           </ol>
         )}
       </Card>
+
+      <ModuloSeguro nombre="La plantilla de briefing">
+        <PlantillaBriefing serviceId={s.id} esAdmin={esAdmin} />
+      </ModuloSeguro>
 
       {esAdmin && (
         <Card>

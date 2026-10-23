@@ -7,6 +7,64 @@ nunca se renumeran.
 
 ---
 
+### Iteración 8 — *2026-10-23* — Modalidad de pago, señal + entrega y Fase 5: proyecto y briefing
+
+R3ZON decide (2026-10-23): pago **embebido** con Stripe, aparcado hasta tener cuenta de
+pruebas (T-30, era D-04); la **modalidad la fija R3ZON** al crear la contratación (T-31,
+cambia T-05); el **proyecto nace al completar el alta** (T-32); la **subida de ficheros
+se aplaza** y el briefing empieza sin ellos (T-33).
+
+**Fase 4: modalidad y señal + entrega**
+
+- `engagements.payment_plan`, sin default: lo pone el trigger con la primera modalidad
+  de la versión del servicio y rechaza las que el servicio no admite. Va al contrato, así
+  que solo cambia en borrador o invitada, como el precio. El hueco `precio.modalidades`
+  (lista de las ofrecidas) pasa a `precio.modalidad` (la elegida, con la señal y el resto
+  en euros): con la elección en R3ZON, la lista ya no decía lo contratado.
+- `delivered_at` + trigger: solo con señal + entrega, con los datos dados, una vez, con la
+  hora de la base, sin desmarcar, auditado. La vista de cobros calcula `deposit_cents` y
+  `due_now_cents` (la señal hasta la entrega, después el saldo); `amount_due_now` solo la
+  lee. Descartado guardar «fase de cobro»: se deriva de `delivered_at`.
+- Panel: modalidad en los interruptores y botón **Marcar entrega** en el cobro. El
+  cliente ve «ahora toca la señal».
+
+**Fase 5: proyecto y briefing (sin ficheros)**
+
+- Módulo `proyectos` (`20261023000900_proyectos.sql`): plantilla de briefing por servicio
+  (solo admin) que se **copia** al proyecto al nacer, para que editarla no cambie
+  proyectos en marcha; `projects` con su máquina de estados; elementos de briefing con
+  tipos `texto`, `color`, `tipografia`, `enlace`. No hay tipo para accesos (T-07) ni,
+  todavía, para ficheros (T-33).
+- El proyecto lo crea un trigger `SECURITY DEFINER` sobre `engagements` (nadie puede
+  crearlo a mano): al pasar a `firmada`, a `activa`, o a `datos_completos` sin firma en el
+  portal (también si R3ZON quita la firma después). Idempotente.
+- Quién escribe qué lo decide el trigger del briefing, no la app: el cliente aporta, deja
+  para más tarde o marca «no aplica» (solo lo opcional); R3ZON valida lo aportado o pide
+  cambios con nota obligatoria; lo validado el cliente ya no lo toca; un proyecto
+  cancelado congela el briefing. Escriben propietario y miembros; facturación solo lee
+  (RLS). El color se normaliza a minúsculas y el enlace tiene que ser `http(s)` (un
+  `javascript:` no entra). El registro de actividad guarda el cambio de estado, no el
+  contenido.
+- Páginas: `/proyectos` y `/proyectos/[id]` (cliente), `/admin/proyectos` y su ficha
+  (revisión y estado), plantilla en la ficha del servicio; el inicio, «ver como cliente»
+  y el paso «Listo» enlazan al briefing.
+- Tests: modalidad y señal (BD), `tests/db/proyectos.test.ts` (nacimiento,
+  compartimentación, permisos por rol, validación, máquina de estados con paridad
+  interfaz-base), unitarios, y E2E `proyectos.spec.ts` (plantilla → alta → briefing →
+  cambios → validación → diseño).
+
+**Errores del camino**
+
+- `next.config.ts` importaba `withSentryConfig` de `@sentry/nextjs`, que en Sentry 11 ya
+  no lo exporta (está en `@sentry/nextjs/config`). Venía de la actualización de
+  dependencias y no se notaba: el typecheck incremental lo tenía en caché y la función
+  solo se llama con DSN. Corregido el import.
+- Al tener el cliente dos secciones (Inicio y Proyectos) apareció la barra inferior del
+  móvil, con el mismo `aria-label` que la lateral: axe lo marca (`landmark-unique`).
+  Etiqueta propia para la barra inferior. Es **core**: se propone para la plantilla.
+- El primer E2E del briefing buscaba el texto exacto de un elemento de la plantilla, que
+  comparte nodo con sus insignias; se busca por la fila.
+
 ### Iteración 7 — *2026-10-23* — Cobros: estado económico separado, interruptores y cobros externos
 
 R3ZON trae un informe de pagos: hay clientes que **ya pagaron fuera** (transferencia) sin

@@ -63,6 +63,9 @@ export async function SeccionAlta({ e }: { e: DetalleContratacion }) {
             firma={e.requires_signature}
             pago={e.requires_payment}
             firmaBloqueada={!["borrador", "invitada", "datos_completos"].includes(e.status)}
+            modalidad={e.payment_plan}
+            planes={e.payment_plans}
+            modalidadBloqueada={!invitable}
           />
         </FormAccion>
       )}

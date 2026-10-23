@@ -6,6 +6,7 @@ import { Encabezado } from "@/components/app-shell/Encabezado";
 import { BloqueNoDisponible, ModuloSeguro } from "@/components/app-shell/ModuloSeguro";
 import { ResumenContrataciones } from "@/modulos/contrataciones/servidor";
 import { cliente, registrarVistaCliente } from "@/modulos/organizaciones/servidor";
+import { ResumenProyectos } from "@/modulos/proyectos/servidor";
 
 export const metadata: Metadata = { title: "Vista de cliente" };
 
@@ -43,6 +44,9 @@ export default async function VistaClientePage({ params }: { params: Promise<{ i
       />
       <ModuloSeguro nombre="Sus servicios">
         <ResumenContrataciones organizationId={id} soloLectura />
+      </ModuloSeguro>
+      <ModuloSeguro nombre="Sus proyectos">
+        <ResumenProyectos organizationId={id} soloLectura />
       </ModuloSeguro>
     </div>
   );

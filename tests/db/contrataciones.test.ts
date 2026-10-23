@@ -254,3 +254,67 @@ describe.skipIf(!db)("directorio de miembros", () => {
     });
   });
 });
+
+describe.skipIf(!db)("contrataciones: modalidad de pago (T-31)", () => {
+  it("por defecto la primera del servicio; una que el servicio no admite se rechaza", async () => {
+    await inRollback(async (c) => {
+      const org = await crearOrganizacion(c, "Acme");
+      const unico = await crearServicio(c, `Único ${Math.random()}`);
+      const e = await crearContratacion(c, org, unico.versionId);
+      const { rows } = await c.query("select payment_plan from public.engagements where id = $1", [
+        e,
+      ]);
+      expect(rows[0].payment_plan).toBe("pago_unico");
+      expect(
+        await fallo(
+          c,
+          "update public.engagements set payment_plan = 'senal_entrega' where id = $1",
+          [e],
+        ),
+      ).toMatch(/no admite la modalidad/);
+    });
+  });
+
+  it("se puede cambiar en borrador o invitada, no después (va al contrato)", async () => {
+    await inRollback(async (c) => {
+      const org = await crearOrganizacion(c, "Acme");
+      const ambos = await crearServicio(c, `Ambos ${Math.random()}`, {
+        planes: ["pago_unico", "senal_entrega"],
+        senal: 30,
+      });
+      const e = await crearContratacion(c, org, ambos.versionId);
+      await c.query("update public.engagements set payment_plan = 'senal_entrega' where id = $1", [
+        e,
+      ]);
+      await c.query("update public.engagements set status = 'invitada' where id = $1", [e]);
+      await c.query("update public.engagements set status = 'datos_completos' where id = $1", [e]);
+      expect(
+        await fallo(c, "update public.engagements set payment_plan = 'pago_unico' where id = $1", [
+          e,
+        ]),
+      ).toMatch(/ya no se pueden cambiar/);
+    });
+  });
+
+  it("invite_to_service acepta la modalidad y la valida", async () => {
+    await inRollback(async (c) => {
+      const staff = await createAuthUser(c, { email: `staff-${Math.random()}@r3zon.test` });
+      await hacerStaff(c, staff);
+      const org = await crearOrganizacion(c, "Acme");
+      const ambos = await crearServicio(c, `Ambos ${Math.random()}`, {
+        planes: ["pago_unico", "senal_entrega"],
+        senal: 30,
+      });
+      await actAs(c, staff);
+      await c.query(
+        "select public.invite_to_service($1, 'ana@acme.test', $2, null, null, true, true, 'senal_entrega')",
+        [org, ambos.versionId],
+      );
+      const { rows } = await c.query(
+        "select payment_plan from public.engagements where organization_id = $1",
+        [org],
+      );
+      expect(rows[0].payment_plan).toBe("senal_entrega");
+    });
+  });
+});

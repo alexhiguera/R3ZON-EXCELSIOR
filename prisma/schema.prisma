@@ -214,18 +214,21 @@ model engagements {
   conditions                String?
   requires_signature        Boolean                     @default(true)
   requires_payment          Boolean                     @default(true)
+  payment_plan              payment_plan
   created_by                String?                     @db.Uuid
   created_at                DateTime                    @default(now()) @db.Timestamptz(6)
   updated_at                DateTime                    @default(now()) @db.Timestamptz(6)
   status_changed_at         DateTime                    @default(now()) @db.Timestamptz(6)
   payment_review            Boolean                     @default(false)
   payment_review_note       String?
+  delivered_at              DateTime?                   @db.Timestamptz(6)
   contracts                 contracts?
   engagement_status_history engagement_status_history[]
   invitations               invitations?                @relation(fields: [invitation_id], references: [id], onUpdate: NoAction)
   organizations             organizations               @relation(fields: [organization_id], references: [id], onUpdate: NoAction)
   service_versions          service_versions            @relation(fields: [service_version_id], references: [id], onUpdate: NoAction)
   payments                  payments[]
+  projects                  projects?
 
   @@index([created_by])
   @@index([invitation_id])
@@ -298,19 +301,21 @@ model organization_members {
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model organizations {
-  id                   String                 @id @default(dbgenerated("uuidv7()")) @db.Uuid
-  name                 String
-  created_by           String?                @db.Uuid
-  created_at           DateTime               @default(now()) @db.Timestamptz(6)
-  updated_at           DateTime               @default(now()) @db.Timestamptz(6)
-  archived_at          DateTime?              @db.Timestamptz(6)
-  contract_signatures  contract_signatures[]
-  contracts            contracts[]
-  engagements          engagements[]
-  invitations          invitations[]
-  organization_billing organization_billing?
-  organization_members organization_members[]
-  payments             payments[]
+  id                     String                   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  name                   String
+  created_by             String?                  @db.Uuid
+  created_at             DateTime                 @default(now()) @db.Timestamptz(6)
+  updated_at             DateTime                 @default(now()) @db.Timestamptz(6)
+  archived_at            DateTime?                @db.Timestamptz(6)
+  contract_signatures    contract_signatures[]
+  contracts              contracts[]
+  engagements            engagements[]
+  invitations            invitations[]
+  organization_billing   organization_billing?
+  organization_members   organization_members[]
+  payments               payments[]
+  project_briefing_items project_briefing_items[]
+  projects               projects[]
 
   @@index([created_by])
 }
@@ -359,6 +364,52 @@ model profiles {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model project_briefing_items {
+  id              String          @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  project_id      String          @db.Uuid
+  organization_id String          @db.Uuid
+  position        Int
+  section         String
+  kind            briefing_kind
+  label           String
+  help            String?
+  required        Boolean
+  status          briefing_status @default(pendiente)
+  value           String?
+  staff_note      String?
+  answered_at     DateTime?       @db.Timestamptz(6)
+  updated_by      String?         @db.Uuid
+  created_at      DateTime        @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime        @default(now()) @db.Timestamptz(6)
+  organizations   organizations   @relation(fields: [organization_id], references: [id], onUpdate: NoAction)
+  projects        projects        @relation(fields: [project_id], references: [id], onUpdate: NoAction)
+
+  @@unique([project_id, position], map: "project_briefing_items_position")
+  @@index([organization_id])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model projects {
+  id                     String                   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  organization_id        String                   @db.Uuid
+  engagement_id          String                   @unique @db.Uuid
+  name                   String
+  status                 project_status           @default(briefing)
+  created_at             DateTime                 @default(now()) @db.Timestamptz(6)
+  updated_at             DateTime                 @default(now()) @db.Timestamptz(6)
+  status_changed_at      DateTime                 @default(now()) @db.Timestamptz(6)
+  project_briefing_items project_briefing_items[]
+  engagements            engagements              @relation(fields: [engagement_id], references: [id], onUpdate: NoAction)
+  organizations          organizations            @relation(fields: [organization_id], references: [id], onUpdate: NoAction)
+
+  @@index([organization_id, created_at(sort: Desc)], map: "projects_organization_id_idx")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model provider_profile {
   id         Boolean  @id @default(true)
   legal_name String   @default("")
@@ -366,6 +417,24 @@ model provider_profile {
   address    String   @default("")
   email      String   @default("")
   updated_at DateTime @default(now()) @db.Timestamptz(6)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model service_briefing_items {
+  id         String        @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  service_id String        @db.Uuid
+  position   Int
+  section    String        @default("General")
+  kind       briefing_kind
+  label      String
+  help       String?
+  required   Boolean       @default(true)
+  created_at DateTime      @default(now()) @db.Timestamptz(6)
+  services   services      @relation(fields: [service_id], references: [id], onUpdate: NoAction)
+
+  @@unique([service_id, position], map: "service_briefing_items_position")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -394,16 +463,34 @@ model service_versions {
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 /// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
 model services {
-  id               String             @id @default(dbgenerated("uuidv7()")) @db.Uuid
-  name             String
-  summary          String?
-  created_by       String?            @db.Uuid
-  created_at       DateTime           @default(now()) @db.Timestamptz(6)
-  updated_at       DateTime           @default(now()) @db.Timestamptz(6)
-  archived_at      DateTime?          @db.Timestamptz(6)
-  service_versions service_versions[]
+  id                     String                   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  name                   String
+  summary                String?
+  created_by             String?                  @db.Uuid
+  created_at             DateTime                 @default(now()) @db.Timestamptz(6)
+  updated_at             DateTime                 @default(now()) @db.Timestamptz(6)
+  archived_at            DateTime?                @db.Timestamptz(6)
+  service_briefing_items service_briefing_items[]
+  service_versions       service_versions[]
 
   @@index([created_by])
+}
+
+/// This enum is commented in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+enum briefing_kind {
+  texto
+  color
+  tipografia
+  enlace
+}
+
+enum briefing_status {
+  pendiente
+  mas_tarde
+  no_aplica
+  aportado
+  cambios
+  validado
 }
 
 enum collection_status {
@@ -466,4 +553,15 @@ enum platform_role {
   client
   staff
   admin
+}
+
+enum project_status {
+  briefing
+  diseno
+  desarrollo
+  revision
+  lanzado
+  mantenimiento
+  en_pausa
+  cancelado
 }

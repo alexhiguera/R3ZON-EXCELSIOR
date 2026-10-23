@@ -16,7 +16,8 @@
   "modulos": {},
 
   "otras": {
-    "/inicio": { "label": "Inicio" }
+    "/inicio": { "label": "Inicio" },
+    "/proyectos": { "label": "Proyectos" }
   },
 
   "publicas": {

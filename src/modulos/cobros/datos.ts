@@ -16,11 +16,17 @@ export type ResumenCobro = {
   engagement_id: string;
   requires_payment: boolean;
   payment_review: boolean;
+  payment_plan: "pago_unico" | "senal_entrega";
+  delivered_at: string | null;
   total_cents: number;
+  /** Señal (con IVA), solo con señal + entrega. */
+  deposit_cents: number | null;
   paid_cents: number;
   pending_cents: number;
   balance_cents: number;
   status: EstadoCobro;
+  /** Lo que se le puede pedir ahora en el portal (lo calcula la base). */
+  due_now_cents: number;
 };
 
 /** Estado de cobro de varias contrataciones (las que la RLS deje ver). */
@@ -35,7 +41,7 @@ export async function resumenCobros(
     supabase
       .from("engagement_collections")
       .select(
-        "engagement_id, requires_payment, payment_review, total_cents, paid_cents, pending_cents, balance_cents, status",
+        "engagement_id, requires_payment, payment_review, payment_plan, delivered_at, total_cents, deposit_cents, paid_cents, pending_cents, balance_cents, status, due_now_cents",
       )
       .in("engagement_id", engagementIds),
   );

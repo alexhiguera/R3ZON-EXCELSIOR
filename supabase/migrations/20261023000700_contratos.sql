@@ -118,7 +118,7 @@ as $$
     'cliente.razon_social', 'cliente.nif', 'cliente.direccion', 'cliente.tipo', 'cliente.email_facturacion',
     'firmante.nombre', 'firmante.dni', 'firmante.cargo', 'firmante.email',
     'servicio.nombre', 'servicio.resumen', 'servicio.incluye', 'servicio.version',
-    'precio.base', 'precio.iva_porcentaje', 'precio.iva', 'precio.total', 'precio.modalidades',
+    'precio.base', 'precio.iva_porcentaje', 'precio.iva', 'precio.total', 'precio.modalidad',
     'contrato.condiciones', 'contrato.fecha', 'contrato.referencia',
     'r3zon.razon_social', 'r3zon.nif', 'r3zon.direccion', 'r3zon.email'
   ];
@@ -485,12 +485,14 @@ begin
     'precio.iva_porcentaje', replace(to_char(sv.vat_rate, 'FM990.00'), '.', ',') || ' %',
     'precio.iva', public.format_eur(round(e.price_cents * sv.vat_rate / 100)::bigint),
     'precio.total', public.format_eur(e.price_cents + round(e.price_cents * sv.vat_rate / 100)::bigint),
-    'precio.modalidades', array_to_string(array(
-        select case p
-                 when 'pago_unico' then 'pago único'
-                 when 'senal_entrega' then 'señal del ' || sv.deposit_percent || ' % a la firma y el resto a la entrega'
-               end
-          from unnest(sv.payment_plans) p), ' o '),
+    'precio.modalidad', case e.payment_plan
+        when 'pago_unico' then 'pago único'
+        when 'senal_entrega' then format('señal del %s %% (%s) al inicio y el resto (%s) a la entrega',
+          sv.deposit_percent,
+          public.format_eur(round((e.price_cents + round(e.price_cents * sv.vat_rate / 100)) * sv.deposit_percent / 100.0)::bigint),
+          public.format_eur(e.price_cents + round(e.price_cents * sv.vat_rate / 100)::bigint
+            - round((e.price_cents + round(e.price_cents * sv.vat_rate / 100)) * sv.deposit_percent / 100.0)::bigint))
+      end,
     'contrato.condiciones', coalesce(nullif(btrim(e.conditions), ''), 'Ninguna.'),
     'contrato.fecha', to_char(now() at time zone 'Europe/Madrid', 'DD/MM/YYYY'),
     'contrato.referencia', upper(left(replace(c.id::text, '-', ''), 12)),

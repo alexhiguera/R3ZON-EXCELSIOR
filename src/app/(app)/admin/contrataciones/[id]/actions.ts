@@ -14,6 +14,7 @@ import {
   cambiarEstado,
   cambiarInterruptores,
   invitarContratacion,
+  marcarEntrega,
 } from "@/modulos/contrataciones/servidor";
 import {
   anadirAnexo,
@@ -145,6 +146,17 @@ export async function accionActivar(
 }
 
 /* ───────────────────────────── Cobros ───────────────────────────── */
+
+export async function accionEntrega(
+  engagementId: string,
+  _: EstadoForm,
+  _datos: FormData,
+): Promise<EstadoForm> {
+  const r = await marcarEntrega(engagementId);
+  if (!r.ok) return { error: r.error };
+  revalidatePath(ruta(engagementId));
+  return { error: null, ok: "Entrega marcada: el portal ya pide el resto." };
+}
 
 export async function accionRegistrarCobro(
   engagementId: string,

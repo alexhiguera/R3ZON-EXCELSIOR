@@ -79,7 +79,9 @@ Matriz inicial de **recurso × acción** (se completa al implementar cada fase):
 | Propuestas | leer, **aceptar** / rechazar | leer | leer | crear, enviar |
 | Cobros ✅ | leer los suyos | leer los suyos | leer los suyos | registrar externos, anular con motivo, marcar facturado y revisión; los de Stripe solo el servidor |
 | Pagar en el portal | pagar | — | pagar | — |
-| Briefing y documentos | todo | todo | leer | todo |
+| Proyectos ✅ | leer | leer | leer | leer, cambiar de estado (nadie los crea a mano: nacen con el alta) |
+| Briefing ✅ | leer, aportar, más tarde, no aplica | igual que `owner` | leer | todo + validar y pedir cambios; plantilla por servicio: **solo admin** |
+| Documentos | todo | todo | leer | todo |
 | Tickets | abrir, responder | abrir, responder | abrir, responder | todo + notas internas |
 
 ### Dimensión 3 — Plan

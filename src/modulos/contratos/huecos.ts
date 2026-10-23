@@ -22,7 +22,11 @@ export const HUECOS = [
   { grupo: "Precio", nombre: "precio.iva_porcentaje", ayuda: "Tipo de IVA" },
   { grupo: "Precio", nombre: "precio.iva", ayuda: "Importe del IVA" },
   { grupo: "Precio", nombre: "precio.total", ayuda: "Total con IVA" },
-  { grupo: "Precio", nombre: "precio.modalidades", ayuda: "Modalidades de pago ofrecidas" },
+  {
+    grupo: "Precio",
+    nombre: "precio.modalidad",
+    ayuda: "Modalidad de pago (y la señal, si la hay)",
+  },
   { grupo: "Contrato", nombre: "contrato.condiciones", ayuda: "Condiciones particulares" },
   { grupo: "Contrato", nombre: "contrato.fecha", ayuda: "Fecha (la de la firma)" },
   { grupo: "Contrato", nombre: "contrato.referencia", ayuda: "Referencia del contrato" },

@@ -23,8 +23,8 @@ Leyenda: ⬜ sin empezar · 🚧 en curso · ✅ cerrada. Tamaño relativo: **S*
 | **🧪 Hito V** | **Recorrido vertical mínimo**: un servicio, un contrato, un medio de pago y una checklist, de invitación a proyecto (partes «V» de las fases 2–5) | L | ⬜ |
 | 2 | Panel R3ZON: clientes, catálogo de servicios e invitaciones con servicio | L | ✅ (el envío por email, aplazado con T-17) |
 | 3 | Onboarding de contratación: bienvenida, datos, contrato y firma | XL | 🚧 (hecho el recorrido completo; pendientes: validación jurídica D-10 y textos D-05) |
-| 4 | Cobros: estado económico, cobros externos y Stripe | L | 🚧 (libro de cobros, cobros externos y alta condicional hechos; Stripe espera a D-04 y a una cuenta de pruebas) |
-| 5 | Briefing del proyecto y zona de documentos (tipo Drive) | L | ⬜ |
+| 4 | Cobros: estado económico, cobros externos y Stripe | L | 🚧 (libro de cobros, cobros externos, alta condicional y señal + entrega hechos; Stripe, embebido (T-30), espera a una cuenta de pruebas) |
+| 5 | Briefing del proyecto y zona de documentos (tipo Drive) | L | 🚧 (proyecto y briefing sin ficheros hechos; ficheros aplazados, T-33) |
 | **🚩 Hito MVP** | **Primer cliente real hace el flujo completo** (fases 0–5 + salida a producción) | | |
 | 6 | Área de cliente: servicios, proyectos, propuestas y mejoras de plan | L | ⬜ |
 | 7 | Soporte: sistema de tickets | M | ⬜ |
@@ -215,7 +215,7 @@ no se pone un contrato real a firmar.
    dirección fiscal, tipo (empresa/autónomo, UE/no UE para el IVA), **firmante** (nombre,
    DNI, cargo) y contacto de facturación. Validación de NIF/CIF y de IVA intracomunitario
    (VIES) si aplica.
-4. ⬜ **Modalidad de pago** (se mueve a la Fase 4: va con el cobro). Texto original: el cliente elige entre las que permite el servicio — pago único
+4. ✅ **Modalidad de pago**: la fija R3ZON al crear la contratación (T-31; ver Fase 4). Texto original: el cliente elige entre las que permite el servicio — pago único
    o señal + entrega — y el medio: **transferencia/SEPA (recomendado, destacado)** o
    tarjeta. La elección entra en el contrato.
 5. ✅ **Plantillas de contrato versionadas** + cláusulas activables + anexos (T-23); PDF en servidor. Texto original: (`contract_templates`) con variables (cliente,
@@ -277,15 +277,18 @@ Antares con TicketBAI.
 7. ✅ **Importe exigible calculado en la base** (`amount_due_now`): 0 si no paga en el
    portal, si está en revisión o si hay una operación pendiente de conciliar; si no, el
    saldo.
-8. ⬜ **Stripe** (`billing-stripe`): cliente por organización, Payment Element o Checkout
-   (D-04), transferencia (IBAN virtual), SEPA y tarjeta. El importe sale **solo** de
+8. ⬜ **Stripe** (`billing-stripe`): cliente por organización, **pago embebido** con
+   Payment Element (T-30), transferencia (IBAN virtual), SEPA y tarjeta. El importe sale **solo** de
    `amount_due_now` en el servidor; un cobro abierto por contratación como máximo;
    clave de idempotencia por contratación e importe; el webhook (firma verificada,
    dedupe por id de evento, sin retrocesos por eventos fuera de orden) es lo único que
    escribe cobros `stripe` (la base ya lo impone: `provider_reference` única y solo
    `service_role`). Pagos asíncronos → cobro `pendiente` hasta el webhook.
-9. ⬜ **Modalidades**: pago único y **señal + entrega** (`amount_due_now` devolverá la
-   señal hasta que R3ZON marque la entrega).
+9. ✅ **Modalidades** (T-31): la fija R3ZON por contratación entre las del servicio
+   (`engagements.payment_plan`; va al contrato, hueco `precio.modalidad`). Con **señal +
+   entrega**, `amount_due_now` pide la señal (sobre el total con IVA) hasta que R3ZON pulsa
+   **Marcar entrega** (`delivered_at`, una vez, con la hora de la base) y después el
+   resto.
 10. ⬜ **Devoluciones, disputas y reembolsos** desde los webhooks (cobro `devuelto` o
     `fallido`); la rectificativa la emite Antares.
 11. ⬜ **Factura** (T-29): Antares la genera con TicketBAI al confirmarse el cobro; el
@@ -309,7 +312,7 @@ Antares con TicketBAI.
 | Escenarios 1–10, autorización, concurrencia | `tests/db/cobros.test.ts`, `e2e/specs/cobros.spec.ts` | ✅ |
 
 **Bloqueante para la parte de Stripe:** una cuenta de Stripe en modo test (hoy todo es
-local, T-17) y la decisión D-04.
+local, T-17). D-04 ya está decidida (T-30: embebido).
 
 **Hecho cuando:** lo anterior, más E2E con Stripe en modo test (tarjeta y SEPA de
 prueba) y tests del webhook: evento repetido no duplica, eventos fuera de orden no
@@ -323,6 +326,13 @@ retroceden, firma inválida → 400, un adeudo devuelto deja el saldo pendiente 
 Google Drive.
 
 **Módulo de la plantilla:** `file-storage` (buckets privados, URLs firmadas).
+
+**Estado (2026-10-23).** Hechos el proyecto (nace al completar el alta, T-32), su máquina
+de estados, la plantilla de briefing por servicio y el briefing del cliente con texto,
+color, tipografía y enlace, «más tarde», «no aplica» y la revisión de R3ZON (validar o
+pedir cambios con nota). **Aplazado** (T-33): todo lo que sube ficheros (entregables 5 y
+6, el tipo «fichero» del briefing y el ZIP del entregable 8), hasta decidir el antivirus.
+Módulo `src/modulos/proyectos`, migración `20261023000900_proyectos.sql`.
 
 **Entregables**
 
@@ -369,7 +379,7 @@ Fase 1 y está formado por la parte mínima de las fases 2 a 5:
 |---|---|---|
 | 2 | Un servicio real (decisión D-08) dado de alta por migración de datos o por un formulario mínimo; generar la invitación con ese servicio; embudo en una tabla simple | Catálogo editable, versiones, descuentos, ficha completa del cliente, «ver como cliente» |
 | 3 | Bienvenida, datos de facturación, una plantilla de contrato, firma con OTP y PDF sellado | Plantillas versionadas por servicio, DPA, firmante delegado |
-| 4 | Pago único por **transferencia** (la recomendada; obliga a resolver «pago en curso» desde el primer día) y factura | SEPA, tarjeta, señal + entrega, devoluciones y reembolsos completos |
+| 4 | Pago único por **transferencia** (la recomendada; obliga a resolver «pago en curso» desde el primer día) y factura | SEPA, tarjeta, devoluciones y reembolsos completos (señal + entrega ya está, T-31) |
 | 5 | Proyecto creado, una checklist de briefing fija y subida de ficheros segura | Plantillas de briefing por servicio, zona tipo Drive completa, recordatorios |
 
 Las máquinas de estados (Fase 2, entregable 0) y la seguridad de ficheros se hacen
@@ -482,7 +492,7 @@ candidatas, con lo que desbloquea cada una, están en [mejoras.md](mejoras.md).
 | T-02 | **Sin registro público**: toda cuenta nace de una invitación de R3ZON; el usuario elige email + contraseña o Google | 2026-10-22 | Solo pueden acceder clientes |
 | T-03 | Dos tipos de usuario: **staff de R3ZON** (panel con todos los clientes) y **usuarios de cliente** (solo lo suyo) | 2026-10-22 | |
 | T-04 | **Firma electrónica simple propia** con evidencias (hash, OTP por email, IP, fecha, hoja de auditoría) como solución técnica, **pendiente de validación jurídica** (D-10) | 2026-10-22 | Sin coste por firma y sin sacar al cliente del portal. eIDAS (art. 25) impide rechazar una firma solo por ser electrónica, pero solo la cualificada equivale automáticamente a la manuscrita: la suficiencia la decide la asesoría, no este plan |
-| T-05 | **Stripe** como única pasarela. Modalidades que elige el cliente: **pago único** o **señal + entrega**, por **transferencia/SEPA (recomendado)** o **tarjeta**. PayPal y cripto, más adelante y vía Stripe | 2026-10-22 | Un solo proveedor que mantener; la transferencia es la opción preferida por R3ZON |
+| T-05 | **Stripe** como única pasarela. Modalidades (**la elección pasa a R3ZON: T-31**): **pago único** o **señal + entrega**, por **transferencia/SEPA (recomendado)** o **tarjeta**. PayPal y cripto, más adelante y vía Stripe | 2026-10-22 | Un solo proveedor que mantener; la transferencia es la opción preferida por R3ZON |
 | T-06 | ~~Factura Stripe Invoicing al principio; después ANTARES~~ **Sustituida por T-29** (2026-10-23) | 2026-10-22 | — |
 | T-07 | El portal **no recoge credenciales** (contraseñas de hosting, dominio, redes) hasta que exista la bóveda cifrada | 2026-10-22 | Un campo de texto o un documento normal no es sitio para una contraseña: la vería cualquiera con acceso al proyecto y acabaría en los backups |
 | T-08 | La columna de pertenencia es **`organization_id`** en todo el proyecto (no `tenant_id`) | 2026-10-22 | Un solo nombre antes de la primera migración; «organización» es el término del dominio ([PRODUCTO.md](PRODUCTO.md) §5) |
@@ -506,6 +516,10 @@ candidatas, con lo que desbloquea cada una, están en [mejoras.md](mejoras.md).
 | T-27 | **Interruptores por contratación**: el equipo decide si el cliente firma en el portal y si paga en el portal | 2026-10-23 | Decisión de R3ZON, por los clientes que ya firmaron o pagaron fuera |
 | T-28 | **Sin efectivo.** Los cobros fuera del portal los registra el equipo (transferencia u otro, con referencia) | 2026-10-23 | Decisión de R3ZON |
 | T-29 | **Factura con TicketBAI desde ANTARES**, al confirmarse el cobro, probablemente con el flujo dentro de ANTARES; el portal guarda la referencia. Sustituye a T-06 y cierra D-11 | 2026-10-23 | R3ZON está en el País Vasco y ANTARES ya tiene el módulo TicketBAI |
+| T-30 | **Pago embebido** en el portal (Payment Element, estética propia), no Stripe Checkout. La integración espera a una cuenta de Stripe en modo test | 2026-10-23 | Decisión de R3ZON (era D-04) |
+| T-31 | **La modalidad de pago la fija R3ZON** al crear o invitar, entre las que permite el servicio (antes la elegía el cliente, T-05). Con señal + entrega, la señal se pide hasta que R3ZON marca la entrega | 2026-10-23 | Decisión de R3ZON: encaja con los interruptores (T-27) y con los clientes que ya pagaron fuera |
+| T-32 | **El proyecto nace al completar el alta** (datos y, si se firma en el portal, la firma; el pago no bloquea), sin esperar a la activación | 2026-10-23 | Decisión de R3ZON: el cliente puede empezar el briefing en cuanto termina |
+| T-33 | **Subida de ficheros aplazada**: primero proyecto y briefing sin ficheros; los ficheros llegan con la cuarentena y el antivirus | 2026-10-23 | Decisión de R3ZON (frente a ClamAV en local o aprobación manual) |
 | T-17 | **Solo en local** por ahora: sin Supabase Cloud, Vercel, Stripe ni Resend reales | 2026-10-23 | Decisión de R3ZON. Lo que depende de servicios externos (emails, Google real, CI) se aplaza sin bloquear el resto |
 
 ## Decisiones abiertas
@@ -514,7 +528,6 @@ Bloquean la fase indicada. Cada una lleva una recomendación; la decisión es de
 
 | ID | Pregunta | Recomendación | Bloquea |
 |---|---|---|---|
-| D-04 | Pago **embebido** (Payment Element, estética propia) o **Stripe Checkout** (página de Stripe, menos trabajo) | Embebido: el flujo «premium» es el motivo del producto | Fase 4 |
 | D-05 | ¿Qué servicios exigen **DPA** (encargo del tratamiento)? ¿Hay ya textos de contrato y condiciones por servicio? | Pedir a la asesoría plantillas: contrato marco + condiciones por servicio + DPA | Fase 3 |
 | D-06 | **Contrato con ANTARES** (T-29): ¿escucha ANTARES a Stripe directamente o se lo pide Excelsior? ¿Cómo vuelve la referencia de la factura (y la de los cobros externos)? ¿Alta de clientes con sus datos fiscales? | Que ANTARES escuche los webhooks de Stripe y exponga la factura por id de cobro; Excelsior solo lee | Fase 4 (factura) y 8 |
 | D-07 | **Plan de Supabase**: Free (sin backups, 1 GB de Storage, 50 MB por fichero) o Pro | Pro antes del MVP: contratos firmados y materiales no pueden depender de un plan sin backups | Hito MVP |

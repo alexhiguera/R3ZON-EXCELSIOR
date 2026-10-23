@@ -44,9 +44,10 @@ otra vía, esos pasos no aparecen.
 7. Escribe el código del email, marca que has leído y aceptas el contrato, y pulsa
    **Firmar contrato**.
 8. Si tienes el paso **Pago**, verás el total con IVA, lo que ya has pagado y lo
-   pendiente. Por ahora el pago no se hace en el portal: el equipo de R3ZON te indica
+   pendiente. Si pagas en dos partes (señal + entrega), ahora solo se te pide la señal. Por ahora el pago no se hace en el portal: el equipo de R3ZON te indica
    cómo hacerlo. Pulsa **Continuar**.
 9. Verás **¡Enhorabuena!** y, si has firmado, podrás **descargar el contrato (PDF)**.
+   Pulsa **Empezar el briefing** para contarnos lo que necesitamos para tu proyecto.
 
 ## Qué tener en cuenta
 
@@ -85,4 +86,5 @@ envía el contrato a quien firma (arriba, «Lo que no es evidente»).
 
 ## Qué leer después
 
+- [Cómo completar el briefing de tu proyecto](completar-briefing.md)
 - [Cómo iniciar sesión](iniciar-sesion.md)

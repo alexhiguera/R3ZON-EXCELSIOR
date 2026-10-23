@@ -5,6 +5,7 @@ import { esStaff, nivelActual } from "@/lib/auth/nivel";
 import { createClient, getCurrentUser } from "@/lib/supabase/server";
 import { ResumenContrataciones } from "@/modulos/contrataciones/servidor";
 import { misEmpresas } from "@/modulos/organizaciones/servidor";
+import { ResumenProyectos } from "@/modulos/proyectos/servidor";
 
 export const metadata: Metadata = { title: "Inicio" };
 
@@ -75,6 +76,9 @@ async function Empresas() {
           </h2>
           <ModuloSeguro nombre="Tus servicios">
             <ResumenContrataciones organizationId={e.id} />
+          </ModuloSeguro>
+          <ModuloSeguro nombre="Tus proyectos">
+            <ResumenProyectos organizationId={e.id} />
           </ModuloSeguro>
         </section>
       ))}

@@ -69,8 +69,8 @@ Secciones propias de Excelsior. Detalle de cada una en [PLAN.md](PLAN.md).
 | RGPD | MVP | ⬜ | Exportación, importación, bloqueo legal y supresión ([RGPD.md](RGPD.md)) |
 | Asistente de onboarding | 3–4 | ✅ | `/bienvenida/[id]`: bienvenida, datos fiscales, [contrato y firma], [pago], listo; los pasos dependen de los interruptores (T-27) |
 | Contratos y firma | 3 | ✅ | `src/modulos/contratos`: plantillas, cláusulas, anexos, firma con código y evidencias, PDF ([ARCHITECTURE.md](ARCHITECTURE.md) §17) |
-| Cobros | 4 | 🚧 | `src/modulos/cobros`: libro de cobros, cobros externos, estado económico, revisión. Falta Stripe (D-04); la factura, en ANTARES (T-29) |
-| Proyectos y briefing | 5 | ⬜ | Checklist de materiales por servicio, datos legales |
+| Cobros | 4 | 🚧 | `src/modulos/cobros`: libro de cobros, cobros externos, estado económico, revisión, modalidad y señal + entrega. Falta Stripe (embebido, T-30); la factura, en ANTARES (T-29) |
+| Proyectos y briefing | 5 | 🚧 | `src/modulos/proyectos`: proyecto al completar el alta, plantilla de briefing por servicio, briefing con texto, color, tipografía y enlace, revisión de R3ZON. Falta el tipo «fichero» (T-33) y los recordatorios |
 | Documentos | 5 | ⬜ | Zona tipo Drive por proyecto |
 | Propuestas y presupuestos | 6 | ⬜ | Aceptar → firmar → pagar |
 | Planes y mejoras | 6 | ⬜ | Suscripciones, cambio de plan |

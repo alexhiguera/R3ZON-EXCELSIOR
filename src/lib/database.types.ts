@@ -227,14 +227,14 @@ isOneToOne: false
                   ]
                 },"engagements": {
                   Row: {
-                    "conditions": string | null,"created_at": string,"created_by": string | null,"id": string,"invitation_id": string | null,"organization_id": string,"payment_review": boolean,"payment_review_note": string | null,"price_cents": number,"requires_payment": boolean,"requires_signature": boolean,"service_version_id": string,"status": Database["public"]['Enums']["engagement_status"],"status_changed_at": string,"updated_at": string
+                    "conditions": string | null,"created_at": string,"created_by": string | null,"delivered_at": string | null,"id": string,"invitation_id": string | null,"organization_id": string,"payment_plan": Database["public"]['Enums']["payment_plan"],"payment_review": boolean,"payment_review_note": string | null,"price_cents": number,"requires_payment": boolean,"requires_signature": boolean,"service_version_id": string,"status": Database["public"]['Enums']["engagement_status"],"status_changed_at": string,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "conditions"?: string | null,"created_at"?: string,"created_by"?: string | null,"id"?: string,"invitation_id"?: string | null,"organization_id": string,"payment_review"?: boolean,"payment_review_note"?: string | null,"price_cents": number,"requires_payment"?: boolean,"requires_signature"?: boolean,"service_version_id": string,"status"?: Database["public"]['Enums']["engagement_status"],"status_changed_at"?: string,"updated_at"?: string
+                    "conditions"?: string | null,"created_at"?: string,"created_by"?: string | null,"delivered_at"?: string | null,"id"?: string,"invitation_id"?: string | null,"organization_id": string,"payment_plan": Database["public"]['Enums']["payment_plan"],"payment_review"?: boolean,"payment_review_note"?: string | null,"price_cents": number,"requires_payment"?: boolean,"requires_signature"?: boolean,"service_version_id": string,"status"?: Database["public"]['Enums']["engagement_status"],"status_changed_at"?: string,"updated_at"?: string
                   }
                   Update: {
-                    "conditions"?: string | null,"created_at"?: string,"created_by"?: string | null,"id"?: string,"invitation_id"?: string | null,"organization_id"?: string,"payment_review"?: boolean,"payment_review_note"?: string | null,"price_cents"?: number,"requires_payment"?: boolean,"requires_signature"?: boolean,"service_version_id"?: string,"status"?: Database["public"]['Enums']["engagement_status"],"status_changed_at"?: string,"updated_at"?: string
+                    "conditions"?: string | null,"created_at"?: string,"created_by"?: string | null,"delivered_at"?: string | null,"id"?: string,"invitation_id"?: string | null,"organization_id"?: string,"payment_plan"?: Database["public"]['Enums']["payment_plan"],"payment_review"?: boolean,"payment_review_note"?: string | null,"price_cents"?: number,"requires_payment"?: boolean,"requires_signature"?: boolean,"service_version_id"?: string,"status"?: Database["public"]['Enums']["engagement_status"],"status_changed_at"?: string,"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -383,6 +383,70 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"project_briefing_items": {
+                  Row: {
+                    "answered_at": string | null,"created_at": string,"help": string | null,"id": string,"kind": Database["public"]['Enums']["briefing_kind"],"label": string,"organization_id": string,"position": number,"project_id": string,"required": boolean,"section": string,"staff_note": string | null,"status": Database["public"]['Enums']["briefing_status"],"updated_at": string,"updated_by": string | null,"value": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "answered_at"?: string | null,"created_at"?: string,"help"?: string | null,"id"?: string,"kind": Database["public"]['Enums']["briefing_kind"],"label": string,"organization_id": string,"position": number,"project_id": string,"required": boolean,"section": string,"staff_note"?: string | null,"status"?: Database["public"]['Enums']["briefing_status"],"updated_at"?: string,"updated_by"?: string | null,"value"?: string | null
+                  }
+                  Update: {
+                    "answered_at"?: string | null,"created_at"?: string,"help"?: string | null,"id"?: string,"kind"?: Database["public"]['Enums']["briefing_kind"],"label"?: string,"organization_id"?: string,"position"?: number,"project_id"?: string,"required"?: boolean,"section"?: string,"staff_note"?: string | null,"status"?: Database["public"]['Enums']["briefing_status"],"updated_at"?: string,"updated_by"?: string | null,"value"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "project_briefing_items_organization_id_fkey"
+      columns: ["organization_id"]
+isOneToOne: false
+      referencedRelation: "organizations"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "project_briefing_items_project_id_fkey"
+      columns: ["project_id"]
+isOneToOne: false
+      referencedRelation: "project_briefing_progress"
+      referencedColumns: ["project_id"]
+    },{
+      foreignKeyName: "project_briefing_items_project_id_fkey"
+      columns: ["project_id"]
+isOneToOne: false
+      referencedRelation: "projects"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"projects": {
+                  Row: {
+                    "created_at": string,"engagement_id": string,"id": string,"name": string,"organization_id": string,"status": Database["public"]['Enums']["project_status"],"status_changed_at": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"engagement_id": string,"id"?: string,"name": string,"organization_id": string,"status"?: Database["public"]['Enums']["project_status"],"status_changed_at"?: string,"updated_at"?: string
+                  }
+                  Update: {
+                    "created_at"?: string,"engagement_id"?: string,"id"?: string,"name"?: string,"organization_id"?: string,"status"?: Database["public"]['Enums']["project_status"],"status_changed_at"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "projects_engagement_id_fkey"
+      columns: ["engagement_id"]
+isOneToOne: true
+      referencedRelation: "engagement_collections"
+      referencedColumns: ["engagement_id"]
+    },{
+      foreignKeyName: "projects_engagement_id_fkey"
+      columns: ["engagement_id"]
+isOneToOne: true
+      referencedRelation: "engagements"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "projects_organization_id_fkey"
+      columns: ["organization_id"]
+isOneToOne: false
+      referencedRelation: "organizations"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"provider_profile": {
                   Row: {
                     "address": string,"email": string,"id": boolean,"legal_name": string,"tax_id": string,"updated_at": string
@@ -396,6 +460,32 @@ isOneToOne: false
                   }
                   Relationships: [
                     
+                  ]
+                },"service_briefing_items": {
+                  Row: {
+                    "created_at": string,"help": string | null,"id": string,"kind": Database["public"]['Enums']["briefing_kind"],"label": string,"position": number,"required": boolean,"section": string,"service_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"help"?: string | null,"id"?: string,"kind": Database["public"]['Enums']["briefing_kind"],"label": string,"position": number,"required"?: boolean,"section"?: string,"service_id": string
+                  }
+                  Update: {
+                    "created_at"?: string,"help"?: string | null,"id"?: string,"kind"?: Database["public"]['Enums']["briefing_kind"],"label"?: string,"position"?: number,"required"?: boolean,"section"?: string,"service_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "service_briefing_items_service_id_fkey"
+      columns: ["service_id"]
+isOneToOne: false
+      referencedRelation: "services"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "service_briefing_items_service_id_fkey"
+      columns: ["service_id"]
+isOneToOne: false
+      referencedRelation: "services_current"
+      referencedColumns: ["id"]
+    }
                   ]
                 },"service_versions": {
                   Row: {
@@ -442,12 +532,26 @@ isOneToOne: false
           Views: {
             "engagement_collections": {
                   Row: {
-                    "balance_cents": number | null,"engagement_id": string | null,"organization_id": string | null,"paid_cents": number | null,"payment_review": boolean | null,"pending_cents": number | null,"requires_payment": boolean | null,"status": Database["public"]['Enums']["collection_status"] | null,"total_cents": number | null
+                    "balance_cents": number | null,"delivered_at": string | null,"deposit_cents": number | null,"due_now_cents": number | null,"engagement_id": string | null,"organization_id": string | null,"paid_cents": number | null,"payment_plan": Database["public"]['Enums']["payment_plan"] | null,"payment_review": boolean | null,"pending_cents": number | null,"requires_payment": boolean | null,"status": Database["public"]['Enums']["collection_status"] | null,"total_cents": number | null
                   }
                   ComputedFields: never
                   Relationships: [
                     {
       foreignKeyName: "engagements_organization_id_fkey"
+      columns: ["organization_id"]
+isOneToOne: false
+      referencedRelation: "organizations"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"project_briefing_progress": {
+                  Row: {
+                    "changes_requested": number | null,"done": number | null,"organization_id": string | null,"project_id": string | null,"required_done": number | null,"required_total": number | null,"to_review": number | null,"total": number | null
+                  }
+                  ComputedFields: never
+                  Relationships: [
+                    {
+      foreignKeyName: "projects_organization_id_fkey"
       columns: ["organization_id"]
 isOneToOne: false
       referencedRelation: "organizations"
@@ -505,7 +609,7 @@ isOneToOne: false
 { Args: { "p_contract_id": string }; Returns: boolean
                            },
 "create_client_with_invitation":
-{ Args: { "p_conditions"?: string,"p_email": string,"p_name": string,"p_price_cents"?: number,"p_requires_payment"?: boolean,"p_requires_signature"?: boolean,"p_service_version_id"?: string }; Returns: {
+{ Args: { "p_conditions"?: string,"p_email": string,"p_name": string,"p_payment_plan"?: Database["public"]['Enums']["payment_plan"],"p_price_cents"?: number,"p_requires_payment"?: boolean,"p_requires_signature"?: boolean,"p_service_version_id"?: string }; Returns: {
               "organization_id": string,"token": string
             }[]
                            },
@@ -531,7 +635,7 @@ isOneToOne: false
 { Args: { "p_email": string,"p_engagement_id": string }; Returns: string
                            },
 "invite_to_service":
-{ Args: { "p_conditions"?: string,"p_email": string,"p_organization_id": string,"p_price_cents"?: number,"p_requires_payment"?: boolean,"p_requires_signature"?: boolean,"p_service_version_id": string }; Returns: string
+{ Args: { "p_conditions"?: string,"p_email": string,"p_organization_id": string,"p_payment_plan"?: Database["public"]['Enums']["payment_plan"],"p_price_cents"?: number,"p_requires_payment"?: boolean,"p_requires_signature"?: boolean,"p_service_version_id": string }; Returns: string
                            },
 "is_admin":
 { Args: Record<PropertyKey, never>; Returns: boolean
@@ -553,6 +657,9 @@ isOneToOne: false
               "display_name": string,"email": string,"joined_at": string,"role": Database["public"]['Enums']["org_role"],"user_id": string
             }[]
                            },
+"project_transition_allowed":
+{ Args: { "p_from": Database["public"]['Enums']["project_status"],"p_to": Database["public"]['Enums']["project_status"] }; Returns: boolean
+                           },
 "session_otp_verified_at":
 { Args: { "p_seconds"?: number }; Returns: string
                            },
@@ -567,7 +674,7 @@ isOneToOne: false
                            }
           }
           Enums: {
-            "collection_status": "no_pagado"|"parcialmente_pagado"|"pagado"|"pendiente_revision","contract_status": "borrador"|"enviado"|"firmado"|"anulado"|"sustituido","engagement_status": "borrador"|"invitada"|"datos_completos"|"firmada"|"activa"|"finalizada"|"cancelada"|"rescindida","org_role": "owner"|"member"|"billing","payment_method": "transferencia"|"otro"|"stripe","payment_plan": "pago_unico"|"senal_entrega","payment_status": "pendiente"|"confirmado"|"fallido"|"devuelto"|"anulado","platform_role": "client"|"staff"|"admin"
+            "briefing_kind": "texto"|"color"|"tipografia"|"enlace","briefing_status": "pendiente"|"mas_tarde"|"no_aplica"|"aportado"|"cambios"|"validado","collection_status": "no_pagado"|"parcialmente_pagado"|"pagado"|"pendiente_revision","contract_status": "borrador"|"enviado"|"firmado"|"anulado"|"sustituido","engagement_status": "borrador"|"invitada"|"datos_completos"|"firmada"|"activa"|"finalizada"|"cancelada"|"rescindida","org_role": "owner"|"member"|"billing","payment_method": "transferencia"|"otro"|"stripe","payment_plan": "pago_unico"|"senal_entrega","payment_status": "pendiente"|"confirmado"|"fallido"|"devuelto"|"anulado","platform_role": "client"|"staff"|"admin","project_status": "briefing"|"diseno"|"desarrollo"|"revision"|"lanzado"|"mantenimiento"|"en_pausa"|"cancelado"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -683,7 +790,7 @@ export type CompositeTypes<
 export const Constants = {
   "public": {
           Enums: {
-            "collection_status": ["no_pagado", "parcialmente_pagado", "pagado", "pendiente_revision"],"contract_status": ["borrador", "enviado", "firmado", "anulado", "sustituido"],"engagement_status": ["borrador", "invitada", "datos_completos", "firmada", "activa", "finalizada", "cancelada", "rescindida"],"org_role": ["owner", "member", "billing"],"payment_method": ["transferencia", "otro", "stripe"],"payment_plan": ["pago_unico", "senal_entrega"],"payment_status": ["pendiente", "confirmado", "fallido", "devuelto", "anulado"],"platform_role": ["client", "staff", "admin"]
+            "briefing_kind": ["texto", "color", "tipografia", "enlace"],"briefing_status": ["pendiente", "mas_tarde", "no_aplica", "aportado", "cambios", "validado"],"collection_status": ["no_pagado", "parcialmente_pagado", "pagado", "pendiente_revision"],"contract_status": ["borrador", "enviado", "firmado", "anulado", "sustituido"],"engagement_status": ["borrador", "invitada", "datos_completos", "firmada", "activa", "finalizada", "cancelada", "rescindida"],"org_role": ["owner", "member", "billing"],"payment_method": ["transferencia", "otro", "stripe"],"payment_plan": ["pago_unico", "senal_entrega"],"payment_status": ["pendiente", "confirmado", "fallido", "devuelto", "anulado"],"platform_role": ["client", "staff", "admin"],"project_status": ["briefing", "diseno", "desarrollo", "revision", "lanzado", "mantenimiento", "en_pausa", "cancelado"]
           }
         }
 } as const

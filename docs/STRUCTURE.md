@@ -28,7 +28,7 @@
 │   │   ├── registro.ts       qué módulos hay y qué secciones aportan al menú
 │   │   ├── tipos.ts
 │   │   └── <modulo>/         index.ts (público) · servidor.ts (solo servidor) · modulo.ts · internos
-│   │                         acceso · contrataciones · inicio · organizaciones · servicios
+│   │                         acceso · cobros · contrataciones · contratos · inicio · organizaciones · proyectos · servicios
 │   ├── components/brand/     logotipo de R3ZON
 │   └── lib/
 │       ├── supabase/         client.ts (navegador) · server.ts · proxy.ts
@@ -94,7 +94,7 @@ src/app/
     ├── bienvenida/[contratacion]/  asistente: bienvenida → datos → contrato →
     │                             firma → pago → enhorabuena                      Fases 3–4
     ├── servicios/                servicios contratados y mejorar plan            Fase 6
-    ├── proyectos/[id]/           fases, briefing y documentos                    Fase 5
+    ├── proyectos/[id]/           estado y briefing ✅; documentos (T-33)          Fase 5
     ├── contratos/                firmados y pendientes                           Fase 3
     ├── propuestas/               presupuestos: ver, aceptar, rechazar            Fase 6
     ├── facturas/                 facturas y pagos pendientes                     Fase 4
@@ -106,7 +106,8 @@ src/app/
         ├── invitaciones/         generar con servicio, reenviar, revocar
         ├── servicios/            catálogo y versiones
         ├── contratos/            plantillas y estado de firma
-        ├── pagos/                cobros pendientes, marcar entrega
+        ├── contrataciones/[id]/  alta, cobros y entrega ✅ (no hay /admin/pagos)
+        ├── proyectos/            briefing por revisar y estado del proyecto ✅
         └── soporte/              bandeja de tickets
 ```
 

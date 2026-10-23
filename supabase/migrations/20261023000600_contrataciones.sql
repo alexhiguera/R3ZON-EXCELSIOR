@@ -30,6 +30,10 @@
 -- cliente firma en el portal) y `requires_payment` (el cliente paga en el
 -- portal). Cubren a clientes que ya firmaron o pagaron fuera.
 --
+-- Modalidad de pago (`payment_plan`): la elige R3ZON entre las que permite la
+-- versión del servicio (T-31); sin elegir, la primera. Va al contrato, así que
+-- solo cambia en borrador o invitada, como el precio.
+--
 -- «Cuenta creada» no es un estado: se deriva de la invitación aceptada.
 --
 -- Depende de: plataforma, organizaciones, invitaciones, servicios.
@@ -55,6 +59,8 @@ create table public.engagements (
   conditions         text,
   requires_signature boolean not null default true,
   requires_payment   boolean not null default true,
+  -- Sin default: lo pone el trigger (la primera modalidad del servicio).
+  payment_plan       public.payment_plan not null,
   created_by         uuid references auth.users (id) on delete set null,
   created_at         timestamptz not null default now(),
   updated_at         timestamptz not null default now(),
@@ -121,7 +127,22 @@ language plpgsql
 security invoker
 set search_path = ''
 as $$
+declare
+  v_planes public.payment_plan[];
 begin
+  -- Modalidad: una de las que permite la versión del servicio.
+  if tg_op = 'INSERT'
+     or (new.payment_plan, new.service_version_id) is distinct from (old.payment_plan, old.service_version_id) then
+    select v.payment_plans into v_planes from public.service_versions v where v.id = new.service_version_id;
+    if not found then
+      raise exception 'El servicio no existe' using errcode = 'P0001';
+    end if;
+    new.payment_plan := coalesce(new.payment_plan, v_planes[1]);
+    if not new.payment_plan = any (v_planes) then
+      raise exception 'Este servicio no admite la modalidad «%»', new.payment_plan using errcode = 'P0001';
+    end if;
+  end if;
+
   if tg_op = 'INSERT' then
     new.created_by := (select auth.uid());
     if new.status <> 'borrador' then
@@ -139,8 +160,8 @@ begin
 
   -- Las condiciones solo se tocan antes de que el cliente dé sus datos: a partir
   -- de ahí van al contrato y no pueden moverse.
-  if (new.service_version_id, new.price_cents, new.conditions)
-     is distinct from (old.service_version_id, old.price_cents, old.conditions)
+  if (new.service_version_id, new.price_cents, new.conditions, new.payment_plan)
+     is distinct from (old.service_version_id, old.price_cents, old.conditions, old.payment_plan)
      and old.status not in ('borrador', 'invitada') then
     raise exception 'Las condiciones ya no se pueden cambiar en estado %', old.status using errcode = 'P0001';
   end if;
@@ -247,7 +268,8 @@ create function public.invite_to_service(
   p_price_cents bigint default null,
   p_conditions text default null,
   p_requires_signature boolean default true,
-  p_requires_payment boolean default true
+  p_requires_payment boolean default true,
+  p_payment_plan public.payment_plan default null
 )
 returns text
 language plpgsql
@@ -267,9 +289,9 @@ begin
   end if;
 
   insert into public.engagements
-    (organization_id, service_version_id, price_cents, conditions, requires_signature, requires_payment)
+    (organization_id, service_version_id, price_cents, conditions, requires_signature, requires_payment, payment_plan)
   values (p_organization_id, p_service_version_id, coalesce(p_price_cents, v_price), nullif(btrim(p_conditions), ''),
-          coalesce(p_requires_signature, true), coalesce(p_requires_payment, true))
+          coalesce(p_requires_signature, true), coalesce(p_requires_payment, true), p_payment_plan)
   returning id into v_engagement_id;
 
   return public.invite_engagement(v_engagement_id, p_email);
@@ -322,9 +344,9 @@ comment on function public.invite_engagement(uuid, text) is
   'Invita (o reinvita) a una contratación en borrador o invitada. Revoca la invitación anterior. Solo staff (RLS).';
 grant execute on function public.invite_engagement(uuid, text) to authenticated;
 
-comment on function public.invite_to_service(uuid, text, uuid, bigint, text, boolean, boolean) is
+comment on function public.invite_to_service(uuid, text, uuid, bigint, text, boolean, boolean, public.payment_plan) is
   'Crea una contratación y la invitación para el cliente (solo staff, por RLS). Devuelve el token una vez.';
-grant execute on function public.invite_to_service(uuid, text, uuid, bigint, text, boolean, boolean) to authenticated;
+grant execute on function public.invite_to_service(uuid, text, uuid, bigint, text, boolean, boolean, public.payment_plan) to authenticated;
 
 -- Cambiar de estado con motivo (cancelar, rescindir…). Invoker: la RLS decide
 -- quién; el trigger, qué transición.
@@ -359,8 +381,8 @@ grant execute on function public.change_engagement_status(uuid, public.engagemen
 revoke all on table public.engagements, public.engagement_status_history from anon, authenticated;
 
 grant select,
-      insert (organization_id, service_version_id, price_cents, conditions, requires_signature, requires_payment),
-      update (service_version_id, price_cents, conditions, status, invitation_id, requires_signature, requires_payment)
+      insert (organization_id, service_version_id, price_cents, conditions, requires_signature, requires_payment, payment_plan),
+      update (service_version_id, price_cents, conditions, status, invitation_id, requires_signature, requires_payment, payment_plan)
   on table public.engagements to authenticated;
 grant select on table public.engagement_status_history to authenticated;
 
@@ -431,7 +453,8 @@ create function public.create_client_with_invitation(
   p_price_cents bigint default null,
   p_conditions text default null,
   p_requires_signature boolean default true,
-  p_requires_payment boolean default true
+  p_requires_payment boolean default true,
+  p_payment_plan public.payment_plan default null
 )
 returns table (organization_id uuid, token text)
 language plpgsql
@@ -448,15 +471,15 @@ begin
     token := public.create_invitation(v_org, p_email, 'owner');
   else
     token := public.invite_to_service(v_org, p_email, p_service_version_id, p_price_cents, p_conditions,
-                                      p_requires_signature, p_requires_payment);
+                                      p_requires_signature, p_requires_payment, p_payment_plan);
   end if;
   return next;
 end;
 $$;
 
-comment on function public.create_client_with_invitation(text, text, uuid, bigint, text, boolean, boolean) is
+comment on function public.create_client_with_invitation(text, text, uuid, bigint, text, boolean, boolean, public.payment_plan) is
   'Crea el cliente y la invitación (con o sin servicio) en una transacción. Solo staff, por RLS.';
-grant execute on function public.create_client_with_invitation(text, text, uuid, bigint, text, boolean, boolean) to authenticated;
+grant execute on function public.create_client_with_invitation(text, text, uuid, bigint, text, boolean, boolean, public.payment_plan) to authenticated;
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 6. Pasos del cliente (Fase 3)

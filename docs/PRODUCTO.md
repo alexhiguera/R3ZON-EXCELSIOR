@@ -103,8 +103,8 @@ R3ZON (panel)                         Cliente
                                           qué incluye su servicio y qué pasará ahora
                                        7. Datos para contrato y factura
                                           (razón social, NIF, dirección, firmante)
-                                       8. Modalidad de pago: pago único o señal + entrega,
-                                          por transferencia/SEPA (recomendado) o tarjeta
+                                       8. Modalidad de pago (la fija R3ZON, T-31): pago único
+                                          o señal + entrega, por transferencia/SEPA o tarjeta
                                        9. Previsualiza el contrato → lo firma
                                       10. Paga (Stripe)
                                       11. Enhorabuena: copia del contrato y factura

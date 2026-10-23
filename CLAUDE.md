@@ -15,7 +15,7 @@ regla lleva su motivo: una norma sin motivo se salta en cuanto estorba.
   propuestas, documentos y tickets. Qué y por qué: [`docs/PRODUCTO.md`](docs/PRODUCTO.md).
   Nombre visible **«R3ZON Clientes»**. Identidad en código:
   [`src/config/project.ts`](src/config/project.ts). Puertos locales 5542x.
-- **Plan y fase en curso:** [`docs/PLAN.md`](docs/PLAN.md). Hoy: **Fase 3** (recorrido hecho; la siguiente es la 4). Las
+- **Plan y fase en curso:** [`docs/PLAN.md`](docs/PLAN.md). Hoy: **Fases 4 y 5** (cobros sin Stripe y briefing sin ficheros hechos; Stripe espera a una cuenta de pruebas, los ficheros a T-33). Las
   decisiones tomadas (T-xx) no se reabren sin preguntar; las abiertas (D-xx) se preguntan
   antes de implementar lo que bloquean.
 - **Entornos:** **solo local** (Supabase en Docker) por decisión de R3ZON (T-17,

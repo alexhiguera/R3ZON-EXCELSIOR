@@ -17,6 +17,7 @@ import { contratacion, type DetalleContratacion } from "@/modulos/contrataciones
 import { FirmaDibujada, TextoContrato } from "@/modulos/contratos";
 import { contratoDe, textoContrato } from "@/modulos/contratos/servidor";
 import { datosFiscales, type RolEmpresa, rolEnEmpresa } from "@/modulos/organizaciones/servidor";
+import { proyectoDeContratacion } from "@/modulos/proyectos/servidor";
 import { ETIQUETA_PLAN } from "@/modulos/servicios";
 import { accionDelegar, accionEnviarCodigo, accionFirmar, accionGuardarDatos } from "./actions";
 
@@ -120,15 +121,11 @@ function Bienvenida({ e }: { e: DetalleContratacion }) {
           </dd>
         </div>
         <div>
-          <dt className="text-xs text-muted">Modalidades de pago</dt>
+          <dt className="text-xs text-muted">Modalidad de pago</dt>
           <dd>
-            {e.payment_plans
-              .map((p) =>
-                p === "senal_entrega" && e.deposit_percent
-                  ? `${ETIQUETA_PLAN[p]} (${e.deposit_percent} % al firmar)`
-                  : ETIQUETA_PLAN[p],
-              )
-              .join(" o ")}
+            {e.payment_plan === "senal_entrega" && e.deposit_percent
+              ? `${ETIQUETA_PLAN.senal_entrega}: ${e.deposit_percent} % al inicio y el resto a la entrega`
+              : ETIQUETA_PLAN[e.payment_plan]}
           </dd>
         </div>
         {e.conditions && (
@@ -392,8 +389,13 @@ async function PasoContrato({ e, rol }: { e: DetalleContratacion; rol: RolEmpres
 }
 
 async function Listo({ e }: { e: DetalleContratacion }) {
-  const [c, cobro] = await Promise.all([contratoDe(e.id), resumenCobro(e.id)]);
+  const [c, cobro, py] = await Promise.all([
+    contratoDe(e.id),
+    resumenCobro(e.id),
+    proyectoDeContratacion(e.id),
+  ]);
   const contrato = c.ok ? c.datos : null;
+  const proyectoId = py.ok ? py.datos?.id : undefined;
   const firmado = contrato?.status === "firmado";
   const estadoCobro = cobro.ok ? cobro.datos?.status : undefined;
   const debe =
@@ -428,6 +430,14 @@ async function Listo({ e }: { e: DetalleContratacion }) {
           Descargar el contrato (PDF)
         </a>
       )}
+      {proyectoId && (
+        <Link
+          href={`/proyectos/${proyectoId}`}
+          className="inline-flex w-fit items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-glow hover:bg-primary-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+        >
+          Empezar el briefing
+        </Link>
+      )}
       <Link href="/inicio" className="text-sm text-brand underline-offset-4 hover:underline">
         Volver al inicio
       </Link>
@@ -441,15 +451,12 @@ async function Listo({ e }: { e: DetalleContratacion }) {
  * revisión no pide nada. El pago online (Stripe) llega con la Fase 4.
  */
 async function PasoPago({ e }: { e: DetalleContratacion }) {
-  const [resumen, historial, exigible] = await Promise.all([
-    resumenCobro(e.id),
-    pagos(e.id),
-    importeExigible(e.id),
-  ]);
-  if (!resumen.ok || !resumen.datos || !historial.ok || !exigible.ok) {
+  const [resumen, historial] = await Promise.all([resumenCobro(e.id), pagos(e.id)]);
+  if (!resumen.ok || !resumen.datos || !historial.ok) {
     return <BloqueNoDisponible nombre="Tu pago" />;
   }
   const c = resumen.datos;
+  const enSenal = c.payment_plan === "senal_entrega" && !c.delivered_at;
   const cobrados = historial.datos.filter((p) => p.status === "confirmado");
 
   return (
@@ -495,10 +502,21 @@ async function PasoPago({ e }: { e: DetalleContratacion }) {
           te avisaremos.
         </p>
       )}
-      {exigible.datos > 0 && (
-        <p className="rounded-xl border border-border bg-white/[0.03] p-4 text-sm">
-          Te queda por pagar <strong>{euros(exigible.datos)}</strong>. Muy pronto podrás hacerlo
-          aquí mismo con tarjeta o SEPA; mientras tanto, el equipo de R3ZON te indicará cómo.
+      {c.payment_plan === "senal_entrega" && c.deposit_cents !== null && (
+        <p className="text-sm text-muted" data-testid="modalidad-cliente">
+          Pagas en dos partes: una señal de {euros(c.deposit_cents)} al inicio y el resto (
+          {euros(c.total_cents - c.deposit_cents)}) a la entrega.
+          {enSenal ? "" : " Ya hemos hecho la entrega."}
+        </p>
+      )}
+      {c.due_now_cents > 0 && (
+        <p
+          className="rounded-xl border border-border bg-white/[0.03] p-4 text-sm"
+          data-testid="exigible-cliente"
+        >
+          {enSenal ? "Ahora toca la señal: " : "Te queda por pagar "}
+          <strong>{euros(c.due_now_cents)}</strong>. Muy pronto podrás hacerlo aquí mismo con
+          tarjeta o SEPA; mientras tanto, el equipo de R3ZON te indicará cómo.
         </p>
       )}
       <Link

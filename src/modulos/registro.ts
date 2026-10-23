@@ -4,6 +4,7 @@ import { moduloContrataciones } from "./contrataciones/modulo";
 import { moduloContratos } from "./contratos/modulo";
 import { moduloInicio } from "./inicio/modulo";
 import { moduloOrganizaciones } from "./organizaciones/modulo";
+import { moduloProyectos } from "./proyectos/modulo";
 import { moduloServicios } from "./servicios/modulo";
 import type { DefinicionModulo } from "./tipos";
 
@@ -21,4 +22,5 @@ export const MODULOS: readonly DefinicionModulo[] = [
   moduloServicios,
   moduloContratos,
   moduloCobros,
+  moduloProyectos,
 ];

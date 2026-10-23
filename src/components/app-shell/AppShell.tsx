@@ -84,7 +84,9 @@ export function AppShell({
 
       {conBarraInferior && (
         <nav
-          aria-label="Secciones"
+          // Etiqueta propia: dos landmarks iguales confunden al lector de pantalla
+          // cuando no hay CSS que oculte uno (axe: landmark-unique).
+          aria-label="Secciones (barra inferior)"
           className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background/85 px-2 pt-1 pb-[max(0.25rem,env(safe-area-inset-bottom))] backdrop-blur-xl lg:hidden"
         >
           <NavLinks audiencia={audiencia} variante="inferior" />

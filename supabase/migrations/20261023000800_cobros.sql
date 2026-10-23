@@ -41,6 +41,13 @@ alter table public.engagements
 
 grant update (payment_review, payment_review_note) on table public.engagements to authenticated;
 
+-- Señal + entrega (T-31): hasta que R3ZON marca la entrega solo se pide la
+-- señal; después, el resto. La fecha la pone la base y no se desmarca.
+alter table public.engagements
+  add column delivered_at timestamptz;
+
+grant update (delivered_at) on table public.engagements to authenticated;
+
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 1. Libro de cobros
 -- ─────────────────────────────────────────────────────────────────────────────
@@ -94,35 +101,55 @@ with (security_invoker = true) as
     e.organization_id,
     e.requires_payment,
     e.payment_review,
+    e.payment_plan,
+    e.delivered_at,
     t.total_cents,
+    t.deposit_cents,
     coalesce(p.paid_cents, 0) as paid_cents,
     coalesce(p.pending_cents, 0) as pending_cents,
     greatest(t.total_cents - coalesce(p.paid_cents, 0), 0) as balance_cents,
+    s.status,
+    -- Lo que se le puede pedir ahora: nada si no paga en el portal, si está en
+    -- revisión o pagado; la señal hasta la entrega; después, el saldo.
     case
+      when e.requires_payment and s.status in ('no_pagado', 'parcialmente_pagado') then
+        greatest(
+          case when e.payment_plan = 'senal_entrega' and e.delivered_at is null
+               then t.deposit_cents else t.total_cents end
+          - coalesce(p.paid_cents, 0),
+          0)
+      else 0
+    end as due_now_cents
+  from public.engagements e
+  join public.service_versions sv on sv.id = e.service_version_id
+  cross join lateral (
+    select x.total_cents,
+           case when e.payment_plan = 'senal_entrega'
+                then round(x.total_cents * sv.deposit_percent / 100.0)::bigint end as deposit_cents
+      from (select e.price_cents + round(e.price_cents * sv.vat_rate / 100)::bigint as total_cents) x
+  ) t
+  left join lateral (
+    select sum(amount_cents) filter (where status = 'confirmado') as paid_cents,
+           sum(amount_cents) filter (where status = 'pendiente') as pending_cents
+      from public.payments pa where pa.engagement_id = e.id
+  ) p on true
+  cross join lateral (
+    select case
       when e.payment_review or coalesce(p.pending_cents, 0) > 0 or coalesce(p.paid_cents, 0) > t.total_cents
         then 'pendiente_revision'
       when coalesce(p.paid_cents, 0) >= t.total_cents then 'pagado'
       when coalesce(p.paid_cents, 0) > 0 then 'parcialmente_pagado'
       else 'no_pagado'
     end::public.collection_status as status
-  from public.engagements e
-  join public.service_versions sv on sv.id = e.service_version_id
-  cross join lateral (
-    select e.price_cents + round(e.price_cents * sv.vat_rate / 100)::bigint as total_cents
-  ) t
-  left join lateral (
-    select sum(amount_cents) filter (where status = 'confirmado') as paid_cents,
-           sum(amount_cents) filter (where status = 'pendiente') as pending_cents
-      from public.payments pa where pa.engagement_id = e.id
-  ) p on true;
+  ) s;
 
 comment on view public.engagement_collections is
-  'Estado económico de cada contratación: total con IVA, cobrado, en curso, saldo y estado. Derivado del libro de cobros.';
+  'Estado económico de cada contratación: total con IVA, señal, cobrado, en curso, saldo, estado e importe exigible ahora. Derivado del libro de cobros.';
 
 -- Importe que se le puede pedir AHORA al cliente en el portal. Cero si la
 -- contratación no se paga en el portal, si está en revisión o si ya está
--- pagada. Lo calcula la base: el navegador nunca dice cuánto se cobra. Los
--- hitos (señal + entrega) se añaden con la Fase 4.
+-- pagada; con señal + entrega, la señal hasta que R3ZON marque la entrega. Lo
+-- calcula la base: el navegador nunca dice cuánto se cobra.
 create function public.amount_due_now(p_engagement_id uuid)
 returns bigint
 language sql
@@ -130,16 +157,13 @@ stable
 security invoker
 set search_path = ''
 as $$
-  select case
-           when c.requires_payment and c.status in ('no_pagado', 'parcialmente_pagado') then c.balance_cents
-           else 0
-         end
+  select c.due_now_cents
     from public.engagement_collections c
    where c.engagement_id = p_engagement_id;
 $$;
 
 comment on function public.amount_due_now(uuid) is
-  'Importe exigible ahora en el portal (0 si no se paga en el portal, si está en revisión o pagado).';
+  'Importe exigible ahora en el portal (0 si no se paga en el portal, si está en revisión o pagado; la señal hasta la entrega).';
 revoke execute on function public.amount_due_now(uuid) from public, anon;
 grant execute on function public.amount_due_now(uuid) to authenticated;
 
@@ -326,6 +350,56 @@ revoke execute on function public.payments_audit() from public, anon, authentica
 create trigger payments_audit
   after insert or update on public.payments
   for each row execute function public.payments_audit();
+
+-- Entrega (señal + entrega): solo con esa modalidad, con la contratación en
+-- marcha (datos dados, firmada o activa), una vez y con la hora de la base.
+create function public.engagements_before_delivery()
+returns trigger
+language plpgsql
+security invoker
+set search_path = ''
+as $$
+begin
+  if old.delivered_at is not null then
+    raise exception 'La entrega ya está marcada' using errcode = 'P0001';
+  end if;
+  if new.delivered_at is null then
+    return new;
+  end if;
+  if new.payment_plan <> 'senal_entrega' then
+    raise exception 'Solo se marca la entrega con la modalidad señal + entrega' using errcode = 'P0001';
+  end if;
+  if new.status not in ('datos_completos', 'firmada', 'activa') then
+    raise exception 'No se puede marcar la entrega en estado %', new.status using errcode = 'P0001';
+  end if;
+  new.delivered_at := now();
+  return new;
+end;
+$$;
+revoke execute on function public.engagements_before_delivery() from public, anon, authenticated;
+
+create trigger engagements_before_delivery
+  before update of delivered_at on public.engagements
+  for each row when (old.delivered_at is distinct from new.delivered_at)
+  execute function public.engagements_before_delivery();
+
+create function public.engagements_audit_delivery()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  perform public.write_audit('engagement.delivered', new.organization_id, jsonb_build_object('engagement_id', new.id));
+  return null;
+end;
+$$;
+revoke execute on function public.engagements_audit_delivery() from public, anon, authenticated;
+
+create trigger engagements_audit_delivery
+  after update of delivered_at on public.engagements
+  for each row when (old.delivered_at is null and new.delivered_at is not null)
+  execute function public.engagements_audit_delivery();
 
 -- Marcar o desmarcar «pendiente de revisión» queda registrado.
 create function public.engagements_audit_review()
